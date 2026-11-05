@@ -137,6 +137,46 @@ fn the_rooms_targets_are_at_least_24px(cx: &mut TestAppContext) {
         ("media", room(PHOTOS_ROOM, false), 10),
         ("rich text", room(HOLIDAY_ROOM, false), 8),
         ("invitation", room(INVITE_ROOM, false), 8),
+        (
+            "composer reply",
+            crate::RoomsLaunch {
+                composer: Some(crate::ComposerLaunch::Reply),
+                ..room(FAMILY_ROOM, false)
+            },
+            12,
+        ),
+        (
+            "composer mentions",
+            crate::RoomsLaunch {
+                composer: Some(crate::ComposerLaunch::Mention("thanks @".to_owned())),
+                ..room(FAMILY_ROOM, false)
+            },
+            12,
+        ),
+        (
+            "composer attachment",
+            crate::RoomsLaunch {
+                composer: Some(crate::ComposerLaunch::Attachment),
+                ..room(FAMILY_ROOM, false)
+            },
+            12,
+        ),
+        (
+            "message actions",
+            crate::RoomsLaunch {
+                message_actions: true,
+                ..room(FAMILY_ROOM, false)
+            },
+            16,
+        ),
+        (
+            "delete dialog",
+            crate::RoomsLaunch {
+                delete_prompt: true,
+                ..room(FAMILY_ROOM, false)
+            },
+            4,
+        ),
     ] {
         let cx = super::a11y::open_rooms_screen(cx, launch);
         assert!(check_targets(screen, cx) >= at_least, "{screen}");

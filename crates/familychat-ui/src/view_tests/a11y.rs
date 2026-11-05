@@ -35,7 +35,7 @@ fn has(entries: &[(Role, String)], role: Role, label: &str) -> bool {
 }
 
 /// Redraws the window and returns what it recorded.
-fn redraw(cx: &mut VisualTestContext) -> Vec<(Role, String)> {
+pub(super) fn redraw(cx: &mut VisualTestContext) -> Vec<(Role, String)> {
     audit::start();
     cx.update(|window, _| window.refresh());
     cx.run_until_parked();
@@ -254,6 +254,7 @@ fn the_command_palette_names_its_results(cx: &mut TestAppContext) {
 
 /// Every rooms screen the screenshot matrix shows.
 fn rooms_launches() -> Vec<(&'static str, crate::RoomsLaunch)> {
+    use crate::ComposerLaunch;
     use familychat_core::rooms::RoomListFilter;
     use familychat_test_support::fixtures::rooms::{
         EMPTY_ROOM, FAMILY_ROOM, FOOTBALL_ROOM, HOLIDAY_ROOM, HOMEWORK_ROOM, INVITE_ROOM, MUM_ROOM,
@@ -262,6 +263,10 @@ fn rooms_launches() -> Vec<(&'static str, crate::RoomsLaunch)> {
     let room = |id: &str| crate::RoomsLaunch {
         room: Some(id.to_owned()),
         ..crate::RoomsLaunch::default()
+    };
+    let composer = |state: ComposerLaunch| crate::RoomsLaunch {
+        composer: Some(state),
+        ..room(FAMILY_ROOM)
     };
     vec![
         ("room list", crate::RoomsLaunch::default()),
@@ -287,6 +292,28 @@ fn rooms_launches() -> Vec<(&'static str, crate::RoomsLaunch)> {
         ("not encrypted", room(HOMEWORK_ROOM)),
         ("empty room", room(EMPTY_ROOM)),
         ("invitation", room(INVITE_ROOM)),
+        ("composer reply", composer(ComposerLaunch::Reply)),
+        ("composer edit", composer(ComposerLaunch::Edit)),
+        (
+            "composer mentions",
+            composer(ComposerLaunch::Mention("thanks @".to_owned())),
+        ),
+        ("composer attachment", composer(ComposerLaunch::Attachment)),
+        ("composer too large", composer(ComposerLaunch::TooLarge)),
+        (
+            "message actions",
+            crate::RoomsLaunch {
+                message_actions: true,
+                ..room(FAMILY_ROOM)
+            },
+        ),
+        (
+            "delete dialog",
+            crate::RoomsLaunch {
+                delete_prompt: true,
+                ..room(FAMILY_ROOM)
+            },
+        ),
         (
             "members",
             crate::RoomsLaunch {
@@ -389,6 +416,78 @@ fn every_rooms_screen_names_every_control(cx: &mut TestAppContext) {
                         .any(|label| label.contains("not end-to-end encrypted")),
                     "{entries:?}"
                 );
+            }
+            "composer reply" | "composer edit" => {
+                assert!(has(&entries, Role::Group, "Write a message"), "{screen}");
+                assert!(
+                    audit::labels(&entries, Role::MultilineTextInput)
+                        .contains(&"Message Smith family"),
+                    "{screen}: {entries:?}"
+                );
+                for button in ["Attach a file", "Send"] {
+                    assert!(has(&entries, Role::Button, button), "{screen}: {button}");
+                }
+                if screen == "composer reply" {
+                    assert!(
+                        audit::labels(&entries, Role::Group)
+                            .iter()
+                            .any(|label| label.starts_with("Replying to ")),
+                        "{entries:?}"
+                    );
+                    assert!(has(&entries, Role::Button, "Cancel the reply"));
+                }
+                if screen == "composer edit" {
+                    assert!(has(&entries, Role::Button, "Cancel the edit"));
+                }
+            }
+            "composer mentions" => {
+                assert!(
+                    has(&entries, Role::ListBox, "People to mention"),
+                    "{entries:?}"
+                );
+                assert!(
+                    audit::labels(&entries, Role::ListBoxOption)
+                        .iter()
+                        .any(|label| label.starts_with("Dad, 1 of")),
+                    "{entries:?}"
+                );
+            }
+            "composer attachment" => {
+                assert!(has(&entries, Role::List, "Files to send"), "{entries:?}");
+                assert!(has(&entries, Role::Button, "Remove Grandad's 80th.pdf"));
+            }
+            "composer too large" => {
+                assert!(
+                    audit::labels(&entries, Role::Alert)
+                        .iter()
+                        .any(|label| label.starts_with("That file is 14 MB")),
+                    "{entries:?}"
+                );
+            }
+            "message actions" => {
+                assert!(
+                    has(&entries, Role::Toolbar, "Actions for your message"),
+                    "{entries:?}"
+                );
+                assert!(has(&entries, Role::Toolbar, "Quick reactions"));
+                for button in [
+                    "React to your message",
+                    "Reply to your message",
+                    "Edit your message",
+                    "Delete your message",
+                    "React with 👍",
+                ] {
+                    assert!(has(&entries, Role::Button, button), "{button}: {entries:?}");
+                }
+            }
+            "delete dialog" => {
+                assert!(
+                    has(&entries, Role::Dialog, "Delete this message?"),
+                    "{entries:?}"
+                );
+                for button in ["Cancel", "Delete"] {
+                    assert!(has(&entries, Role::Button, button), "{button}");
+                }
             }
             "invitation" => {
                 assert!(has(&entries, Role::Heading, "Join Cousins?"));

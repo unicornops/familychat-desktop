@@ -71,7 +71,7 @@ mod widgets;
 #[cfg(test)]
 mod view_tests;
 
-pub use rooms::RoomsLaunch;
+pub use rooms::{ComposerLaunch, RoomsLaunch};
 pub use shell::ShellView;
 
 use crate::components::title_bar::TRAFFIC_LIGHT_POSITION;

@@ -20,6 +20,8 @@ use gpui::{
 };
 use tokio::sync::watch;
 
+use familychat_actions::ComposerState;
+
 use crate::a11y::{A11yFlags, AccessibleExt, Politeness};
 use crate::components::{Banner, BannerTone, Button, ComponentTheme, ToastHost};
 use crate::rooms::{RoomsLaunch, RoomsView};
@@ -109,9 +111,15 @@ impl SignedInView {
         };
         let banner = tone.map(|tone| {
             let message = sync.message().unwrap_or_default();
+            // A curfew's banner says what the person sees: "Chat is
+            // paused" (the composer is read-only meanwhile).
+            let title = match sync {
+                SyncState::Suspended { .. } => ComposerState::PAUSED_TITLE,
+                other => other.label(),
+            };
             Banner::new("signed-in-sync", message)
                 .tone(tone)
-                .title(sync.label())
+                .title(title)
                 .when(can_retry, |banner| {
                     banner.action(
                         Button::new("signed-in-retry", "Try again")

@@ -271,7 +271,9 @@ impl ComposerState {
     pub fn placeholder(self, room_name: &str) -> String {
         match self {
             Self::Writable => format!("Message {room_name}"),
-            Self::Paused => "Chat is paused. You can read, but not send.".to_owned(),
+            Self::Paused => {
+                "Chat is paused. Messages can't be sent until the pause ends.".to_owned()
+            }
             Self::NotJoined => "Join the room to write in it.".to_owned(),
         }
     }
@@ -562,10 +564,21 @@ impl Actions {
         })
     }
 
-    async fn size_allowed(&self, source: &FileSource) -> Result<(), Refusal> {
+    /// The same check as [`Self::check_file`], answering instead of
+    /// reporting: the file's size when the server takes it, or why not.
+    /// A frontend shows a file as pending only once this says yes.
+    pub fn file_allowed(
+        &self,
+        source: FileSource,
+    ) -> Pin<Box<dyn Future<Output = Result<u64, Refusal>> + Send + 'static>> {
+        let this = self.clone();
+        Box::pin(async move { this.size_allowed(&source).await })
+    }
+
+    async fn size_allowed(&self, source: &FileSource) -> Result<u64, Refusal> {
         let size = source.size().map_err(|_| Refusal::Unreadable)?;
         let limits = self.limits().await?;
-        files::check_size(size, &limits)
+        files::check_size(size, &limits).map(|()| size)
     }
 
     async fn limits(&self) -> Result<familychat_core::messaging::MediaLimits, Refusal> {

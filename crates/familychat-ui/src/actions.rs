@@ -14,6 +14,7 @@
 //! | `Shell` | the window root |
 //! | `Signin` | the sign-in screens |
 //! | `Rooms` | the room list, the open room and its timeline |
+//! | `Composer` | the open room's message field and its files (`showing_mentions` while the mention list shows) |
 //! | `CommandPalette` | the command palette's search field and results |
 //! | `Modal`, `Menu` | an open dialog or menu (the components' own keys) |
 //! | `TextInput` | any text field (owned by the text input component) |
@@ -63,6 +64,24 @@ actions!(
         ShowInvites,
         /// Open the notification settings.
         NotificationSettings,
+        /// Move to the message field.
+        FocusComposer,
+        /// Pick files to send.
+        AttachFile,
+        /// Select the message above.
+        SelectPreviousMessage,
+        /// Select the message below.
+        SelectNextMessage,
+        /// Reply to the selected (or newest) message.
+        ReplyToMessage,
+        /// Edit the selected (or newest own) message.
+        EditMessage,
+        /// React to the selected (or newest) message.
+        ReactToMessage,
+        /// Delete the selected own message, after asking.
+        DeleteMessage,
+        /// Leave the open room, after asking.
+        LeaveRoom,
         /// Quit Family Chat.
         Quit,
         /// Hide Family Chat (macOS).

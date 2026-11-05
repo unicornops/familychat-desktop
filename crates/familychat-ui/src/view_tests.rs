@@ -33,6 +33,7 @@ use crate::{InitialView, LaunchOptions, ShellView, appearance_for, decorations_f
 
 mod a11y;
 mod forwarded_links;
+mod composer;
 mod hit_targets;
 mod notifications;
 mod perf;
