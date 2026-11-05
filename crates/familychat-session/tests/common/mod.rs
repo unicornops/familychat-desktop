@@ -205,3 +205,61 @@ pub fn assert_not_in_files(dir: &Path, needle: &str) -> Result<u64> {
     }
     Ok(scanned)
 }
+
+/// A `width` by `height` RGB PNG whose pixels are a gradient, built by
+/// hand (stored deflate blocks, no compression), so the tests need no
+/// image encoder.
+pub fn png(width: u32, height: u32) -> Vec<u8> {
+    fn crc32(bytes: &[u8]) -> u32 {
+        let mut crc = 0xFFFF_FFFFu32;
+        for byte in bytes {
+            crc ^= u32::from(*byte);
+            for _ in 0..8 {
+                crc = if crc & 1 == 1 {
+                    (crc >> 1) ^ 0xEDB8_8320
+                } else {
+                    crc >> 1
+                };
+            }
+        }
+        !crc
+    }
+    fn chunk(out: &mut Vec<u8>, kind: &[u8; 4], data: &[u8]) {
+        out.extend_from_slice(&u32::try_from(data.len()).unwrap_or(0).to_be_bytes());
+        let mut typed = kind.to_vec();
+        typed.extend_from_slice(data);
+        out.extend_from_slice(&typed);
+        out.extend_from_slice(&crc32(&typed).to_be_bytes());
+    }
+    let mut raw = Vec::new();
+    for y in 0..height {
+        raw.push(0); // No filter.
+        for x in 0..width {
+            raw.extend_from_slice(&[(x * 40) as u8, (y * 40) as u8, 0x80]);
+        }
+    }
+    let mut zlib = vec![0x78, 0x01];
+    let blocks: Vec<&[u8]> = raw.chunks(0xFFFF).collect();
+    for (index, block) in blocks.iter().enumerate() {
+        zlib.push(u8::from(index + 1 == blocks.len()));
+        let length = u16::try_from(block.len()).unwrap_or(0);
+        zlib.extend_from_slice(&length.to_le_bytes());
+        zlib.extend_from_slice(&(!length).to_le_bytes());
+        zlib.extend_from_slice(block);
+    }
+    let (mut a, mut b) = (1u32, 0u32);
+    for byte in &raw {
+        a = (a + u32::from(*byte)) % 65_521;
+        b = (b + a) % 65_521;
+    }
+    zlib.extend_from_slice(&((b << 16) | a).to_be_bytes());
+    let mut ihdr = Vec::new();
+    ihdr.extend_from_slice(&width.to_be_bytes());
+    ihdr.extend_from_slice(&height.to_be_bytes());
+    ihdr.extend_from_slice(&[8, 2, 0, 0, 0]);
+    let mut out = b"\x89PNG\r\n\x1a\n".to_vec();
+    chunk(&mut out, b"IHDR", &ihdr);
+    chunk(&mut out, b"IDAT", &zlib);
+    chunk(&mut out, b"IEND", &[]);
+    out
+}
