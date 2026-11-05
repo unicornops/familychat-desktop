@@ -56,7 +56,7 @@ rust-embed = { version = "8", features = ["interpolate-folder-path"] }
 # `^0.40.2`, libsqlite3-sys 0.38): move it only with the Matrix crates.
 # `bundled` builds SQLite from source on every OS, as matrix-sdk's
 # `bundled-sqlite` will from Phase 3.
-rusqlite = { version = "0.40.2", features = ["bundled"] }
+rusqlite = { version = "0.41.1", features = ["bundled"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"
