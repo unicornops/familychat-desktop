@@ -48,6 +48,10 @@ use tokio::sync::{mpsc, watch};
 /// arrive.
 const WAIT: Duration = Duration::from_secs(90);
 
+/// How long a request to confirm a device waits for the other device
+/// before it is cancelled and sent again.
+const ASK_AGAIN: Duration = Duration::from_secs(15);
+
 fn harness() -> Result<HomeserverHarness> {
     HomeserverHarness::connect()
 }
@@ -444,15 +448,50 @@ async fn two_devices_verify_each_other_by_emoji_and_history_decrypts() -> Result
     // devices it knows.
     knows_a_signed_sibling(&second).await?;
     let mut incoming = first.session.verification_requests();
-    let ours = second
-        .session
-        .verify_this_device(&second.key)
-        .await
-        .context("verify_this_device answers")??;
-    let (account, theirs) = tokio::time::timeout(WAIT, incoming.recv())
-        .await
-        .context("no request reached the first device")?
-        .context("the requests stopped")?;
+    // matrix-sdk 0.19.1 drops a request from a device the receiving device
+    // has no keys for yet ("Could not retrieve the device data for the
+    // incoming verification request, ignoring it"), and the first device
+    // learns the new device's keys only when its sync reports the device
+    // list change. So ask again, as a person would after cancelling, until
+    // the request gets through or the wait runs out.
+    let deadline = tokio::time::Instant::now() + WAIT;
+    let mut asked = 0;
+    let (ours, account, theirs) = loop {
+        asked += 1;
+        let ours = second
+            .session
+            .verify_this_device(&second.key)
+            .await
+            .context("verify_this_device answers")??;
+        match tokio::time::timeout(ASK_AGAIN, incoming.recv()).await {
+            Ok(received) => {
+                let (account, theirs) = received.context("the requests stopped")?;
+                break (ours, account, theirs);
+            }
+            Err(_) if tokio::time::Instant::now() < deadline => {
+                ours.answer(VerificationAnswer::Cancel);
+            }
+            Err(_) => {
+                // Say what the devices logged about verification, so a
+                // failure shows whether the request was sent, received or
+                // dropped.
+                let seen: Vec<String> = log_text()
+                    .lines()
+                    .filter(|line| {
+                        let line = line.to_lowercase();
+                        line.contains("verif")
+                            || line.contains("to-device")
+                            || line.contains("to_device")
+                    })
+                    .map(str::to_owned)
+                    .collect();
+                bail!(
+                    "no request reached the first device in {asked} tries within {WAIT:?}; the verification log: {seen:#?}"
+                );
+            }
+        }
+    };
+    eprintln!("the verification request got through on try {asked}");
     ensure!(account == first.key, "the request is for the first account");
     step(&theirs, "the incoming request", |step| {
         *step == VerificationStep::Incoming
