@@ -216,6 +216,7 @@ jobs:
             # every name it refuses. The Egress check step fails the build
             # on anything else.
             - name: Start the egress proxy
+              id: egress-proxy
               run: |
                   egress_dir="${PWD}/target/homeserver-harness/egress"
                   mkdir -p "${egress_dir}"
@@ -296,7 +297,10 @@ jobs:
             # homeservers in the proxy's log, the front end's access log or
             # the resolver's refusals, and on a proxy log with no harness
             # connection in it (the tests did not go through the proxy).
+            # It runs (and fails the build on its own) even when a live test
+            # failed first, once the proxy was up: whatever ran is checked.
             - name: Egress check
+              if: ${{ !cancelled() && steps.egress-proxy.outcome == 'success' }}
               run: scripts/check-egress.sh target/homeserver-harness/egress/proxy.log target/homeserver-harness/edge-logs/access.log target/homeserver-harness/egress/resolver.log
 
             - name: Homeserver harness logs
