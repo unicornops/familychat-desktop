@@ -5,12 +5,35 @@ edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
 publish = false
-description = "Family Chat's background runtime and, from Phase 3, its Matrix sessions"
+description = "Family Chat's background runtime and Matrix sessions: the account manager, sync, room lists and timelines"
 
 [dependencies]
 anyhow.workspace = true
 familychat-core = { path = "../familychat-core" }
+familychat-security = { path = "../familychat-security" }
+familychat-store = { path = "../familychat-store" }
+futures-util = { version = "0.3", default-features = false, features = ["std"] }
+matrix-sdk.workspace = true
+matrix-sdk-ui.workspace = true
+# Our own HTTP client for matrix-sdk (ADR 0005): the reqwest line it uses.
+reqwest.workspace = true
+thiserror.workspace = true
 tokio.workspace = true
+tracing.workspace = true
+zeroize.workspace = true
+
+[dev-dependencies]
+# The live tests' HTTP client trusts the harness CA and resolves only the
+# harness hosts; it is injected through `SessionConfig::http_client`, so
+# nothing in this crate trusts the CA itself (ADR 0004).
+familychat-test-support = { path = "../familychat-test-support", features = ["test-harness"] }
+serde_json.workspace = true
+tracing-subscriber.workspace = true
+# The mocked homeserver for the tests that need no harness.
+wiremock = "0.6.5"
+
+[[test]]
+name = "live_session"
 
 [lints]
 workspace = true

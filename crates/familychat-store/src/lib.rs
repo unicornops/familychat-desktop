@@ -11,8 +11,8 @@
 //! - The app store itself (`familychat.sqlite3`): SQLite with migrations,
 //!   identifying values encrypted with matrix-sdk's `StoreCipher`.
 //!
-//! The SDK's own stores (`accounts/<uuid>/sdk/`) are opened by
-//! `familychat-session` from Phase 3, with the passphrase
+//! The SDK's own stores (`accounts/<uuid>/sdk/` and `accounts/<uuid>/cache/`)
+//! are opened by `familychat-session`, with the passphrase
 //! [`Profile::account_store_passphrase`] gives.
 
 mod app_store;

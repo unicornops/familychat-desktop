@@ -7,5 +7,15 @@ rust-version.workspace = true
 publish = false
 description = "Family Chat's domain types and view models, shared by both frontends"
 
+[dependencies]
+# Matrix identifiers only (room, user and event ids), from the ruma line
+# matrix-sdk uses; no API, events or network (PLAN.md, section 5.1).
+ruma.workspace = true
+# The runtime-agnostic channels the session sends view models over
+# (oneshot, mpsc, watch): Tokio's sync primitives work on any executor, so
+# GPUI tasks await them and the terminal UI polls them. No runtime, timer
+# or I/O feature.
+tokio = { version = "1", default-features = false, features = ["sync"] }
+
 [lints]
 workspace = true

@@ -53,7 +53,7 @@ Each crate has one job, and only the frontends know about a UI toolkit
 | `familychat-ui` | the GPUI frontend | yes | no | no |
 | `familychat-tui` | the terminal frontend | no | yes | no |
 | `familychat-core` | identifiers, domain types and view models both frontends draw | no | no | no |
-| `familychat-session` | the background runtime; from Phase 3 the Matrix sessions | no | no | yes (Phase 3) |
+| `familychat-session` | the background runtime and the Matrix sessions (ADR 0005) | no | no | yes |
 | `familychat-theme` | Zed theme compatibility and the bundled themes | no | no | no |
 | `familychat-assets` | embedded icons and the Linux UI font | GPUI's `AssetSource` | no | no |
 
@@ -61,8 +61,8 @@ Later phases add `familychat-signin`, `-actions`, `-security`, `-store`,
 `-notify` and `-test-support` (PLAN.md, section 5.1). Phase 0 has only the
 seven above.
 
-Rules, enforced by review now and by a `cargo metadata` check in CI from
-Phase 3:
+Rules, enforced in CI by `scripts/check-dependency-boundaries.sh` from
+Phase 3 (ADR 0005):
 
 - `familychat-ui` and `familychat-tui` never depend on matrix-sdk, on
   matrix-sdk-ui, or on the other frontend's toolkit.

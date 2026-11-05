@@ -5,6 +5,7 @@ accepted = [
     "MIT",
     "BSD-2-Clause",
     "BSD-3-Clause",
+    "BSL-1.0",
     "ISC",
     "MPL-2.0",
     "NCSA",
@@ -33,6 +34,8 @@ ignore-dev-dependencies = true
 # so these are recorded here; keep each file's header notice when editing.
 #
 # - crates/familychat-theme, crates/familychat-assets, the BackgroundRuntime
+#   (crates/familychat-session/src/runtime.rs) and the retry backoff
+#   (crates/familychat-session/src/backoff.rs, from zmail-sync's backoff.rs)
 #   in crates/familychat-session, crates/familychat-ui/src/fonts.rs,
 #   crates/familychat-tui/src/terminal.rs and crates/familychat-app/build.rs
 #   are copied from Zmail (https://github.com/unicornops/zmail), Copyright

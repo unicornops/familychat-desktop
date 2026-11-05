@@ -64,6 +64,18 @@ only, standing in for the control panel's port-forward. Client traffic
 always goes through the front end, so Palpo's per-peer rate limits see one
 peer, as they see a family's edge proxy.
 
+Synapse's is published on `127.0.0.1:18009`, also for its admin API only
+(Phase 3): the script appends the harness's settings to the config
+Synapse generates (refresh tokens for logins that ask for them, with
+20-second access tokens, so the session tests see matrix-sdk rotate them;
+login and message rate limits raised, since every request comes from the
+front end), creates a Synapse admin with the image's
+`register_new_matrix_user` and the generated shared secret, and writes its
+token and the admin URL to the env file (`FAMILYCHAT_HARNESS_SYNAPSE_*`).
+`HomeserverHarness::new_synapse_user` creates Synapse users through
+`PUT /_synapse/admin/v2/users/{mxid}` and signs them in with a refresh
+token.
+
 ### The script
 
 `scripts/homeserver-harness.sh up|down|reset|env|mint-token|create-user|logs|ps`

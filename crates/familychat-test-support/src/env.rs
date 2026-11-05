@@ -28,6 +28,8 @@ const ADMIN_URL: &str = "FAMILYCHAT_HARNESS_ADMIN_URL";
 const ADMIN_USER: &str = "FAMILYCHAT_HARNESS_ADMIN_USER";
 const ADMIN_TOKEN: &str = "FAMILYCHAT_HARNESS_ADMIN_TOKEN";
 const REGISTRATION_TOKEN: &str = "FAMILYCHAT_HARNESS_REGISTRATION_TOKEN";
+const SYNAPSE_ADMIN_URL: &str = "FAMILYCHAT_HARNESS_SYNAPSE_ADMIN_URL";
+const SYNAPSE_ADMIN_TOKEN: &str = "FAMILYCHAT_HARNESS_SYNAPSE_ADMIN_TOKEN";
 
 /// Where the running harness is and how to reach it.
 ///
@@ -56,6 +58,10 @@ pub struct HarnessEnv {
     pub admin_user: String,
     admin_token: String,
     registration_token: String,
+    /// Synapse's admin API on loopback (plain HTTP), for creating Synapse
+    /// users.
+    pub synapse_admin_url: String,
+    synapse_admin_token: String,
 }
 
 impl HarnessEnv {
@@ -120,6 +126,8 @@ impl HarnessEnv {
             admin_user: get(ADMIN_USER)?,
             admin_token: get(ADMIN_TOKEN)?,
             registration_token: get(REGISTRATION_TOKEN)?,
+            synapse_admin_url: get(SYNAPSE_ADMIN_URL)?,
+            synapse_admin_token: get(SYNAPSE_ADMIN_TOKEN)?,
         };
         for (key, url) in [
             (HS1_URL, &env.hs1_url),
@@ -134,6 +142,8 @@ impl HarnessEnv {
             .with_context(|| format!("{SERVER_NAME} is not a bare host"))?;
         loopback_http(&env.admin_url)
             .with_context(|| format!("{ADMIN_URL} is not an http:// URL on loopback"))?;
+        loopback_http(&env.synapse_admin_url)
+            .with_context(|| format!("{SYNAPSE_ADMIN_URL} is not an http:// URL on loopback"))?;
         Ok(env)
     }
 
@@ -161,6 +171,11 @@ impl HarnessEnv {
     pub fn registration_token(&self) -> &str {
         &self.registration_token
     }
+
+    /// The Synapse admin's access token, for Synapse's admin API.
+    pub fn synapse_admin_token(&self) -> &str {
+        &self.synapse_admin_token
+    }
 }
 
 impl fmt::Debug for HarnessEnv {
@@ -178,6 +193,8 @@ impl fmt::Debug for HarnessEnv {
             .field("admin_user", &self.admin_user)
             .field("admin_token", &"<redacted>")
             .field("registration_token", &"<redacted>")
+            .field("synapse_admin_url", &self.synapse_admin_url)
+            .field("synapse_admin_token", &"<redacted>")
             .finish()
     }
 }
@@ -271,6 +288,8 @@ export FAMILYCHAT_HARNESS_ADMIN_URL='http://127.0.0.1:18008'
 export FAMILYCHAT_HARNESS_ADMIN_USER='@panel-admin:hs1.familychat.test'
 export FAMILYCHAT_HARNESS_ADMIN_TOKEN='admin-secret'
 export FAMILYCHAT_HARNESS_REGISTRATION_TOKEN='registration-secret'
+export FAMILYCHAT_HARNESS_SYNAPSE_ADMIN_URL='http://127.0.0.1:18009'
+export FAMILYCHAT_HARNESS_SYNAPSE_ADMIN_TOKEN='synapse-secret'
 ";
 
     fn sample_env() -> HarnessEnv {
@@ -321,6 +340,7 @@ export FAMILYCHAT_HARNESS_REGISTRATION_TOKEN='registration-secret'
         let debug = format!("{:?}", sample_env());
         assert!(!debug.contains("admin-secret"), "{debug}");
         assert!(!debug.contains("registration-secret"), "{debug}");
+        assert!(!debug.contains("synapse-secret"), "{debug}");
         assert!(debug.contains("hs1.familychat.test"), "{debug}");
     }
 

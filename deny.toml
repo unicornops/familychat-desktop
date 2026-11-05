@@ -5,8 +5,10 @@ all-features = true
 version = 2
 # All "unmaintained" advisories in crates the pinned GPUI pulls in, the same
 # ones Zmail carries; none has a repo-local replacement. Each is re-checked
-# when the Zed pin moves (docs/upstream/zed.md).
+# when the Zed pin moves (docs/upstream/zed.md). The one matrix-sdk entry is
+# re-checked when the Matrix crates move.
 ignore = [
+    { id = "RUSTSEC-2026-0319", reason = "anymap2 is pulled by the pinned matrix-sdk 0.19.1 (its client's type map) with no maintained version in that release; re-check when the Matrix crates move" },
     { id = "RUSTSEC-2024-0436", reason = "paste is pulled transitively by the pinned GPUI image stack (image, exr, pulp) and has no safe repo-local replacement yet" },
     { id = "RUSTSEC-2026-0192", reason = "ttf-parser is pulled transitively by the pinned GPUI font stack (cosmic-text, fontdb) and has no safe repo-local replacement yet" },
     { id = "RUSTSEC-2026-0206", reason = "rustybuzz is pulled transitively by the pinned GPUI SVG stack (usvg) and has no safe repo-local replacement yet" },
@@ -25,6 +27,9 @@ allow = [
     "MIT",
     "BSD-2-Clause",
     "BSD-3-Clause",
+    # xxhash-rust, through matrix-sdk's growable-bloom-filter; the Boost
+    # licence is permissive and GPL-compatible.
+    "BSL-1.0",
     "ISC",
     "MPL-2.0",
     "NCSA",

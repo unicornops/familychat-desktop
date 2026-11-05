@@ -3,7 +3,8 @@
 //! ```text
 //! familychat.lock                  profile lock (exclusive)
 //! familychat.sqlite3               app store: accounts registry, preferences, UI state
-//! accounts/<account-uuid>/sdk/     matrix-sdk state, crypto and event cache stores (Phase 3)
+//! accounts/<account-uuid>/sdk/     matrix-sdk state and crypto stores
+//! accounts/<account-uuid>/cache/   matrix-sdk event cache and media stores
 //! logs/                            redacted logs, crash.log
 //! unreadable-<time>/               data moved aside by "start over"
 //! ```
@@ -91,9 +92,15 @@ impl DataDir {
         self.accounts_dir().join(account.to_string())
     }
 
-    /// `accounts/<uuid>/sdk/`, for matrix-sdk's stores.
+    /// `accounts/<uuid>/sdk/`, for matrix-sdk's state and crypto stores.
     pub fn account_sdk_dir(&self, account: AccountId) -> PathBuf {
         self.account_dir(account).join("sdk")
+    }
+
+    /// `accounts/<uuid>/cache/`, for matrix-sdk's event cache and media
+    /// stores: encrypted like the others, and safe to delete.
+    pub fn account_cache_dir(&self, account: AccountId) -> PathBuf {
+        self.account_dir(account).join("cache")
     }
 
     /// `logs/`.
@@ -245,6 +252,10 @@ mod tests {
         assert_eq!(
             dir.account_sdk_dir(id),
             Path::new("/profile/accounts/0b5c2a1e-7f3d-4c2b-9a8e-1d2c3b4a5f60/sdk")
+        );
+        assert_eq!(
+            dir.account_cache_dir(id),
+            Path::new("/profile/accounts/0b5c2a1e-7f3d-4c2b-9a8e-1d2c3b4a5f60/cache")
         );
     }
 }

@@ -47,7 +47,10 @@ services:
       - "127.0.0.1:${FAMILYCHAT_HARNESS_ADMIN_PORT:-18008}:8008"
 
   # Synapse, pinned, for "any homeserver" coverage. Its config is made by
-  # the image's own `generate` mode into the synapse-data volume.
+  # the image's own `generate` mode into the synapse-data volume, and the
+  # script appends the harness's settings (refresh tokens, rate limits).
+  # Its plain HTTP listener is published on loopback for its admin API
+  # only, as Palpo's is; client traffic goes through the edge.
   synapse:
     image: matrixdotorg/synapse:v1.164.2@sha256:f0df87cff259872637b4b5e5174b9977e5e3046dd421505407803b5e45c5f842
     environment:
@@ -55,6 +58,8 @@ services:
       SYNAPSE_REPORT_STATS: "no"
     volumes:
       - synapse-data:/data
+    ports:
+      - "127.0.0.1:${FAMILYCHAT_HARNESS_SYNAPSE_ADMIN_PORT:-18009}:8008"
 
   # The TLS front end: one nginx serving every harness host on 8443 with a
   # certificate from the throwaway CA the script makes on every `up`.

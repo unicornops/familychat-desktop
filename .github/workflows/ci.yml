@@ -55,7 +55,7 @@ jobs:
                           workspace_checks=true
                         fi
                         ;;
-                      about.toml|about.hbs|deny.toml|scripts/homeserver-harness.sh|scripts/check-release-features.sh)
+                      about.toml|about.hbs|deny.toml|scripts/homeserver-harness.sh|scripts/check-release-features.sh|scripts/check-dependency-boundaries.sh)
                         workspace_checks=true
                         ;;
                       docker/homeserver-harness/*)
@@ -145,8 +145,14 @@ jobs:
             - name: Release builds never enable the test harness
               run: scripts/check-release-features.sh
 
+            # ADR 0001 and PLAN.md section 5.1: the frontends never depend on
+            # the Matrix SDK or each other's toolkit, and familychat-core
+            # exposes no SDK type.
+            - name: Dependency boundaries
+              run: scripts/check-dependency-boundaries.sh
+
             - name: Lint the scripts
-              run: shellcheck scripts/homeserver-harness.sh scripts/check-release-features.sh scripts/keychain-session.sh
+              run: shellcheck scripts/homeserver-harness.sh scripts/check-release-features.sh scripts/check-dependency-boundaries.sh scripts/keychain-session.sh
 
             # The live homeserver harness (ADR 0004): Palpo at Family Chat's
             # image with its Postgres sidecar, Synapse, and the TLS front end.
@@ -173,6 +179,13 @@ jobs:
             - name: Live homeserver harness tests
               timeout-minutes: 10
               run: cargo test -p familychat-test-support --test live_homeserver_harness --locked -- --ignored --nocapture
+
+            # The Matrix session against the harness (ADR 0005): restore,
+            # sync, rooms, the timeline and back-pagination on Palpo, the
+            # suspended state, and refresh-token rotation on Synapse.
+            - name: Live session tests
+              timeout-minutes: 15
+              run: cargo test -p familychat-session --test live_session --locked -- --ignored --nocapture
 
             - name: Homeserver harness logs
               if: failure()
