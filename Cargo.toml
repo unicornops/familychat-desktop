@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "crates/familychat-actions",
     "crates/familychat-app",
     "crates/familychat-assets",
     "crates/familychat-core",

@@ -9,6 +9,9 @@ description = "Family Chat's GPUI desktop frontend"
 
 [dependencies]
 anyhow.workspace = true
+# What the person does in a room (ADR 0012): sending, replies, edits,
+# reactions, files, invitations and drafts, GPUI-free and SDK-free.
+familychat-actions = { path = "../familychat-actions" }
 familychat-assets = { path = "../familychat-assets" }
 familychat-core = { path = "../familychat-core" }
 # What a notification says, coalesced per room and capped (ADR 0013).

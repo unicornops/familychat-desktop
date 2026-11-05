@@ -21,12 +21,18 @@ use matrix_sdk_ui::{RoomListService, Timeline};
 use tokio::sync::{Mutex, mpsc};
 use tracing::info;
 
-use crate::mapping::{list_diff, timeline_item};
+use crate::{
+    mapping::{list_diff, timeline_item},
+    messaging::OpenTimelines,
+};
 
-/// Opens the room's live timeline and starts the task that bridges it.
+/// Opens the room's live timeline and starts the task that bridges it. The
+/// timeline is registered in `open` while it runs, so messaging actions in
+/// the room work on it.
 pub(crate) async fn open(
     room: Room,
     service: Arc<RoomListService>,
+    open: OpenTimelines,
 ) -> Result<TimelineSubscription, SessionError> {
     service.set_room_subscriptions(&[room.room_id()]).await;
     let timeline = room
@@ -37,8 +43,10 @@ pub(crate) async fn open(
     let (commands, commands_rx) = mpsc::unbounded_channel();
     let own_user = room.own_user_id().to_owned();
     let room_id = room.room_id().to_owned();
+    let timeline = Arc::new(timeline);
+    open.insert(room_id.clone(), &timeline);
     tokio::spawn(async move {
-        run(Arc::new(timeline), own_user, updates_tx, commands_rx).await;
+        run(timeline, own_user, updates_tx, commands_rx).await;
         // The room's events no longer need to arrive in full.
         service.remove_room_subscriptions(&[&room_id]);
     });

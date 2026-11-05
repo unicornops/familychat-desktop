@@ -32,6 +32,7 @@ use crate::signin::{Page, SigninView};
 use crate::{InitialView, LaunchOptions, ShellView, appearance_for, decorations_for};
 
 mod a11y;
+mod composer;
 mod forwarded_links;
 mod hit_targets;
 mod notifications;

@@ -46,6 +46,7 @@ use crate::{
     backoff::Backoff,
     failure::Failure,
     media::AuthenticatedMediaFetcher,
+    messaging::OpenTimelines,
     notifications::{self, NotificationFeed},
 };
 
@@ -87,11 +88,12 @@ pub enum OpenError {
     Refused(String),
 }
 
-/// The parts of an open account the room list and timelines use.
+/// The parts of an open account the room list, timelines and actions use.
 #[derive(Clone)]
 pub(crate) struct Ready {
     pub(crate) client: Client,
     pub(crate) sync: Arc<SyncService>,
+    pub(crate) timelines: OpenTimelines,
 }
 
 /// An account and its supervisor. Dropping it stops the supervisor.
@@ -368,6 +370,7 @@ async fn open_client(
         Ready {
             client,
             sync: Arc::new(sync),
+            timelines: OpenTimelines::default(),
         },
         offline,
     ))
@@ -523,21 +526,58 @@ fn after_failure(
     }
 }
 
+/// Turns the send queue back on, and reads the server's upload limit
+/// once, when the sync reaches the server.
+fn on_running(client: &Client) {
+    let client = client.clone();
+    tokio::spawn(async move {
+        if !client.send_queue().is_enabled() {
+            info!("the connection is back; sending what was queued");
+        }
+        // Rooms whose own queue stopped after a failed send start again
+        // too: this wakes every room's queue.
+        client.send_queue().set_enabled(true).await;
+        if let Err(error) = client.load_or_fetch_max_upload_size().await {
+            info!(%error, "the server's upload limit couldn't be read yet");
+        }
+    });
+}
+
+/// After a send that failed but can be retried (the server couldn't be
+/// reached), turns the queue back on after `wait`, so the message goes
+/// once the server answers even if the sync never stopped.
+fn retry_sending_after(client: &Client, wait: Duration) {
+    let client = client.clone();
+    tokio::spawn(async move {
+        tokio::time::sleep(wait).await;
+        client.send_queue().set_enabled(true).await;
+    });
+}
+
 /// Keeps the account's sync going: starts the `SyncService`, reports its
 /// state, and after a failure waits as the failure says before starting it
 /// again (PLAN.md, section 5.6). The SDK's own offline mode is not used: it
 /// restarts the sync as soon as `/versions` answers, which for a suspended
 /// account (whose `/versions` works and whose every other request is
 /// refused) is a request loop.
+///
+/// It also keeps the send queue going (ADR 0012): the SDK stops a room's
+/// queue after a send fails, so the supervisor turns it back on when the
+/// sync reaches the server again, and after a backoff when a send fails
+/// while the sync keeps running. A send refused with `M_USER_SUSPENDED`
+/// is the account's pause showing on a send (a server that lets a paused
+/// account read): the account goes to `Suspended` like a refused sync.
 async fn supervise(id: AccountId, ready: Ready, shared: Arc<Shared>) {
     let mut offline = Backoff::new(OFFLINE_BACKOFF.0, OFFLINE_BACKOFF.1);
     let mut suspended = Backoff::new(SUSPENDED_BACKOFF.0, SUSPENDED_BACKOFF.1);
     let mut errors = Backoff::new(ERROR_BACKOFF.0, ERROR_BACKOFF.1);
+    let mut sending = Backoff::new(OFFLINE_BACKOFF.0, OFFLINE_BACKOFF.1);
     let mut sync_state = ready.sync.state();
     let mut list_state = ready.sync.room_list_service().state();
     let mut session_changes = ready.client.subscribe_to_session_changes();
     let mut room_updates = ready.client.subscribe_to_all_room_updates();
     shared.set_unread(notifications::unread_total(&ready.client));
+    let mut send_errors = ready.client.send_queue().subscribe_errors();
 
     loop {
         // A start after a failure begins a new attempt, so the account is
@@ -566,6 +606,10 @@ async fn supervise(id: AccountId, ready: Ready, shared: Arc<Shared>) {
                         offline.reset();
                         suspended.reset();
                         errors.reset();
+                        if shared.status.borrow().sync != SyncState::Running {
+                            sending.reset();
+                            on_running(&ready.client);
+                        }
                         shared.set_sync(SyncState::Running);
                     }
                     Some(_) => {}
@@ -575,6 +619,19 @@ async fn supervise(id: AccountId, ready: Ready, shared: Arc<Shared>) {
                     Ok(_) | Err(broadcast::error::RecvError::Lagged(_)) => {
                         shared.set_unread(notifications::unread_total(&ready.client));
                     }
+                    Err(broadcast::error::RecvError::Closed) => return,
+                },
+                error = send_errors.recv() => match error {
+                    Ok(error) => match Failure::from_sdk(&error.error) {
+                        Failure::Suspended => break Failure::Suspended,
+                        _ if error.is_recoverable => {
+                            let wait = sending.next_delay();
+                            info!(account = %id, ?wait, "a send failed; trying again later");
+                            retry_sending_after(&ready.client, wait);
+                        }
+                        other => info!(account = %id, failure = ?other, "a send was refused"),
+                    },
+                    Err(broadcast::error::RecvError::Lagged(_)) => {}
                     Err(broadcast::error::RecvError::Closed) => return,
                 },
                 change = session_changes.recv() => match change {

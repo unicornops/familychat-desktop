@@ -32,6 +32,7 @@ mod live;
 mod manager;
 mod mapping;
 mod media;
+mod messaging;
 mod notifications;
 mod room_list;
 mod runtime;

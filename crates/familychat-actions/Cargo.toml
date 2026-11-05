@@ -1,0 +1,37 @@
+[package]
+name = "familychat-actions"
+version = "0.0.1"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+description = "What a person does in a room, shared by Family Chat's frontends: sending with Markdown and mentions, replies, edits, reactions, deletions, receipts, typing, files without their location, invitations, new rooms and drafts (ADR 0012)"
+
+[dependencies]
+familychat-core = { path = "../familychat-core" }
+# The Matrix HTML sanitiser every formatted body we send passes through,
+# and taking the location out of pictures (`image_metadata`).
+familychat-security = { path = "../familychat-security" }
+# Markdown to Matrix HTML (`markdown`): ruma's own conversion
+# (`FormattedBody::markdown`, pulldown-cmark), on the ruma line matrix-sdk
+# uses. Its events are already in every build that has the SDK; nothing
+# here talks to a server.
+ruma = { workspace = true, features = ["events", "markdown"] }
+# The events channel a frontend may receive on (`Actions::channel`).
+tokio = { version = "1", default-features = false, features = ["sync"] }
+
+[dev-dependencies]
+anyhow.workspace = true
+familychat-session = { path = "../familychat-session" }
+familychat-store = { path = "../familychat-store" }
+# The fixture session for the offline tests, and the homeserver harness
+# (its client trusts only the harness CA) for the live ones.
+familychat-test-support = { path = "../familychat-test-support", features = ["fixtures", "test-harness"] }
+reqwest.workspace = true
+tokio = { version = "1", default-features = false, features = ["macros", "rt-multi-thread", "time"] }
+
+[[test]]
+name = "live_actions"
+
+[lints]
+workspace = true

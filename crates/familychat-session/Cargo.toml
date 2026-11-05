@@ -19,6 +19,9 @@ matrix-sdk.workspace = true
 # and moved with the other Matrix crates.
 matrix-sdk-base = { version = "=0.19.1", default-features = false, features = ["e2e-encryption"] }
 matrix-sdk-ui.workspace = true
+# The MIME type a file is sent with, as the SDK's attachment API takes it.
+# Already in the graph under matrix-sdk.
+mime = "0.3"
 # Our own HTTP client for matrix-sdk (ADR 0005): the reqwest line it uses.
 reqwest.workspace = true
 # A media handle is the source's JSON (the mxc address, and an encrypted

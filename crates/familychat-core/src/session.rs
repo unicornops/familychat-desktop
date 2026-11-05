@@ -22,12 +22,13 @@
 
 use std::{fmt, path::PathBuf, sync::Arc};
 
-use ruma::{OwnedUserId, RoomId};
+use ruma::{OwnedRoomId, OwnedUserId, RoomId};
 use tokio::sync::{mpsc, oneshot, watch};
 
 use crate::{
     diff::ListDiff,
     media::{DecodedImage, MediaError, MediaInfo},
+    messaging::{Draft, MediaLimits, NewRoom, RoomDone, RoomRequest, ServerDefaults},
     notifications::IncomingNotification,
     rooms::{RoomListCommand, RoomListFilter, RoomListLoading, RoomMember, RoomSummary},
     sync::AccountStatus,
@@ -69,6 +70,11 @@ pub enum SessionError {
     NotReady,
     /// The session has shut down.
     ShutDown,
+    /// The server refused because the account is paused
+    /// (`M_USER_SUSPENDED`: a Family Chat curfew).
+    Paused,
+    /// The server refused a file as too large (`M_TOO_LARGE`).
+    TooLarge,
     /// Something else failed.
     Failed(String),
 }
@@ -80,6 +86,10 @@ impl fmt::Display for SessionError {
             Self::UnknownRoom => f.write_str("That room isn't available."),
             Self::NotReady => f.write_str("That account isn't ready yet."),
             Self::ShutDown => f.write_str("Family Chat is closing."),
+            Self::Paused => f.write_str(
+                "Chat is paused for now, so nothing can be sent. It starts again when the pause ends.",
+            ),
+            Self::TooLarge => f.write_str("The server says that file is too large to send."),
             Self::Failed(message) => f.write_str(message),
         }
     }
@@ -261,8 +271,34 @@ pub trait SessionApi: Send + Sync {
     /// A room's joined and invited members.
     fn members(&self, account: &AccountKey, room: &RoomId) -> Reply<Vec<RoomMember>>;
 
-    /// Accepts (`accept`) or declines an invitation to `room`.
-    fn answer_invite(&self, account: &AccountKey, room: &RoomId, accept: bool) -> Reply<()>;
+    /// Does `request` in `room`: sends through the SDK's send queue
+    /// (local echo at once, retried when the connection comes back),
+    /// edits, reactions, deletions, receipts, typing, invitations and
+    /// leaving. `familychat-actions` makes the requests; a frontend goes
+    /// through it.
+    fn room_action(
+        &self,
+        account: &AccountKey,
+        room: &RoomId,
+        request: RoomRequest,
+    ) -> Reply<RoomDone>;
+
+    /// Makes a new room or direct chat, and answers with its id.
+    fn create_room(&self, account: &AccountKey, room: NewRoom) -> Reply<OwnedRoomId>;
+
+    /// What the account's server accepts as uploads, fetched once and
+    /// kept.
+    fn media_limits(&self, account: &AccountKey) -> Reply<MediaLimits>;
+
+    /// What the account's server says about new rooms (its well-known).
+    fn server_defaults(&self, account: &AccountKey) -> Reply<ServerDefaults>;
+
+    /// The draft kept for `room`, if any.
+    fn draft(&self, account: &AccountKey, room: &RoomId) -> Reply<Option<Draft>>;
+
+    /// Keeps `draft` for `room` (encrypted in the app store), or forgets
+    /// it (`None`).
+    fn save_draft(&self, account: &AccountKey, room: &RoomId, draft: Option<Draft>) -> Reply<()>;
 
     /// An image to draw: fetched from the account's homeserver through
     /// authenticated media (a thumbnail where the server or the sender
@@ -326,5 +362,10 @@ mod tests {
             "That account is not signed in."
         );
         assert_eq!(SessionError::Failed("x".to_owned()).to_string(), "x");
+        assert!(
+            SessionError::Paused
+                .to_string()
+                .starts_with("Chat is paused")
+        );
     }
 }

@@ -229,6 +229,16 @@ jobs:
               timeout-minutes: 15
               run: cargo test -p familychat-app --test live_tui_signin --locked -- --ignored --nocapture
 
+            # The messaging actions against the harness (ADR 0012): send,
+            # reply, edit, react and redact between two members; a message
+            # sent with the front end stopped goes when it is back; a paused
+            # account sends nothing until the pause ends; an over-limit file
+            # refused before any upload (the access log); a photo uploaded
+            # without its location; new direct chats encrypted.
+            - name: Live messaging tests
+              timeout-minutes: 15
+              run: cargo test -p familychat-actions --test live_actions --locked -- --ignored --nocapture
+
             - name: Homeserver harness logs
               if: failure()
               run: scripts/homeserver-harness.sh logs

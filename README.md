@@ -1,7 +1,7 @@
 # Family Chat Desktop
 
 > [!WARNING]
-> **Family Chat Desktop is alpha software and is in no way ready for real use.** Right now the window and the terminal UI sign you in and let you read your rooms: you cannot send messages yet. Expect bugs, missing features and breaking changes between releases. Use the Family Chat apps for iOS, Android or the web in the meantime.
+> **Family Chat Desktop is alpha software and is in no way ready for real use.** Right now the window signs you in and lets you read and write in your rooms (without device verification or key backup yet), and the terminal UI signs you in and lets you read them. Expect bugs, missing features and breaking changes between releases. Use the Family Chat apps for iOS, Android or the web in the meantime.
 
 Family Chat Desktop (`familychat`) is a native desktop chat client for macOS, Linux and Windows, written in Rust, with a graphical UI built on GPUI and a terminal UI built on ratatui. It is a standards-compliant Matrix client that works with any homeserver supporting what modern Matrix clients need, and its first job is to be the best way to use [Family Chat](https://safechat.family), the family-safe hosted Matrix service, including easy sign-in with a code from a parent.
 
@@ -61,6 +61,16 @@ Phase 6, rooms and the timeline in the window ([#7](https://github.com/unicornop
 - `matrix:` and `matrix.to` links open in the app; every other link shows its whole address and asks before your browser opens it, and warns when its text shows a different site
 - keyboard commands to move between rooms and unread rooms, jump to the oldest unread or the latest message, show the members and switch filters
 
+Phase 7, writing ([#8](https://github.com/unicornops/familychat-desktop/issues/8), [ADR 0012](./docs/adr/0012-messaging-actions-and-the-composer.md)):
+
+- a composer under each room: Enter sends, Shift+Enter starts a new line, and Markdown (**bold**, _italic_, `code`, lists, quotes) is sent as the formatted text Family Chat itself would show; `@` suggests the room's members
+- reply, edit and delete your messages, and react with a quick picker or by clicking a reaction; deleting a message and leaving a room ask first; each action is a keyboard command too
+- files from the attach button, the clipboard or a drop: one larger than your server takes (11 MB on Family Chat) is refused before anything is uploaded, and a photo's location is taken out before it is sent
+- a message written while offline waits and goes when the connection is back; what you were writing in a room is kept (encrypted) until you come back to it
+- during a Family Chat curfew the window says "Chat is paused" and the composer is read-only until the pause ends
+- the room hears when you are typing and how far you have read; new rooms and direct chats are encrypted unless your server says otherwise
+- all of it through `familychat-actions`, which the terminal UI will use too
+
 Phase 9, notifications, single instance and sign-in links ([#10](https://github.com/unicornops/familychat-desktop/issues/10), [ADR 0013](./docs/adr/0013-notifications-single-instance-and-sign-in-links.md)):
 
 - your computer's own notifications for new messages while Family Chat is open, for the rooms you aren't looking at: who wrote, where and what (or just "New message" if you turn the text off in Notification settings, Ctrl+Alt+N or Cmd+Option+N), one per room however many arrive, and never more than six a minute; clicking one opens the room
@@ -78,7 +88,7 @@ Phase 10, the terminal UI: sign-in and reading ([#11](https://github.com/unicorn
 - the mouse (click, scroll, drag to select and copy, as in Zellij), new messages in the status line with an optional bell (`--bell`), `NO_COLOR` and ASCII drawing (`--ascii`)
 - every name, message and file name from a server is filtered for escape sequences before it reaches your terminal
 
-Sending, encryption and the rest follow in the later phases; opening `familychat://` links straight from your browser needs the installers of Phase 12.
+Writing from the terminal (Phase 11), encryption and the rest follow in the later phases; opening `familychat://` links straight from your browser needs the installers of Phase 12.
 
 ## Building
 

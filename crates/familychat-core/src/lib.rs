@@ -26,6 +26,9 @@
 //!   ([`SettingsApi`](settings::SettingsApi));
 //! - [`requests`]: what reaches the running window from outside it (a
 //!   sign-in link from a second launch or the OS);
+//! - [`messaging`]: what a frontend asks the session to do in a room
+//!   (sends, edits, reactions, files, invitations, drafts), as
+//!   `familychat-actions` prepares it;
 //! - [`diff`]: [`ListDiff`](diff::ListDiff), the changes the room list and
 //!   timelines arrive as;
 //! - what the shell shows about itself.
@@ -36,6 +39,7 @@ pub mod fuzzy;
 pub mod identity;
 pub mod links;
 pub mod media;
+pub mod messaging;
 pub mod notifications;
 pub mod requests;
 pub mod rich_text;

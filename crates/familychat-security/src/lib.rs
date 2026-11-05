@@ -14,11 +14,15 @@
 //!   `formatted_body` into `familychat-core`'s rich-text tree (ADR 0007).
 //! - [`images`]: decoding message images within byte, size and frame
 //!   limits, never SVG.
+//! - [`image_metadata`]: taking the location (EXIF GPS, XMP) and camera
+//!   details out of a picture before it is sent, losslessly where the
+//!   format allows.
 //! - [`file_names`]: safe names for downloaded files.
 //! - [`terminal`]: the terminal sanitiser every server string goes through
 //!   before the terminal UI draws it (ADR 0008).
 
 pub mod file_names;
+pub mod image_metadata;
 pub mod images;
 pub mod keychain;
 pub mod logging;

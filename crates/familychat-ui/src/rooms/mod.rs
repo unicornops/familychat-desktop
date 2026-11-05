@@ -18,7 +18,16 @@
 //! The layout follows the window: below [`NARROW_BELOW`] it shows the list
 //! or the room, with a back button; from [`MEMBERS_BESIDE_FROM`] the member
 //! list sits beside the timeline, and below it covers the timeline.
+//!
+//! Taking part (Phase 7, ADR 0012): the open room has a [`ComposerView`]
+//! under its timeline, and everything the person does (send, reply, edit,
+//! react, delete, files, read receipts, typing, invitations, leaving) goes
+//! through one `familychat-actions` [`Actions`], whose events come back
+//! over a channel and are drawn here: a refused or failed send in the
+//! composer, anything else as a toast. Deleting a message and leaving a
+//! room ask first. While the account is paused the composer is read-only.
 
+mod composer;
 mod media;
 mod members;
 mod rich_text;
@@ -26,12 +35,14 @@ mod timeline;
 
 use std::{path::PathBuf, sync::Arc};
 
+use familychat_actions::{Action, ActionEvent, Actions, ComposerState, FileSource, Refusal};
 use familychat_core::{
     OwnedRoomId,
     links::{LinkAction, LinkPrompt, MatrixLink, classify},
     media::MediaInfo,
     rooms::{Encryption, RoomListFilter, RoomListLoading, RoomSummary},
     session::{AccountView, RoomListControls, SessionApi},
+    sync::AccountStatus,
     timeline::time_label,
 };
 use gpui::{
@@ -40,16 +51,21 @@ use gpui::{
     UniformListScrollHandle, Window, div, prelude::*, px, rgb, uniform_list,
 };
 
+pub(crate) use self::composer::{ComposerEvent, ComposerView, Target};
 pub(crate) use self::media::ImageCache;
 use self::members::{MEMBERS_WIDTH, MembersState, render_members};
+use self::timeline::MessageChoice;
 pub(crate) use self::timeline::TimelineView;
 pub(crate) use self::timeline::TimelineViewEvent;
 use self::timeline::encryption_notice;
 use crate::a11y::{A11yFlags, AccessibleExt, readable};
 use crate::actions::{
-    JumpToLatest, JumpToOldestUnread, NextRoom, NextUnreadRoom, PreviousRoom, PreviousUnreadRoom,
-    ShowAllRooms, ShowInvites, ShowPeople, ShowUnreadRooms, ToggleMemberList,
+    AttachFile, DeleteMessage, EditMessage, FocusComposer, JumpToLatest, JumpToOldestUnread,
+    LeaveRoom, NextRoom, NextUnreadRoom, PreviousRoom, PreviousUnreadRoom, ReactToMessage,
+    ReplyToMessage, SelectNextMessage, SelectPreviousMessage, ShowAllRooms, ShowInvites,
+    ShowPeople, ShowUnreadRooms, ToggleMemberList,
 };
+use crate::components::actions::Cancel;
 use crate::components::tooltip::Tooltip;
 use crate::components::{
     Avatar, Badge, BadgeTone, Banner, BannerTone, Button, ButtonSize, ComponentTheme, HitTargetExt,
@@ -87,6 +103,29 @@ pub struct RoomsLaunch {
     pub link: Option<(String, String)>,
     /// Open every folded run of room changes.
     pub expand_changes: bool,
+    /// The composer's state to show (the screenshot matrix).
+    pub composer: Option<ComposerLaunch>,
+    /// Select the newest message and open its quick reaction picker.
+    pub message_actions: bool,
+    /// Ask about deleting the account's newest message.
+    pub delete_prompt: bool,
+}
+
+/// A composer state to open on (`familychat launch-ui-fixture`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ComposerLaunch {
+    /// This text typed.
+    Text(String),
+    /// Replying to the newest message from someone else.
+    Reply,
+    /// Editing the account's newest message.
+    Edit,
+    /// This text typed, ending in an `@` query: the mention list shows.
+    Mention(String),
+    /// A file waiting to be sent.
+    Attachment,
+    /// A file over the server's limit was refused.
+    TooLarge,
 }
 
 /// A room came in front of the person (the shell marks its
@@ -97,7 +136,9 @@ pub(crate) struct RoomOpened(pub(crate) OwnedRoomId);
 /// The open room.
 struct OpenRoom {
     timeline: Entity<TimelineView>,
+    composer: Entity<ComposerView>,
     _events: Subscription,
+    _composer_events: Subscription,
 }
 
 /// The signed-in window's body.
@@ -126,7 +167,19 @@ pub(crate) struct RoomsView {
     /// A room a notification opened that the list doesn't hold.
     notified: Option<RoomSummary>,
     answering: Vec<OwnedRoomId>,
+    actions: Actions,
+    status: AccountStatus,
+    /// What the launch still has to do once the room's timeline loads.
+    pending_launch: Option<RoomsLaunch>,
+    delete_prompt: Option<(OwnedRoomId, MessageChoice)>,
+    delete_modal: ModalState,
+    leave_prompt: Option<RoomSummary>,
+    leave_modal: ModalState,
+    /// When the open room was last marked read.
+    last_read: Option<std::time::Instant>,
+    _status_task: Task<()>,
     _list_task: Task<()>,
+    _action_events: Task<()>,
     _loading_task: Task<()>,
     members_task: Task<()>,
     action_task: Task<()>,
@@ -149,6 +202,42 @@ impl RoomsView {
             .map(|launch| launch.filter)
             .unwrap_or_default();
         let images = cx.new(|_| ImageCache::new(session.clone(), account.key.clone()));
+        let (actions, mut action_events) = Actions::channel(session.clone(), account.key.clone());
+        let action_events = cx.spawn_in(window, async move |this, cx| {
+            while let Some(first) = action_events.recv().await {
+                let mut events = vec![first];
+                while let Ok(more) = action_events.try_recv() {
+                    events.push(more);
+                }
+                if this
+                    .update_in(cx, |this, window, cx| {
+                        this.action_events(events, window, cx)
+                    })
+                    .is_err()
+                {
+                    break;
+                }
+            }
+        });
+        let status_receiver = session.account_status(&account.key);
+        let status = status_receiver
+            .as_ref()
+            .map(|receiver| receiver.borrow().clone())
+            .unwrap_or_default();
+        let status_task = match status_receiver {
+            Some(mut receiver) => cx.spawn_in(window, async move |this, cx| {
+                while receiver.changed().await.is_ok() {
+                    let status = receiver.borrow_and_update().clone();
+                    if this
+                        .update_in(cx, |this, window, cx| this.set_status(status, window, cx))
+                        .is_err()
+                    {
+                        break;
+                    }
+                }
+            }),
+            None => Task::ready(()),
+        };
         let reply = session.room_list(&account.key, filter);
         let list_task = cx.spawn_in(window, async move |this, cx| {
             let subscription = match reply.await {
@@ -223,7 +312,17 @@ impl RoomsView {
             launch,
             notified: None,
             answering: Vec::new(),
+            actions,
+            status,
+            pending_launch: None,
+            delete_prompt: None,
+            delete_modal: ModalState::new(cx),
+            leave_prompt: None,
+            leave_modal: ModalState::new(cx),
+            last_read: None,
+            _status_task: status_task,
             _list_task: list_task,
+            _action_events: action_events,
             _loading_task: Task::ready(()),
             members_task: Task::ready(()),
             action_task: Task::ready(()),
@@ -286,6 +385,17 @@ impl RoomsView {
     }
 
     /// The open room's timeline.
+    pub(crate) fn composer(&self) -> Option<&Entity<ComposerView>> {
+        self.open.as_ref().map(|open| &open.composer)
+    }
+
+    /// The question about deleting a message, while it is open.
+    #[cfg_attr(not(test), allow(dead_code))]
+    pub(crate) fn delete_prompt(&self) -> Option<&MessageChoice> {
+        self.delete_prompt.as_ref().map(|(_, choice)| choice)
+    }
+
+    /// The open room's timeline.
     pub(crate) fn timeline(&self) -> Option<&Entity<TimelineView>> {
         self.open.as_ref().map(|open| &open.timeline)
     }
@@ -337,6 +447,11 @@ impl RoomsView {
                 .find(|room| Some(&room.room_id) == self.selected.as_ref())
                 .cloned()
         {
+            let state = ComposerState::of(&self.status, &room);
+            open.composer.update(cx, |composer, cx| {
+                composer.set_room(room.clone(), cx);
+                composer.set_state(state, window, cx);
+            });
             open.timeline
                 .update(cx, |timeline, cx| timeline.set_room(room, cx));
         }
@@ -362,9 +477,96 @@ impl RoomsView {
         {
             timeline.update(cx, |timeline, cx| timeline.expand_all_changes(cx));
         }
-        if let Some((href, text)) = launch.link {
-            self.open_link(&href, &text, window, cx);
+        if let Some((href, text)) = &launch.link {
+            self.open_link(href, text, window, cx);
         }
+        if let Some(open) = &self.open {
+            match &launch.composer {
+                Some(ComposerLaunch::Text(text) | ComposerLaunch::Mention(text)) => {
+                    let text = text.clone();
+                    open.composer
+                        .update(cx, |composer, cx| composer.set_text(&text, window, cx));
+                }
+                Some(ComposerLaunch::Attachment) => {
+                    open.composer.update(cx, |composer, cx| {
+                        composer.set_text("The photos from Saturday", window, cx);
+                        composer.add_file(
+                            FileSource::Bytes {
+                                name: "Grandad's 80th.pdf".to_owned(),
+                                data: Arc::from(vec![0u8; 2_516_582]),
+                            },
+                            cx,
+                        );
+                    });
+                }
+                Some(ComposerLaunch::TooLarge) => {
+                    open.composer.update(cx, |composer, cx| {
+                        composer.add_file(
+                            FileSource::Bytes {
+                                name: "Holiday video.mov".to_owned(),
+                                data: Arc::from(vec![0u8; 14_890_000]),
+                            },
+                            cx,
+                        );
+                    });
+                }
+                _ => {}
+            }
+        }
+        // The rest needs the timeline's messages.
+        if matches!(
+            launch.composer,
+            Some(ComposerLaunch::Reply | ComposerLaunch::Edit)
+        ) || launch.message_actions
+            || launch.delete_prompt
+        {
+            self.pending_launch = Some(launch);
+        }
+    }
+
+    /// The launch steps that need the open room's messages.
+    fn apply_pending_launch(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let Some(launch) = self.pending_launch.take() else {
+            return;
+        };
+        let Some(timeline) = self.timeline().cloned() else {
+            return;
+        };
+        match launch.composer {
+            Some(ComposerLaunch::Reply) => {
+                if let Some(choice) = timeline.read(cx).chosen(|own, _| !own) {
+                    self.reply_to(choice, window, cx);
+                }
+            }
+            Some(ComposerLaunch::Edit) => {
+                if let Some(choice) = timeline.read(cx).chosen(|_, editable| editable) {
+                    self.edit(choice, window, cx);
+                }
+            }
+            _ => {}
+        }
+        if launch.message_actions {
+            timeline.update(cx, |timeline, cx| {
+                timeline.select_step(-1, cx);
+                timeline.open_picker(None, cx);
+            });
+        }
+        if launch.delete_prompt
+            && let Some(choice) = timeline.read(cx).chosen(|own, _| own)
+        {
+            self.ask_to_delete(choice, window, cx);
+        }
+    }
+
+    fn set_status(&mut self, status: AccountStatus, window: &mut Window, cx: &mut Context<Self>) {
+        self.status = status;
+        if let Some(open) = &self.open {
+            let room = open.timeline.read(cx).room().clone();
+            let state = ComposerState::of(&self.status, &room);
+            open.composer
+                .update(cx, |composer, cx| composer.set_state(state, window, cx));
+        }
+        cx.notify();
     }
 
     /// Shows another set of rooms.
@@ -405,8 +607,13 @@ impl RoomsView {
             });
         self.notified = None;
         cx.emit(RoomOpened(room.clone()));
+        if let Some(open) = &self.open {
+            open.composer
+                .update(cx, |composer, cx| composer.save_draft_now(cx));
+        }
         self.selected = Some(room.clone());
         self.open = None;
+        self.last_read = None;
         if let Some(index) = self
             .rooms
             .iter()
@@ -420,14 +627,31 @@ impl RoomsView {
                 let session = self.session.clone();
                 let account = self.account.key.clone();
                 let images = self.images.clone();
-                let timeline =
-                    cx.new(|cx| TimelineView::new(session, account, summary, images, window, cx));
+                let timeline = {
+                    let summary = summary.clone();
+                    cx.new(|cx| TimelineView::new(session, account, summary, images, window, cx))
+                };
                 let events = cx.subscribe_in(&timeline, window, |this, _, event, window, cx| {
                     this.timeline_event(event.clone(), window, cx);
                 });
+                let state = ComposerState::of(&self.status, &summary);
+                let composer = {
+                    let session = self.session.clone();
+                    let account = self.account.key.clone();
+                    let actions = self.actions.clone();
+                    cx.new(|cx| {
+                        ComposerView::new(session, account, summary, actions, state, window, cx)
+                    })
+                };
+                let composer_events =
+                    cx.subscribe_in(&composer, window, |this, _, event, window, cx| {
+                        this.composer_event(event.clone(), window, cx);
+                    });
                 self.open = Some(OpenRoom {
                     timeline,
+                    composer,
                     _events: events,
+                    _composer_events: composer_events,
                 });
                 if self.members_open {
                     self.load_members(cx);
@@ -482,31 +706,171 @@ impl RoomsView {
             return;
         }
         self.answering.push(room.clone());
-        let name = self
-            .rooms
-            .iter()
-            .find(|summary| summary.room_id == room)
-            .map(|summary| summary.name.clone())
-            .unwrap_or_default();
-        let reply = self.session.answer_invite(&self.account.key, &room, accept);
-        self.action_task = cx.spawn(async move |this, cx| {
-            let result = reply
-                .await
-                .unwrap_or(Err(familychat_core::session::SessionError::ShutDown));
-            let _ = this.update(cx, |this, cx| {
-                this.answering.retain(|answering| answering != &room);
-                let toast = match result {
-                    Ok(()) if accept => {
-                        Toast::new(format!("You joined {name}.")).kind(ToastKind::Success)
-                    }
-                    Ok(()) => Toast::new(format!("You declined the invitation to {name}.")),
-                    Err(error) => Toast::new(error.to_string()).kind(ToastKind::Error),
-                };
-                this.toast(toast, cx);
-                cx.notify();
-            });
-        });
+        cx.background_spawn(self.actions.answer_invite(&room, accept))
+            .detach();
         cx.notify();
+    }
+
+    /// What the actions reported, a burst at a time.
+    fn action_events(
+        &mut self,
+        events: Vec<ActionEvent>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        for event in events {
+            self.action_event(event, window, cx);
+        }
+        cx.notify();
+    }
+
+    fn room_name(&self, room: &OwnedRoomId) -> String {
+        self.rooms
+            .iter()
+            .find(|summary| &summary.room_id == room)
+            .map(|summary| summary.name.clone())
+            .unwrap_or_default()
+    }
+
+    fn action_event(&mut self, event: ActionEvent, _window: &mut Window, cx: &mut Context<Self>) {
+        if matches!(
+            event,
+            ActionEvent::Refused {
+                refusal: Refusal::Empty,
+                ..
+            }
+        ) {
+            return;
+        }
+        let answered = match &event {
+            ActionEvent::Done {
+                room: Some(room),
+                action,
+            }
+            | ActionEvent::Failed {
+                room: Some(room),
+                action,
+                ..
+            }
+            | ActionEvent::Refused {
+                room: Some(room),
+                action,
+                ..
+            } if matches!(action, Action::AcceptInvite | Action::DeclineInvite) => {
+                Some(room.clone())
+            }
+            _ => None,
+        };
+        if let Some(room) = &answered {
+            self.answering.retain(|answering| answering != room);
+        }
+        let open_room = self.selected.clone();
+        let composer = self.composer().cloned();
+        match &event {
+            ActionEvent::DraftLoaded { room, draft } => {
+                if open_room.as_ref() == Some(room)
+                    && let Some(composer) = composer
+                {
+                    let target = draft
+                        .as_ref()
+                        .and_then(|draft| draft.reply_to.clone())
+                        .map(|event_id| {
+                            let found = self
+                                .timeline()
+                                .and_then(|timeline| timeline.read(cx).choice_for_event(&event_id));
+                            Target::Reply {
+                                event_id,
+                                sender: found
+                                    .as_ref()
+                                    .map(|choice| choice.sender.clone())
+                                    .unwrap_or_else(|| "a message".to_owned()),
+                                text: found
+                                    .map(|choice| composer::one_line(&choice.text))
+                                    .unwrap_or_default(),
+                            }
+                        })
+                        .unwrap_or(Target::New);
+                    let draft = draft.clone();
+                    composer.update(cx, |composer, cx| {
+                        composer.apply_draft(draft, target, _window, cx);
+                    });
+                }
+            }
+            ActionEvent::Failed {
+                room: Some(room),
+                action: Action::LoadDraft,
+                ..
+            } => {
+                // No draft to show, but what is typed now can be kept.
+                if open_room.as_ref() == Some(room)
+                    && let Some(composer) = composer
+                {
+                    composer.update(cx, |composer, cx| {
+                        composer.apply_draft(None, Target::New, _window, cx);
+                    });
+                }
+            }
+            ActionEvent::Refused {
+                room: Some(room),
+                action: Action::Send | Action::Reply | Action::Edit | Action::SendFile,
+                refusal,
+            } if open_room.as_ref() == Some(room) && *refusal != Refusal::Empty => {
+                if let Some(composer) = composer {
+                    let message = refusal.to_string();
+                    composer.update(cx, |composer, cx| composer.show_error(message, cx));
+                }
+            }
+            ActionEvent::Failed {
+                room: Some(room),
+                action: action @ (Action::Send | Action::Reply | Action::Edit | Action::SendFile),
+                ..
+            } if open_room.as_ref() == Some(room) => {
+                if let (Some(composer), Some(message)) = (composer, event.message()) {
+                    let _ = action;
+                    composer.update(cx, |composer, cx| composer.show_error(message, cx));
+                }
+            }
+            ActionEvent::Done {
+                room: Some(room),
+                action: Action::Leave,
+            } => {
+                let name = self.room_name(room);
+                if self.selected.as_ref() == Some(room) {
+                    self.selected = None;
+                    self.open = None;
+                }
+                self.toast(Toast::new(format!("You left {name}.")), cx);
+            }
+            ActionEvent::RoomCreated { room, .. } => {
+                let room = room.clone();
+                self.open_room(room, _window, cx);
+            }
+            ActionEvent::Done {
+                room: Some(room),
+                action: Action::AcceptInvite,
+            } => {
+                let name = self.room_name(room);
+                self.toast(
+                    Toast::new(format!("You joined {name}.")).kind(ToastKind::Success),
+                    cx,
+                );
+            }
+            ActionEvent::Done {
+                room: Some(room),
+                action: Action::DeclineInvite,
+            } => {
+                let name = self.room_name(room);
+                self.toast(
+                    Toast::new(format!("You declined the invitation to {name}.")),
+                    cx,
+                );
+            }
+            other => {
+                if let Some(message) = other.message() {
+                    self.toast(Toast::new(message).kind(ToastKind::Error), cx);
+                }
+            }
+        }
     }
 
     // -- Members ------------------------------------------------------------
@@ -559,6 +923,139 @@ impl RoomsView {
         match event {
             TimelineViewEvent::Link { href, text } => self.open_link(&href, &text, window, cx),
             TimelineViewEvent::Save(media) => self.save(media, window, cx),
+            TimelineViewEvent::Reply(choice) => self.reply_to(choice, window, cx),
+            TimelineViewEvent::Edit(choice) => self.edit(choice, window, cx),
+            TimelineViewEvent::React { target, key } => {
+                if let Some(room) = self.selected.clone() {
+                    cx.background_spawn(self.actions.toggle_reaction(&room, target, &key))
+                        .detach();
+                }
+            }
+            TimelineViewEvent::Delete(choice) => self.ask_to_delete(choice, window, cx),
+            TimelineViewEvent::ReadToEnd => {
+                self.mark_read(window, cx);
+                self.apply_pending_launch(window, cx);
+            }
+        }
+    }
+
+    /// The open room is read to its newest message: the read receipt and
+    /// marker move there (at most every two seconds, and only while the
+    /// window is in front).
+    fn mark_read(&mut self, window: &mut Window, _cx: &mut Context<Self>) {
+        if !window.is_window_active() {
+            return;
+        }
+        let Some(room) = self.selected.clone() else {
+            return;
+        };
+        let now = std::time::Instant::now();
+        if self
+            .last_read
+            .is_some_and(|last| now.duration_since(last) < std::time::Duration::from_secs(2))
+        {
+            return;
+        }
+        self.last_read = Some(now);
+        _cx.background_spawn(self.actions.mark_read(&room)).detach();
+    }
+
+    fn reply_to(&mut self, choice: MessageChoice, window: &mut Window, cx: &mut Context<Self>) {
+        let Some(event_id) = choice.target.event_id.clone() else {
+            self.toast(Toast::new("Wait until that message has been sent."), cx);
+            return;
+        };
+        if let Some(open) = &self.open {
+            let text = composer::one_line(&choice.text);
+            open.composer.update(cx, |composer, cx| {
+                composer.reply_to(event_id, choice.sender.clone(), text, window, cx);
+            });
+        }
+        self.dismiss_selection(cx);
+    }
+
+    fn edit(&mut self, choice: MessageChoice, window: &mut Window, cx: &mut Context<Self>) {
+        if let Some(open) = &self.open {
+            open.composer.update(cx, |composer, cx| {
+                composer.edit(choice.target.clone(), choice.text.clone(), window, cx);
+            });
+        }
+        self.dismiss_selection(cx);
+    }
+
+    fn dismiss_selection(&mut self, cx: &mut Context<Self>) {
+        if let Some(timeline) = self.timeline().cloned() {
+            timeline.update(cx, |timeline, cx| {
+                timeline.dismiss(cx);
+            });
+        }
+    }
+
+    fn ask_to_delete(
+        &mut self,
+        choice: MessageChoice,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let Some(room) = self.selected.clone() else {
+            return;
+        };
+        self.delete_prompt = Some((room, choice));
+        self.delete_modal.open(window, cx);
+        cx.notify();
+    }
+
+    fn close_delete_prompt(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.delete_prompt = None;
+        self.delete_modal.close(window, cx);
+        window.focus(&self.focus_handle, cx);
+        cx.notify();
+    }
+
+    /// Deletes the message the dialog asked about.
+    fn confirm_delete(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if let Some((room, choice)) = self.delete_prompt.clone() {
+            cx.background_spawn(self.actions.redact(&room, choice.target, None))
+                .detach();
+        }
+        self.close_delete_prompt(window, cx);
+    }
+
+    fn close_leave_prompt(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.leave_prompt = None;
+        self.leave_modal.close(window, cx);
+        window.focus(&self.focus_handle, cx);
+        cx.notify();
+    }
+
+    fn confirm_leave(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if let Some(room) = self.leave_prompt.clone() {
+            cx.background_spawn(self.actions.leave(&room.room_id))
+                .detach();
+        }
+        self.close_leave_prompt(window, cx);
+    }
+
+    fn composer_event(
+        &mut self,
+        event: ComposerEvent,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        match event {
+            ComposerEvent::Sent => {
+                if let Some(timeline) = self.timeline().cloned() {
+                    timeline.update(cx, |timeline, cx| timeline.jump_to_latest(cx));
+                }
+            }
+            ComposerEvent::EditLatest => {
+                let choice = self
+                    .timeline()
+                    .and_then(|timeline| timeline.read(cx).chosen(|_, editable| editable));
+                if let Some(choice) = choice {
+                    self.edit(choice, window, cx);
+                }
+            }
         }
     }
 
@@ -724,6 +1221,100 @@ impl RoomsView {
     fn toggle_members(&mut self, _: &ToggleMemberList, _: &mut Window, cx: &mut Context<Self>) {
         let open = !self.members_open;
         self.set_members_open(open, cx);
+    }
+
+    fn focus_composer(&mut self, _: &FocusComposer, window: &mut Window, cx: &mut Context<Self>) {
+        if let Some(composer) = self.composer().cloned() {
+            composer.update(cx, |composer, cx| composer.focus(window, cx));
+        }
+    }
+
+    fn attach_file(&mut self, _: &AttachFile, window: &mut Window, cx: &mut Context<Self>) {
+        if let Some(composer) = self.composer().cloned() {
+            composer.update(cx, |composer, cx| composer.pick_files(window, cx));
+        }
+    }
+
+    fn select_message(&mut self, step: isize, cx: &mut Context<Self>) {
+        if let Some(timeline) = self.timeline().cloned() {
+            timeline.update(cx, |timeline, cx| timeline.select_step(step, cx));
+        }
+    }
+
+    /// The message a keyboard command is about, or a toast saying why
+    /// there is none.
+    fn chosen(
+        &mut self,
+        accept: impl Fn(bool, bool) -> bool,
+        none: &str,
+        cx: &mut Context<Self>,
+    ) -> Option<MessageChoice> {
+        let choice = self
+            .timeline()
+            .and_then(|timeline| timeline.read(cx).chosen(accept));
+        if choice.is_none() {
+            self.toast(Toast::new(none.to_owned()), cx);
+        }
+        choice
+    }
+
+    fn reply_command(&mut self, _: &ReplyToMessage, window: &mut Window, cx: &mut Context<Self>) {
+        if let Some(choice) = self.chosen(|_, _| true, "There's no message to reply to.", cx) {
+            self.reply_to(choice, window, cx);
+        }
+    }
+
+    fn edit_command(&mut self, _: &EditMessage, window: &mut Window, cx: &mut Context<Self>) {
+        if let Some(choice) = self.chosen(
+            |_, editable| editable,
+            "Pick one of your messages to edit.",
+            cx,
+        ) {
+            self.edit(choice, window, cx);
+        }
+    }
+
+    fn react_command(&mut self, _: &ReactToMessage, _: &mut Window, cx: &mut Context<Self>) {
+        if let Some(timeline) = self.timeline().cloned() {
+            timeline.update(cx, |timeline, cx| timeline.open_picker(None, cx));
+        }
+    }
+
+    fn delete_command(&mut self, _: &DeleteMessage, window: &mut Window, cx: &mut Context<Self>) {
+        let selected_own = self.timeline().is_some_and(|timeline| {
+            let timeline = timeline.read(cx);
+            timeline.selected().is_some() && timeline.chosen(|own, _| own).is_some()
+        });
+        if !selected_own {
+            self.toast(Toast::new("Select one of your messages to delete it."), cx);
+            return;
+        }
+        if let Some(choice) = self.chosen(|own, _| own, "", cx) {
+            self.ask_to_delete(choice, window, cx);
+        }
+    }
+
+    fn leave_command(&mut self, _: &LeaveRoom, window: &mut Window, cx: &mut Context<Self>) {
+        let room = self
+            .selected
+            .as_ref()
+            .and_then(|selected| self.rooms.iter().find(|room| &room.room_id == selected))
+            .cloned();
+        if let Some(room) = room {
+            self.leave_prompt = Some(room);
+            self.leave_modal.open(window, cx);
+            cx.notify();
+        }
+    }
+
+    fn cancel(&mut self, _: &Cancel, _: &mut Window, cx: &mut Context<Self>) {
+        let dismissed = self
+            .timeline()
+            .cloned()
+            .is_some_and(|timeline| timeline.update(cx, |timeline, cx| timeline.dismiss(cx)));
+        if !dismissed {
+            cx.propagate();
+        }
     }
 
     // -- Rendering ----------------------------------------------------------
@@ -1233,7 +1824,64 @@ impl RoomsView {
                     this.toggle_members(&ToggleMemberList, window, cx);
                 })),
             )
+            .child(
+                IconButton::new("room-leave", "door-open", "Leave the room")
+                    .shortcut(primary_key("LeaveRoom"))
+                    .on_click(cx.listener(|this, _, window, cx| {
+                        this.leave_command(&LeaveRoom, window, cx);
+                    })),
+            )
             .into_any_element()
+    }
+
+    fn render_delete_prompt(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
+        let (_, choice) = self.delete_prompt.as_ref()?;
+        let preview = composer::one_line(&choice.text);
+        Some(
+            Modal::new("delete-prompt", self.delete_modal.focus_handle())
+                .title("Delete this message?")
+                .description("It goes for everyone in the room, and it can't be brought back.")
+                .width(px(440.0))
+                .child(readable("delete-preview", preview))
+                .footer(Button::new("delete-cancel", "Cancel").on_click(
+                    cx.listener(|this, _, window, cx| this.close_delete_prompt(window, cx)),
+                ))
+                .footer(
+                    Button::new("delete-confirm", "Delete")
+                        .icon("trash-2")
+                        .danger()
+                        .on_click(
+                            cx.listener(|this, _, window, cx| this.confirm_delete(window, cx)),
+                        ),
+                )
+                .on_dismiss(cx.listener(|this, _, window, cx| this.close_delete_prompt(window, cx)))
+                .into_any_element(),
+        )
+    }
+
+    fn render_leave_prompt(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
+        let room = self.leave_prompt.as_ref()?;
+        Some(
+            Modal::new("leave-prompt", self.leave_modal.focus_handle())
+                .title(format!("Leave {}?", room.name))
+                .description(
+                    "You won't see new messages here. Someone in the room can invite you back.",
+                )
+                .width(px(440.0))
+                .footer(Button::new("leave-cancel", "Cancel").on_click(
+                    cx.listener(|this, _, window, cx| this.close_leave_prompt(window, cx)),
+                ))
+                .footer(
+                    Button::new("leave-confirm", "Leave")
+                        .icon("door-open")
+                        .danger()
+                        .on_click(
+                            cx.listener(|this, _, window, cx| this.confirm_leave(window, cx)),
+                        ),
+                )
+                .on_dismiss(cx.listener(|this, _, window, cx| this.close_leave_prompt(window, cx)))
+                .into_any_element(),
+        )
     }
 
     fn render_invite(
@@ -1477,29 +2125,11 @@ impl RoomsView {
                             .children(timeline.map(|timeline| timeline.into_any_element()))
                             .into_any_element()
                     })
-                    .child(
-                        div()
-                            .flex()
-                            .flex_none()
-                            .items_center()
-                            .gap(px(SPACE_2))
-                            .px(px(SPACE_6))
-                            .py(px(SPACE_3))
-                            .border_t_1()
-                            .border_color(rgb(colors.border))
-                            .child(icon("info", ICON_SIZE_SM, colors.muted))
-                            .child(
-                                div()
-                                    .flex_1()
-                                    .min_w_0()
-                                    .type_style(TYPE_CAPTION)
-                                    .text_color(rgb(colors.muted))
-                                    .child(readable(
-                                        "room-read-only",
-                                        "Reading only for now: writing messages arrives in a \
-                                         later release of this alpha.",
-                                    )),
-                            ),
+                    .children(
+                        self.composer()
+                            .cloned()
+                            .filter(|_| !members_overlay)
+                            .map(|composer| composer.into_any_element()),
                     ),
             )
             .when(self.members_open && members_beside, |this| {
@@ -1651,6 +2281,20 @@ impl Render for RoomsView {
             .on_action(cx.listener(Self::jump_to_oldest_unread))
             .on_action(cx.listener(Self::jump_to_latest))
             .on_action(cx.listener(Self::toggle_members))
+            .on_action(cx.listener(Self::focus_composer))
+            .on_action(cx.listener(Self::attach_file))
+            .on_action(cx.listener(|this, _: &SelectPreviousMessage, _, cx| {
+                this.select_message(-1, cx);
+            }))
+            .on_action(cx.listener(|this, _: &SelectNextMessage, _, cx| {
+                this.select_message(1, cx);
+            }))
+            .on_action(cx.listener(Self::reply_command))
+            .on_action(cx.listener(Self::edit_command))
+            .on_action(cx.listener(Self::react_command))
+            .on_action(cx.listener(Self::delete_command))
+            .on_action(cx.listener(Self::leave_command))
+            .on_action(cx.listener(Self::cancel))
             .on_action(cx.listener(|this, _: &ShowAllRooms, _, cx| {
                 this.set_filter(RoomListFilter::All, cx);
             }))
@@ -1668,6 +2312,8 @@ impl Render for RoomsView {
             .flex()
             .child(body)
             .children(self.render_link_prompt(&colors, cx))
+            .children(self.render_delete_prompt(cx))
+            .children(self.render_leave_prompt(cx))
     }
 }
 

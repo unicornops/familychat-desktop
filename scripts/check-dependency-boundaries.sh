@@ -14,6 +14,10 @@ set -euo pipefail
 #   - familychat-notify and familychat-instance (ADR 0013) depend on no
 #     matrix-sdk crate and on neither frontend's toolkit, so both frontends
 #     can use them.
+#   - familychat-actions (ADR 0012), which both frontends use directly,
+#     depends on no matrix-sdk crate and on neither frontend's toolkit: it
+#     works through familychat-core's SessionApi, and ruma's events are
+#     allowed for its Markdown conversion.
 #
 # familychat-signin (ADR 0006) is a Matrix crate (it hands sign-ins to
 # familychat-session), so the first rule keeps it out of both frontends:
@@ -90,6 +94,12 @@ for shared in familychat-notify familychat-instance; do
   found="$(matching "${SDK}|gpui|gpui_platform|ratatui|crossterm" <<<"${graph}")"
   [[ -z "${found}" ]] || fail "${shared} depends on the Matrix SDK or a frontend's toolkit: $(tr '\n' ' ' <<<"${found}")"
 done
+actions="$(tree familychat-actions)"
+grep -qx familychat-actions <<<"${actions}" || fail "cargo tree printed no familychat-actions; the check cannot run"
+found="$(matching "${SDK}" <<<"${actions}")"
+[[ -z "${found}" ]] || fail "familychat-actions depends on the Matrix SDK: $(tr '\n' ' ' <<<"${found}")"
+found="$(matching 'gpui|gpui_platform|ratatui|crossterm|familychat-ui|familychat-tui' <<<"${actions}")"
+[[ -z "${found}" ]] || fail "familychat-actions depends on a frontend's toolkit: $(tr '\n' ' ' <<<"${found}")"
 
 # Self-tests.
 tree familychat-session | grep -qx matrix-sdk \
@@ -98,8 +108,10 @@ tree familychat-signin | grep -qx matrix-sdk \
   || fail "self-test failed: the check does not see matrix-sdk in familychat-signin's graph"
 tree familychat-ui | grep -qx gpui \
   || fail "self-test failed: the check does not see gpui in familychat-ui's graph"
+tree familychat-ui | grep -qx familychat-actions \
+  || fail "self-test failed: the check does not see familychat-actions in familychat-ui's graph"
 
 if ((failed)); then
   exit 1
 fi
-echo "check-dependency-boundaries: the frontends, familychat-core, familychat-notify and familychat-instance are free of the Matrix SDK, and each frontend of the other's toolkit"
+echo "check-dependency-boundaries: the frontends, familychat-core, familychat-actions, familychat-notify and familychat-instance are free of the Matrix SDK, and each frontend, the actions and the shared crates of the other's toolkit"

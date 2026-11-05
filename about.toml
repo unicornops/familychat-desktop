@@ -115,8 +115,19 @@ ignore-dev-dependencies = true
 #   zmail-ui's src/notifications.rs (posting through GPUI's system
 #   notifications with opaque tags, the click handler) in
 #   crates/familychat-ui/src/notifications.rs.
+# - The messaging actions and the composer (Phase 7, ADR 0012), same
+#   copyright and licence; keep each file's header notice. Adapted from
+#   Zmail: the actions service and its events-to-a-callback shape in
+#   crates/familychat-actions/src/lib.rs (zmail-actions' lib.rs), the
+#   composer's attach picker, dropped files and file cards, and its mention
+#   list's keys, in crates/familychat-ui/src/rooms/composer.rs (zmail-ui's
+#   compose.rs and compose/recipients.rs). The text input's
+#   `submit_on_enter` mode is this project's addition to the ported
+#   crates/familychat-ui/src/components/text_input.rs.
 # - crates/familychat-ui/src/testdata/signin-qr-screenshot.png is made for
-#   this project's tests (python-qrcode and Pillow), under its licence.
+#   this project's tests (python-qrcode and Pillow), under its licence, and
+#   crates/familychat-test-support/src/testdata/photo.jpg (a 32x24
+#   gradient made with ImageMagick for the location tests) likewise.
 #
 # Nothing is copied from the Element X forks (AGPL-3.0); see PLAN.md,
 # section 2.
@@ -145,6 +156,7 @@ ignore-dev-dependencies = true
 #   chevron-left, chevrons-down, chevrons-up, corner-down-right,
 #   hourglass, image, image-off, lock-open, mail-plus,
 #   message-circle-more, message-square-dashed, messages-square, pencil,
-#   shield-off and users from Lucide 1.68.0. Embedded
+#   shield-off and users from Lucide 1.68.0; in Phase 7 door-open
+#   and face-slightly-smiling-plus from Lucide 1.68.0. Embedded
 #   in all builds; release archives ship the licence as
 #   licenses/Lucide-LICENSE.txt.

@@ -125,6 +125,15 @@ pub const LATER: &[(&str, &str)] = &[
     // The window's notification settings dialog (ADR 0013); the terminal
     // gets its settings with Phase 13.
     ("NotificationSettings", "Phase 13"),
+    ("FocusComposer", "Phase 11"),
+    ("AttachFile", "Phase 11"),
+    ("SelectPreviousMessage", "Phase 11"),
+    ("SelectNextMessage", "Phase 11"),
+    ("ReplyToMessage", "Phase 11"),
+    ("EditMessage", "Phase 11"),
+    ("ReactToMessage", "Phase 11"),
+    ("DeleteMessage", "Phase 11"),
+    ("LeaveRoom", "Phase 11"),
 ];
 
 /// The terminal's own commands: the key the bar shows, the bar's label

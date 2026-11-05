@@ -25,7 +25,7 @@ use familychat_test_support::fixtures::{
     rooms::{self, LARGE_EVENTS, LARGE_ROOMS},
     steps,
 };
-use familychat_ui::{InitialView, LaunchOptions, RoomsLaunch};
+use familychat_ui::{ComposerLaunch, InitialView, LaunchOptions, RoomsLaunch};
 
 /// Every fixture view, in the screenshot matrix's order.
 pub(crate) const VIEWS: &[&str] = &[
@@ -77,6 +77,15 @@ pub(crate) const VIEWS: &[&str] = &[
     "notification-settings",
     "notification-settings-hidden",
     "forwarded-link",
+    "composer-text",
+    "composer-reply",
+    "composer-edit",
+    "composer-mentions",
+    "composer-attachment",
+    "composer-too-large",
+    "room-paused",
+    "message-actions",
+    "message-delete",
 ];
 
 /// The rooms a signed-in fixture has.
@@ -152,6 +161,15 @@ impl Fixture {
     fn room(room: &str) -> Self {
         Self::rooms(RoomsLaunch {
             room: Some(room.to_owned()),
+            ..RoomsLaunch::default()
+        })
+    }
+
+    /// The family room with the composer in `state`.
+    fn composer(state: ComposerLaunch) -> Self {
+        Self::rooms(RoomsLaunch {
+            room: Some(rooms::FAMILY_ROOM.to_owned()),
+            composer: Some(state),
             ..RoomsLaunch::default()
         })
     }
@@ -269,6 +287,32 @@ fn fixture(view: &str) -> Result<Fixture> {
             initial_view: InitialView::ForwardedLink(FIXTURE_LINK.to_owned()),
             ..Fixture::signed_in(SyncState::Running)
         },
+        "composer-text" => Fixture::composer(ComposerLaunch::Text(
+            "Can someone pick me up after football? I'll be at the **main gate**.".to_owned(),
+        )),
+        "composer-reply" => Fixture::composer(ComposerLaunch::Reply),
+        "composer-edit" => Fixture::composer(ComposerLaunch::Edit),
+        "composer-mentions" => Fixture::composer(ComposerLaunch::Mention(
+            "Thanks for the pancakes @".to_owned(),
+        )),
+        "composer-attachment" => Fixture::composer(ComposerLaunch::Attachment),
+        "composer-too-large" => Fixture::composer(ComposerLaunch::TooLarge),
+        "room-paused" => Fixture {
+            account: Some(SyncState::Suspended {
+                recheck_in: Duration::from_secs(120),
+            }),
+            ..Fixture::room(rooms::FAMILY_ROOM)
+        },
+        "message-actions" => Fixture::rooms(RoomsLaunch {
+            room: Some(rooms::FAMILY_ROOM.to_owned()),
+            message_actions: true,
+            ..RoomsLaunch::default()
+        }),
+        "message-delete" => Fixture::rooms(RoomsLaunch {
+            room: Some(rooms::FAMILY_ROOM.to_owned()),
+            delete_prompt: true,
+            ..RoomsLaunch::default()
+        }),
         other => bail!(
             "unknown fixture view `{other}`; the views are: {}",
             VIEWS.join(", ")

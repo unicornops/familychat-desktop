@@ -27,7 +27,12 @@ use familychat_core::{
     OwnedRoomId, OwnedUserId, UserId,
     diff::ListDiff,
     media::{DecodedImage, MediaError, MediaInfo},
+    messaging::{
+        Draft, MediaLimits, MessageRef, NewRoom, OutgoingMessage, RoomDone, RoomRequest,
+        ServerDefaults,
+    },
     notifications::IncomingNotification,
+    rich_text::RichText,
     rooms::{
         Membership, RoomListCommand, RoomListFilter, RoomListLoading, RoomMember, RoomSummary,
     },
@@ -42,9 +47,13 @@ use familychat_core::{
     },
     startup::{OpenState, Opened, StartupApi},
     sync::{AccountStatus, SyncState},
-    timeline::{PaginationState, TimelineCommand, TimelineItem, TimelineUpdate},
+    timeline::{
+        MessageBody, MessageKind, PaginationState, Reaction, ReplyPreview, SendState,
+        TimelineCommand, TimelineContent, TimelineEvent, TimelineItem, TimelineItemId,
+        TimelineItemKind, TimelineUpdate,
+    },
 };
-use familychat_security::KeychainError;
+use familychat_security::{KeychainError, matrix_html::message_text};
 use familychat_signin::wording;
 use familychat_store::{
     UnreadableReason, keychain_unavailable_message, linux_keychain_unavailable_message,
@@ -107,7 +116,16 @@ pub struct FixtureSession {
     record: Arc<Mutex<SessionRecord>>,
     notifications: Mutex<Option<mpsc::Sender<IncomingNotification>>>,
     unread: Mutex<BTreeMap<AccountKey, watch::Sender<u64>>>,
+    media_limits: Mutex<Option<MediaLimits>>,
+    server_defaults: Mutex<ServerDefaults>,
+    drafts: Mutex<BTreeMap<(AccountKey, OwnedRoomId), Draft>>,
+    fail_requests: Mutex<Option<SessionError>>,
+    sent: Mutex<usize>,
 }
+
+/// Family Chat's Palpo upload limit, which the fixture serves unless told
+/// otherwise.
+pub const FIXTURE_UPLOAD_LIMIT: u64 = 11 * 1024 * 1024;
 
 /// What the window asked of the fixture session.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -124,6 +142,26 @@ pub struct SessionRecord {
     pub images: Vec<String>,
     /// Each file saved: its suggested name and where it went.
     pub saved: Vec<(String, PathBuf)>,
+    /// Each room request, in order (messages, reactions, receipts, typing,
+    /// files, invitations): what `familychat-actions` asked for.
+    pub requests: Vec<(OwnedRoomId, RoomRequest)>,
+    /// Each new room asked for.
+    pub created: Vec<NewRoom>,
+    /// Each draft kept (`None`: forgotten), by room.
+    pub drafts: Vec<(OwnedRoomId, Option<Draft>)>,
+    /// How many times the upload limit was asked for.
+    pub media_limit_asks: usize,
+}
+
+impl SessionRecord {
+    /// The room requests other than receipts and typing notices.
+    pub fn writes(&self) -> Vec<&RoomRequest> {
+        self.requests
+            .iter()
+            .map(|(_, request)| request)
+            .filter(|request| !matches!(request, RoomRequest::MarkRead | RoomRequest::Typing(_)))
+            .collect()
+    }
 }
 
 impl std::fmt::Debug for FixtureSession {
@@ -152,11 +190,261 @@ pub fn filter_rooms(rooms: &[RoomSummary], filter: RoomListFilter) -> Vec<RoomSu
 }
 
 impl FixtureSession {
-    /// A session with no accounts.
+    /// A session with no accounts, and Family Chat's upload limit.
     pub fn new() -> Arc<Self> {
-        Arc::new(Self::default())
+        let session = Self::default();
+        *lock(&session.media_limits) = Some(MediaLimits {
+            max_upload_bytes: Some(FIXTURE_UPLOAD_LIMIT),
+        });
+        Arc::new(session)
     }
 
+    /// The upload limit `media_limits` answers with (`None`: it fails, as
+    /// an unreachable server's does).
+    pub fn set_media_limits(&self, limits: Option<MediaLimits>) {
+        *lock(&self.media_limits) = limits;
+    }
+
+    /// What the server's well-known says about new rooms.
+    pub fn set_server_defaults(&self, defaults: ServerDefaults) {
+        *lock(&self.server_defaults) = defaults;
+    }
+
+    /// Makes every room request and new room fail with `error` (`None`
+    /// puts it back).
+    pub fn fail_requests(&self, error: Option<SessionError>) {
+        *lock(&self.fail_requests) = error;
+    }
+
+    /// Keeps a draft for a room, as one kept on an earlier visit.
+    pub fn set_draft(&self, account: &AccountKey, room: &str, draft: Draft) {
+        if let Ok(room) = OwnedRoomId::try_from(room) {
+            lock(&self.drafts).insert((account.clone(), room), draft);
+        }
+    }
+
+    /// The account's user id.
+    fn own_user(&self, account: &AccountKey) -> Option<OwnedUserId> {
+        self.accounts
+            .borrow()
+            .iter()
+            .find(|view| &view.key == account)
+            .map(|view| view.user_id.clone())
+    }
+
+    /// Carries out a room request on the fixture's rooms and timelines.
+    fn carry_out(
+        &self,
+        account: &AccountKey,
+        room: &familychat_core::RoomId,
+        request: &RoomRequest,
+    ) -> Result<RoomDone, SessionError> {
+        let own = self.own_user(account).ok_or(SessionError::UnknownAccount)?;
+        match request {
+            RoomRequest::AnswerInvite(accept) => {
+                lock(&self.record).invites.push((room.to_owned(), *accept));
+                self.rooms.send_modify(|rooms| {
+                    if *accept {
+                        for summary in rooms.iter_mut().filter(|summary| summary.room_id == room) {
+                            summary.membership = Membership::Joined;
+                            summary.invited_by = None;
+                        }
+                    } else {
+                        rooms.retain(|summary| summary.room_id != room);
+                    }
+                });
+                return Ok(RoomDone::Done);
+            }
+            RoomRequest::Leave => {
+                self.rooms
+                    .send_modify(|rooms| rooms.retain(|summary| summary.room_id != room));
+                return Ok(RoomDone::Done);
+            }
+            RoomRequest::MarkRead | RoomRequest::Typing(_) | RoomRequest::Invite(_) => {
+                return Ok(RoomDone::Done);
+            }
+            _ => {}
+        }
+        let number = {
+            let mut sent = lock(&self.sent);
+            *sent += 1;
+            *sent
+        };
+        let mut done = RoomDone::Done;
+        let timelines = lock(&self.timelines);
+        let timeline = timelines.get(room).ok_or(SessionError::UnknownRoom)?;
+        timeline.send_modify(|items| {
+            done = apply_request(items, request, &own, number);
+        });
+        Ok(done)
+    }
+}
+
+/// A message the account sends, as the fixture's timeline shows it.
+fn own_message(own: &OwnedUserId, number: usize, content: TimelineContent) -> TimelineItem {
+    TimelineItem {
+        id: TimelineItemId(format!("fixture-sent-{number}")),
+        kind: TimelineItemKind::Event(TimelineEvent {
+            event_id: familychat_core::OwnedEventId::try_from(format!("$fixture-sent-{number}"))
+                .ok(),
+            sender: own.clone(),
+            sender_name: Some("Ana".to_owned()),
+            timestamp_ms: rooms::now_ms(),
+            is_own: true,
+            content,
+            send_state: Some(SendState::Sent),
+            in_reply_to: None,
+            reactions: Vec::new(),
+        }),
+    }
+}
+
+fn message_content(message: &OutgoingMessage) -> TimelineContent {
+    TimelineContent::Message {
+        kind: MessageKind::Text,
+        body: message.body.clone(),
+        rich: message_text(
+            message.body.as_str(),
+            message.html.as_ref().map(MessageBody::as_str),
+        ),
+        edited: false,
+        media: None,
+    }
+}
+
+/// The event a request is about.
+fn target_event<'a>(
+    items: &'a mut [TimelineItem],
+    target: &MessageRef,
+) -> Option<&'a mut TimelineEvent> {
+    items.iter_mut().find_map(|item| {
+        let matches = item.id == target.item;
+        match &mut item.kind {
+            TimelineItemKind::Event(event)
+                if matches || (target.event_id.is_some() && event.event_id == target.event_id) =>
+            {
+                Some(event)
+            }
+            _ => None,
+        }
+    })
+}
+
+/// Applies a message request to a fixture timeline, as the server and the
+/// timeline would.
+fn apply_request(
+    items: &mut Vec<TimelineItem>,
+    request: &RoomRequest,
+    own: &OwnedUserId,
+    number: usize,
+) -> RoomDone {
+    match request {
+        RoomRequest::Send { message, reply_to } => {
+            let in_reply_to = reply_to.as_ref().map(|event_id| {
+                let answered = items.iter().find_map(|item| match &item.kind {
+                    TimelineItemKind::Event(event) if event.event_id.as_ref() == Some(event_id) => {
+                        Some(event.clone())
+                    }
+                    _ => None,
+                });
+                ReplyPreview {
+                    event_id: event_id.clone(),
+                    sender: answered
+                        .as_ref()
+                        .and_then(|event| event.sender_name.clone()),
+                    text: answered.and_then(|event| match event.content {
+                        TimelineContent::Message { body, .. } => Some(body),
+                        _ => None,
+                    }),
+                }
+            });
+            let mut item = own_message(own, number, message_content(message));
+            if let TimelineItemKind::Event(event) = &mut item.kind {
+                event.in_reply_to = in_reply_to;
+            }
+            items.push(item);
+        }
+        RoomRequest::SendFile { file, .. } => {
+            let kind = if file.mime_type.starts_with("image/") {
+                MessageKind::Image
+            } else {
+                MessageKind::File
+            };
+            items.push(own_message(
+                own,
+                number,
+                TimelineContent::Message {
+                    kind,
+                    body: MessageBody::new(file.file_name.clone()),
+                    rich: RichText::plain(&file.file_name),
+                    edited: false,
+                    media: None,
+                },
+            ));
+        }
+        RoomRequest::Edit { target, message } => {
+            if let Some(event) = target_event(items, target) {
+                let mut content = message_content(message);
+                if let TimelineContent::Message { edited, .. } = &mut content {
+                    *edited = true;
+                }
+                event.content = content;
+            }
+        }
+        RoomRequest::Redact { target, .. } => {
+            if let Some(event) = target_event(items, target) {
+                event.content = TimelineContent::Redacted;
+                event.reactions.clear();
+            }
+        }
+        RoomRequest::ToggleReaction { target, key } => {
+            if let Some(event) = target_event(items, target) {
+                let added = toggle(&mut event.reactions, key);
+                return RoomDone::Reaction(added);
+            }
+        }
+        RoomRequest::MarkRead
+        | RoomRequest::Typing(_)
+        | RoomRequest::Invite(_)
+        | RoomRequest::AnswerInvite(_)
+        | RoomRequest::Leave => {}
+    }
+    RoomDone::Done
+}
+
+/// Adds or takes back the account's reaction `key`; `true` when added.
+fn toggle(reactions: &mut Vec<Reaction>, key: &str) -> bool {
+    match reactions.iter().position(|reaction| reaction.key == key) {
+        Some(index) if reactions[index].own => {
+            let reaction = &mut reactions[index];
+            reaction.own = false;
+            reaction.count = reaction.count.saturating_sub(1);
+            reaction.senders.retain(|sender| sender != "Ana");
+            if reaction.count == 0 {
+                reactions.remove(index);
+            }
+            false
+        }
+        Some(index) => {
+            let reaction = &mut reactions[index];
+            reaction.own = true;
+            reaction.count += 1;
+            reaction.senders.push("Ana".to_owned());
+            true
+        }
+        None => {
+            reactions.push(Reaction {
+                key: key.to_owned(),
+                count: 1,
+                own: true,
+                senders: vec!["Ana".to_owned()],
+            });
+            true
+        }
+    }
+}
+
+impl FixtureSession {
     /// Adds a signed-in account in `sync`.
     pub fn add_account(&self, user_id: &UserId, sync: SyncState) -> AccountKey {
         let mut statuses = lock(&self.statuses);
@@ -520,23 +808,97 @@ impl SessionApi for FixtureSession {
         )
     }
 
-    fn answer_invite(
+    fn room_action(
         &self,
-        _account: &AccountKey,
+        account: &AccountKey,
         room: &familychat_core::RoomId,
-        accept: bool,
+        request: RoomRequest,
+    ) -> Reply<RoomDone> {
+        if !lock(&self.statuses).contains_key(account) {
+            return answered(Err(SessionError::UnknownAccount));
+        }
+        lock(&self.record)
+            .requests
+            .push((room.to_owned(), request.clone()));
+        if let Some(error) = lock(&self.fail_requests).clone() {
+            return answered(Err(error));
+        }
+        answered(self.carry_out(account, room, &request))
+    }
+
+    fn create_room(&self, account: &AccountKey, new_room: NewRoom) -> Reply<OwnedRoomId> {
+        if !lock(&self.statuses).contains_key(account) {
+            return answered(Err(SessionError::UnknownAccount));
+        }
+        lock(&self.record).created.push(new_room.clone());
+        if let Some(error) = lock(&self.fail_requests).clone() {
+            return answered(Err(error));
+        }
+        let number = {
+            let mut sent = lock(&self.sent);
+            *sent += 1;
+            *sent
+        };
+        let Ok(room) = OwnedRoomId::try_from(format!("!fixture-new-{number}:{FIXTURE_SERVER}"))
+        else {
+            return answered(Err(SessionError::Failed("no room id".to_owned())));
+        };
+        let mut summary = RoomSummary::new(
+            room.clone(),
+            new_room
+                .name
+                .clone()
+                .unwrap_or_else(|| "New chat".to_owned()),
+        );
+        summary.is_direct = new_room.direct;
+        summary.encryption = if new_room.encrypted {
+            familychat_core::rooms::Encryption::Encrypted
+        } else {
+            familychat_core::rooms::Encryption::NotEncrypted
+        };
+        summary.joined_members = 1;
+        self.set_timeline(room.as_str(), Vec::new());
+        self.rooms.send_modify(|rooms| rooms.insert(0, summary));
+        answered(Ok(room))
+    }
+
+    fn media_limits(&self, _account: &AccountKey) -> Reply<MediaLimits> {
+        lock(&self.record).media_limit_asks += 1;
+        answered(
+            lock(&self.media_limits)
+                .ok_or_else(|| SessionError::Failed("The server can't be reached.".to_owned())),
+        )
+    }
+
+    fn server_defaults(&self, _account: &AccountKey) -> Reply<ServerDefaults> {
+        answered(Ok(*lock(&self.server_defaults)))
+    }
+
+    fn draft(&self, account: &AccountKey, room: &familychat_core::RoomId) -> Reply<Option<Draft>> {
+        answered(Ok(lock(&self.drafts)
+            .get(&(account.clone(), room.to_owned()))
+            .cloned()))
+    }
+
+    fn save_draft(
+        &self,
+        account: &AccountKey,
+        room: &familychat_core::RoomId,
+        draft: Option<Draft>,
     ) -> Reply<()> {
-        lock(&self.record).invites.push((room.to_owned(), accept));
-        self.rooms.send_modify(|rooms| {
-            if accept {
-                for summary in rooms.iter_mut().filter(|summary| summary.room_id == room) {
-                    summary.membership = Membership::Joined;
-                    summary.invited_by = None;
-                }
-            } else {
-                rooms.retain(|summary| summary.room_id != room);
+        lock(&self.record)
+            .drafts
+            .push((room.to_owned(), draft.clone()));
+        let key = (account.clone(), room.to_owned());
+        let mut drafts = lock(&self.drafts);
+        match draft {
+            Some(draft) => {
+                drafts.insert(key, draft);
             }
-        });
+            None => {
+                drafts.remove(&key);
+            }
+        }
         answered(Ok(()))
     }
 

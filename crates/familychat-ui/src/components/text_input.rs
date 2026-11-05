@@ -8,7 +8,8 @@
 //! The port adds wrapping and vertical movement for multi-line text, word
 //! movement, undo/redo, masking, scrolling, a disabled state and theming.
 //! Copied from Zmail's `zmail-ui`, which made that port; Family Chat adds
-//! [`TextInput::take_secret`].
+//! [`TextInput::take_secret`] and [`TextInput::submit_on_enter`] (the
+//! composer: Enter sends, Shift+Enter is a new line).
 //!
 //! # Usage
 //!
@@ -122,6 +123,9 @@ actions!(
         /// Submit a single-line input, or insert a newline in a multi-line
         /// one.
         Enter,
+        /// Insert a newline in a multi-line input (Shift+Enter); submit a
+        /// single-line one.
+        Newline,
         /// Move focus to the next field.
         FocusNext,
         /// Move focus to the previous field.
@@ -172,7 +176,7 @@ pub(crate) fn key_bindings() -> Vec<KeyBinding> {
         KeyBinding::new("shift-home", SelectHome, context),
         KeyBinding::new("shift-end", SelectEnd, context),
         KeyBinding::new("enter", Enter, context),
-        KeyBinding::new("shift-enter", Enter, context),
+        KeyBinding::new("shift-enter", Newline, context),
         KeyBinding::new("tab", FocusNext, context),
         KeyBinding::new("shift-tab", FocusPrevious, context),
         KeyBinding::new(secondary!("a"), SelectAll, context),
@@ -228,7 +232,8 @@ pub(crate) enum TextInputEvent {
     /// The user changed the text (typing, deleting, pasting, IME, undo).
     /// Programmatic [`TextInput::set_text`] calls do not emit it.
     Changed,
-    /// The user pressed Enter in a single-line input.
+    /// The user pressed Enter in a single-line input (or in a
+    /// [`TextInput::submit_on_enter`] one).
     Submitted,
 }
 
@@ -257,6 +262,9 @@ pub(crate) struct TextInput {
     clear_label: Option<SharedString>,
     multiline: bool,
     masked: bool,
+    /// A multi-line input where Enter submits and Shift+Enter is a new
+    /// line (the composer).
+    submit_on_enter: bool,
     disabled: bool,
     compact: bool,
     borderless: bool,
@@ -308,6 +316,7 @@ impl TextInput {
             clear_label: None,
             multiline: false,
             masked: false,
+            submit_on_enter: false,
             disabled: false,
             compact: false,
             borderless: false,
@@ -395,6 +404,13 @@ impl TextInput {
     pub(crate) fn rows(mut self, min: usize, max: usize) -> Self {
         self.min_rows = min.max(1);
         self.max_rows = max.max(self.min_rows);
+        self
+    }
+
+    /// For a multi-line input: Enter submits ([`TextInputEvent::Submitted`])
+    /// and Shift+Enter inserts the new line, as chat composers do.
+    pub(crate) fn submit_on_enter(mut self) -> Self {
+        self.submit_on_enter = true;
         self
     }
 
@@ -701,6 +717,14 @@ impl TextInput {
     }
 
     fn enter(&mut self, _: &Enter, _: &mut Window, cx: &mut Context<Self>) {
+        if self.multiline && !self.submit_on_enter {
+            self.replace_selection("\n", EditKind::Typing, cx);
+        } else {
+            cx.emit(TextInputEvent::Submitted);
+        }
+    }
+
+    fn newline(&mut self, _: &Newline, _: &mut Window, cx: &mut Context<Self>) {
         if self.multiline {
             self.replace_selection("\n", EditKind::Typing, cx);
         } else {
@@ -1748,6 +1772,7 @@ impl Render for TextInput {
                     .on_action(cx.listener(Self::undo))
                     .on_action(cx.listener(Self::redo))
                     .on_action(cx.listener(Self::enter))
+                    .on_action(cx.listener(Self::newline))
                     .on_action(cx.listener(Self::focus_next))
                     .on_action(cx.listener(Self::focus_previous))
                     .on_action(cx.listener(Self::show_character_palette))

@@ -34,7 +34,23 @@
       "secondary-alt-1": "familychat::ShowAllRooms",
       "secondary-alt-2": "familychat::ShowUnreadRooms",
       "secondary-alt-3": "familychat::ShowPeople",
-      "secondary-alt-4": "familychat::ShowInvites"
+      "secondary-alt-4": "familychat::ShowInvites",
+      "secondary-l": "familychat::FocusComposer",
+      "secondary-shift-a": "familychat::AttachFile",
+      "secondary-alt-up": "familychat::SelectPreviousMessage",
+      "secondary-alt-down": "familychat::SelectNextMessage",
+      "secondary-shift-r": "familychat::ReplyToMessage",
+      "secondary-shift-e": "familychat::EditMessage",
+      "secondary-shift-l": "familychat::ReactToMessage",
+      "secondary-shift-backspace": "familychat::DeleteMessage",
+      "secondary-shift-w": "familychat::LeaveRoom",
+      "escape": "familychat_components::Cancel"
+    }
+  },
+  {
+    "context": "Composer",
+    "bindings": {
+      "escape": "familychat_components::Cancel"
     }
   }
 ]

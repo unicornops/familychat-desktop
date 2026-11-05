@@ -6,6 +6,7 @@ use std::{path::PathBuf, sync::Arc};
 
 use familychat_core::{
     media::{DecodedImage, MediaError, MediaInfo},
+    messaging::{Draft, MediaLimits, Mention, NewRoom, RoomDone, RoomRequest, ServerDefaults},
     notifications::IncomingNotification,
     rooms::{MemberRole, Membership, RoomListFilter, RoomMember, sort_members},
     session::{
@@ -13,14 +14,16 @@ use familychat_core::{
         TimelineSubscription,
     },
     sync::AccountStatus,
+    timeline::MessageBody,
 };
 use matrix_sdk::{
     Client, RoomMemberships,
     ruma::{
-        OwnedRoomId, RoomId,
+        OwnedEventId, OwnedRoomId, OwnedUserId, RoomId,
         events::room::{member::MembershipState, power_levels::UserPowerLevel},
     },
 };
+use serde_json::{Value, json};
 use tokio::{
     runtime::Handle,
     sync::{mpsc, oneshot, watch},
@@ -28,7 +31,51 @@ use tokio::{
 
 use tracing::info;
 
-use crate::{account::Ready, manager::AccountManager, media, room_list, timeline};
+use crate::{account::Ready, manager::AccountManager, media, messaging, room_list, timeline};
+
+/// A draft as the app store keeps it (encrypted, ADR 0003).
+fn draft_json(draft: &Draft) -> Value {
+    json!({
+        "text": draft.text.as_str(),
+        "mentions": draft.mentions.iter().map(|mention| json!({
+            "user_id": mention.user_id.as_str(),
+            "label": mention.label,
+        })).collect::<Vec<_>>(),
+        "reply_to": draft.reply_to.as_ref().map(|event| event.as_str()),
+        "editing": draft.editing.as_ref().map(|event| event.as_str()),
+    })
+}
+
+/// A draft from the app store; anything unreadable in it is left out.
+fn draft_from_json(value: &Value) -> Option<Draft> {
+    let event = |field: &str| {
+        value
+            .get(field)
+            .and_then(Value::as_str)
+            .and_then(|id| OwnedEventId::try_from(id).ok())
+    };
+    Some(Draft {
+        text: MessageBody::new(value.get("text")?.as_str()?),
+        mentions: value
+            .get("mentions")
+            .and_then(Value::as_array)
+            .map(|mentions| {
+                mentions
+                    .iter()
+                    .filter_map(|mention| {
+                        Some(Mention {
+                            user_id: OwnedUserId::try_from(mention.get("user_id")?.as_str()?)
+                                .ok()?,
+                            label: mention.get("label")?.as_str()?.to_owned(),
+                        })
+                    })
+                    .collect()
+            })
+            .unwrap_or_default(),
+        reply_to: event("reply_to"),
+        editing: event("editing"),
+    })
+}
 
 /// The live sessions of one profile.
 #[derive(Debug, Clone)]
@@ -84,6 +131,27 @@ impl LiveSession {
 }
 
 impl LiveSession {
+    /// Runs `work` (the app store: disk and crypto) on the runtime's
+    /// blocking pool and answers with its result.
+    fn blocking_reply<T>(
+        &self,
+        account: &AccountKey,
+        work: impl FnOnce() -> Result<T, SessionError> + Send + 'static,
+    ) -> Reply<T>
+    where
+        T: Send + 'static,
+    {
+        let (answer, reply) = oneshot::channel();
+        if self.manager.account_by_key(account).is_none() {
+            let _ = answer.send(Err(SessionError::UnknownAccount));
+            return reply;
+        }
+        self.handle.spawn_blocking(move || {
+            let _ = answer.send(work());
+        });
+        reply
+    }
+
     /// Spawns media work with the account's client and answers with its
     /// result; an account that isn't open can't fetch anything.
     fn media_reply<T, F>(
@@ -138,7 +206,12 @@ impl SessionApi for LiveSession {
                 .client
                 .get_room(&room)
                 .ok_or(SessionError::UnknownRoom)?;
-            timeline::open(room, ready.sync.room_list_service()).await
+            timeline::open(
+                room,
+                ready.sync.room_list_service(),
+                ready.timelines.clone(),
+            )
+            .await
         })
     }
 
@@ -185,26 +258,75 @@ impl SessionApi for LiveSession {
         })
     }
 
-    fn answer_invite(&self, account: &AccountKey, room: &RoomId, accept: bool) -> Reply<()> {
+    fn room_action(
+        &self,
+        account: &AccountKey,
+        room: &RoomId,
+        request: RoomRequest,
+    ) -> Reply<RoomDone> {
         let room: OwnedRoomId = room.to_owned();
         self.reply(account, move |ready| async move {
             let room = ready
                 .client
                 .get_room(&room)
                 .ok_or(SessionError::UnknownRoom)?;
-            let answered = if accept {
-                room.join().await
-            } else {
-                room.leave().await
-            };
-            answered.map_err(|error| {
-                info!(%error, accept, "answering an invitation failed");
-                SessionError::Failed(if accept {
-                    "The invitation couldn't be accepted. Try again.".to_owned()
-                } else {
-                    "The invitation couldn't be declined. Try again.".to_owned()
+            messaging::room_action(room, &ready.timelines, request).await
+        })
+    }
+
+    fn create_room(&self, account: &AccountKey, room: NewRoom) -> Reply<OwnedRoomId> {
+        self.reply(account, move |ready| async move {
+            messaging::create_room(&ready.client, room).await
+        })
+    }
+
+    fn media_limits(&self, account: &AccountKey) -> Reply<MediaLimits> {
+        self.reply(account, move |ready| async move {
+            messaging::media_limits(&ready.client).await
+        })
+    }
+
+    fn server_defaults(&self, account: &AccountKey) -> Reply<ServerDefaults> {
+        self.reply(account, move |ready| async move {
+            Ok(messaging::server_defaults(&ready.client).await)
+        })
+    }
+
+    fn draft(&self, account: &AccountKey, room: &RoomId) -> Reply<Option<Draft>> {
+        let room = room.to_string();
+        let manager = self.manager.clone();
+        let key = account.clone();
+        self.blocking_reply(account, move || {
+            let id = manager
+                .account_by_key(&key)
+                .ok_or(SessionError::UnknownAccount)?
+                .id();
+            let stored: Option<Value> = manager
+                .with_profile(|profile| profile.draft(id, &room))
+                .map_err(|error| {
+                    info!(%error, "reading a draft failed");
+                    SessionError::Failed("Your draft couldn't be opened.".to_owned())
+                })?;
+            Ok(stored.as_ref().and_then(draft_from_json))
+        })
+    }
+
+    fn save_draft(&self, account: &AccountKey, room: &RoomId, draft: Option<Draft>) -> Reply<()> {
+        let room = room.to_string();
+        let manager = self.manager.clone();
+        let key = account.clone();
+        self.blocking_reply(account, move || {
+            let id = manager
+                .account_by_key(&key)
+                .ok_or(SessionError::UnknownAccount)?
+                .id();
+            let value = draft.as_ref().map(draft_json);
+            manager
+                .with_profile(|profile| profile.set_draft(id, &room, value.as_ref()))
+                .map_err(|error| {
+                    info!(%error, "keeping a draft failed");
+                    SessionError::Failed("Your draft couldn't be kept.".to_owned())
                 })
-            })
         })
     }
 
@@ -236,5 +358,25 @@ impl SessionApi for LiveSession {
         if let Some(account) = self.manager.account_by_key(account) {
             account.retry_sync();
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn drafts_round_trip_through_the_stored_form() {
+        let draft = Draft {
+            text: MessageBody::new("Mum, are we still on?"),
+            mentions: vec![Mention {
+                user_id: OwnedUserId::try_from("@mum:smith.safechat.family").expect("an id"),
+                label: "Mum".to_owned(),
+            }],
+            reply_to: Some(OwnedEventId::try_from("$reply:smith.safechat.family").expect("an id")),
+            editing: None,
+        };
+        assert_eq!(draft_from_json(&draft_json(&draft)), Some(draft));
+        assert_eq!(draft_from_json(&json!({"mentions": []})), None);
     }
 }

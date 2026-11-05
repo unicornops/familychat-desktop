@@ -336,6 +336,49 @@ impl HomeserverHarness {
         send(request).await
     }
 
+    // --- The front end -------------------------------------------------------
+
+    /// Runs `scripts/homeserver-harness.sh COMMAND` with this harness's
+    /// state directory.
+    async fn script(&self, command: &'static str) -> Result<()> {
+        let script = crate::env::repo_root().join("scripts/homeserver-harness.sh");
+        let state_dir = self
+            .env
+            .access_log
+            .parent()
+            .and_then(std::path::Path::parent)
+            .map(std::path::Path::to_path_buf);
+        let output = tokio::task::spawn_blocking(move || {
+            let mut run = std::process::Command::new(&script);
+            run.arg(command);
+            if let Some(state_dir) = state_dir {
+                run.env(crate::STATE_DIR_VAR, state_dir);
+            }
+            run.output()
+        })
+        .await
+        .context("the harness script's task")?
+        .with_context(|| format!("running scripts/homeserver-harness.sh {command}"))?;
+        if !output.status.success() {
+            bail!(
+                "scripts/homeserver-harness.sh {command} failed: {}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+        }
+        Ok(())
+    }
+
+    /// Stops the TLS front end: every harness host stops answering, as a
+    /// server does when the network goes (the offline tests).
+    pub async fn stop_front_end(&self) -> Result<()> {
+        self.script("stop-edge").await
+    }
+
+    /// Starts the TLS front end again, and waits until it answers.
+    pub async fn start_front_end(&self) -> Result<()> {
+        self.script("start-edge").await
+    }
+
     // --- The access log ------------------------------------------------------
 
     /// Every request the front end has logged since the harness came up.
@@ -734,6 +777,33 @@ impl HomeserverHarness {
             })),
         )
         .await
+    }
+
+    /// The bytes of uploaded media, as `session` downloads them through
+    /// authenticated media (`/_matrix/client/v1/media/download`).
+    pub async fn download_media(&self, session: &Session, mxc: &str) -> Result<Vec<u8>> {
+        let (server, media_id) = mxc
+            .strip_prefix("mxc://")
+            .and_then(|rest| rest.split_once('/'))
+            .with_context(|| format!("{mxc} is not an mxc:// address"))?;
+        let url = Self::url(
+            &self.env.hs1_url,
+            &[
+                "_matrix", "client", "v1", "media", "download", server, media_id,
+            ],
+        )?;
+        let response = self
+            .edge
+            .get(url)
+            .bearer_auth(session.access_token())
+            .send()
+            .await
+            .context("downloading media")?;
+        let status = response.status();
+        if !status.is_success() {
+            bail!("downloading {mxc} answered {status}");
+        }
+        Ok(response.bytes().await.context("reading media")?.to_vec())
     }
 
     /// The latest timeline events of `room_id` as `session` sees them, newest

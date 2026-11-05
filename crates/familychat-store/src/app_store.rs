@@ -28,7 +28,10 @@ use matrix_sdk_store_encryption::StoreCipher;
 use rusqlite::{Connection, ErrorCode, OpenFlags, OptionalExtension, TransactionBehavior, params};
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 
-const MIGRATIONS: &[(&str, &str)] = &[("0001_app_store", SCHEMA_0001)];
+const MIGRATIONS: &[(&str, &str)] = &[
+    ("0001_app_store", SCHEMA_0001),
+    ("0002_drafts", SCHEMA_0002),
+];
 
 const SCHEMA_0001: &str = r#"
 -- The StoreCipher's keys, encrypted with the app store passphrase.
@@ -61,9 +64,23 @@ CREATE TABLE ui_state (
 );
 "#;
 
+const SCHEMA_0002: &str = r#"
+-- What was being written in each room, kept between visits (ADR 0012).
+-- `account_id` is the account's random UUID (it identifies nobody),
+-- `room_hash` the keyed hash of the room id, `value` the encrypted draft.
+-- Removing an account removes its drafts.
+CREATE TABLE drafts (
+    account_id TEXT NOT NULL,
+    room_hash BLOB NOT NULL,
+    value BLOB NOT NULL,
+    PRIMARY KEY (account_id, room_hash)
+);
+"#;
+
 /// `StoreCipher::hash_key` table names, one per use.
 const ACCOUNTS_USER_ID: &str = "accounts.user_id";
 const UI_STATE_KEY: &str = "ui_state.key";
+const DRAFTS_ROOM: &str = "drafts.room";
 
 /// Why the app store could not be used.
 #[derive(Debug, thiserror::Error)]
@@ -349,11 +366,63 @@ impl AppStore {
 
     /// Removes the account from the registry; `false` when it was not there.
     pub(crate) fn remove_account(&self, id: AccountId) -> Result<bool, StoreError> {
-        let removed = self
-            .conn()
+        let conn = self.conn();
+        conn.execute("DELETE FROM drafts WHERE account_id = ?1", [id.to_string()])
+            .map_err(sqlite("remove the account's drafts"))?;
+        let removed = conn
             .execute("DELETE FROM accounts WHERE id = ?1", [id.to_string()])
             .map_err(sqlite("remove the account"))?;
         Ok(removed > 0)
+    }
+
+    /// The account's draft for `room`, decrypted.
+    pub(crate) fn draft<T: DeserializeOwned>(
+        &self,
+        account: AccountId,
+        room: &str,
+    ) -> Result<Option<T>, StoreError> {
+        let hash = self.cipher.hash_key(DRAFTS_ROOM, room.as_bytes());
+        let value: Option<Vec<u8>> = self
+            .conn()
+            .query_row(
+                "SELECT value FROM drafts WHERE account_id = ?1 AND room_hash = ?2",
+                params![account.to_string(), hash.as_slice()],
+                |row| row.get(0),
+            )
+            .optional()
+            .map_err(sqlite("read a draft"))?;
+        value.map(|value| self.decrypt(&value)).transpose()
+    }
+
+    /// Keeps the account's draft for `room`, encrypted, or forgets it
+    /// (`None`).
+    pub(crate) fn set_draft(
+        &self,
+        account: AccountId,
+        room: &str,
+        draft: Option<&impl Serialize>,
+    ) -> Result<(), StoreError> {
+        let hash = self.cipher.hash_key(DRAFTS_ROOM, room.as_bytes());
+        let conn = self.conn();
+        match draft {
+            Some(draft) => {
+                let value = self.encrypt(draft)?;
+                conn.execute(
+                    "INSERT INTO drafts (account_id, room_hash, value) VALUES (?1, ?2, ?3)
+                     ON CONFLICT (account_id, room_hash) DO UPDATE SET value = excluded.value",
+                    params![account.to_string(), hash.as_slice(), value],
+                )
+                .map(drop)
+                .map_err(sqlite("save a draft"))
+            }
+            None => conn
+                .execute(
+                    "DELETE FROM drafts WHERE account_id = ?1 AND room_hash = ?2",
+                    params![account.to_string(), hash.as_slice()],
+                )
+                .map(drop)
+                .map_err(sqlite("forget a draft")),
+        }
     }
 
     /// A preference's value, if set.
@@ -592,6 +661,57 @@ mod tests {
         ] {
             assert!(!is_matrix_user_id(bad), "{bad:?}");
         }
+    }
+
+    #[test]
+    fn drafts_are_encrypted_per_account_and_go_with_it() {
+        let dir = TestDir::new("drafts");
+        dir.data_dir().create().expect("dir");
+        let key = passphrase();
+        let path = dir.data_dir().store_path();
+        let store = AppStore::create(&path, &key).expect("created");
+        let account = store
+            .add_account(&NewAccount {
+                user_id: "@ana:smith.safechat.family".to_owned(),
+                homeserver_url: "https://smith.safechat.family/".to_owned(),
+            })
+            .expect("added");
+        let room = "!family:smith.safechat.family";
+        assert_eq!(store.draft::<String>(account, room).expect("read"), None);
+        store
+            .set_draft(
+                account,
+                room,
+                Some(&"a secret plan for Saturday".to_owned()),
+            )
+            .expect("kept");
+        assert_eq!(
+            store
+                .draft::<String>(account, room)
+                .expect("read")
+                .as_deref(),
+            Some("a secret plan for Saturday")
+        );
+        drop(store);
+        let bytes = std::fs::read(&path).expect("the file");
+        for needle in ["secret plan", "!family"] {
+            assert!(
+                !bytes
+                    .windows(needle.len())
+                    .any(|window| window == needle.as_bytes()),
+                "{needle} is on disk in plaintext"
+            );
+        }
+        let store = AppStore::open(&path, &key).expect("opens");
+        store
+            .set_draft(account, room, None::<&String>)
+            .expect("forgotten");
+        assert_eq!(store.draft::<String>(account, room).expect("read"), None);
+        store
+            .set_draft(account, room, Some(&"again".to_owned()))
+            .expect("kept");
+        assert!(store.remove_account(account).expect("removed"));
+        assert_eq!(store.draft::<String>(account, room).expect("read"), None);
     }
 
     #[test]

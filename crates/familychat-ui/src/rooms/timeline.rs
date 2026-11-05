@@ -14,6 +14,14 @@
 //! account's [`ImageCache`]; links and saves go to the room view as
 //! [`TimelineViewEvent`]s, which opens Matrix links in the app and asks
 //! before any other.
+//!
+//! Each message has its actions (Phase 7, ADR 0012): hovering it, or
+//! selecting it from the keyboard (`SelectPreviousMessage`,
+//! `SelectNextMessage`), shows a small bar with React (a quick picker of
+//! six reactions), Reply, and for the account's own messages Edit and
+//! Delete; a reaction under a message adds or takes back the account's
+//! own. The view only reports what was asked for; the room view does it
+//! through `familychat-actions` (and asks before deleting).
 
 use std::{
     collections::HashSet,
@@ -26,6 +34,7 @@ use familychat_core::{
     OwnedEventId,
     diff::apply_all,
     media::{MediaError, MediaInfo},
+    messaging::MessageRef,
     rich_text::RichText,
     rooms::{Encryption, RoomSummary},
     session::{AccountKey, SessionApi, TimelineControls},
@@ -80,6 +89,64 @@ pub(crate) enum TimelineViewEvent {
     },
     /// Save a message's file.
     Save(MediaInfo),
+    /// Reply to a message.
+    Reply(MessageChoice),
+    /// Edit one of the account's messages.
+    Edit(MessageChoice),
+    /// Add or take back the account's reaction `key`.
+    React {
+        /// The message.
+        target: MessageRef,
+        /// The reaction.
+        key: String,
+    },
+    /// Delete one of the account's messages (the room view asks first).
+    Delete(MessageChoice),
+    /// The newest message is on screen: the room is read.
+    ReadToEnd,
+}
+
+/// A message an action is about, with what its previews show.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct MessageChoice {
+    /// The message.
+    pub(crate) target: MessageRef,
+    /// Who sent it.
+    pub(crate) sender: String,
+    /// Its text (or what it is).
+    pub(crate) text: String,
+}
+
+/// The reactions the quick picker offers.
+pub(crate) const QUICK_REACTIONS: [&str; 6] = ["👍", "❤️", "😂", "😮", "😢", "🎉"];
+
+/// What a message's actions may be: it is a message (not a room change),
+/// and whether it is the account's own and can be edited.
+fn actions_for(event: &TimelineEvent) -> Option<(bool, bool)> {
+    let editable = matches!(
+        &event.content,
+        TimelineContent::Message {
+            kind: MessageKind::Text | MessageKind::Emote | MessageKind::Notice,
+            ..
+        }
+    ) && event.is_own
+        && event.event_id.is_some();
+    match &event.content {
+        TimelineContent::Message { .. } | TimelineContent::Sticker { .. } => {
+            Some((event.is_own, editable))
+        }
+        _ => None,
+    }
+}
+
+/// The text of a message, for previews and for editing.
+fn message_text(event: &TimelineEvent) -> String {
+    match &event.content {
+        TimelineContent::Message { body, .. } | TimelineContent::Sticker { body } => {
+            body.as_str().to_owned()
+        }
+        _ => placeholder(&event.content).unwrap_or_default().to_owned(),
+    }
 }
 
 /// The timeline of one room.
@@ -102,6 +169,10 @@ pub(crate) struct TimelineView {
     images: Entity<ImageCache>,
     /// An event to show once it is loaded (a `matrix:` link to it).
     pending_event: Option<OwnedEventId>,
+    /// The message selected from the keyboard, whose actions show.
+    selected: Option<TimelineItemId>,
+    /// The message whose quick reaction picker is open.
+    picker: Option<TimelineItemId>,
     _task: Task<()>,
     _images: Subscription,
     /// Rows laid out since the last look (tests and the benchmark).
@@ -186,6 +257,8 @@ impl TimelineView {
             revealed: HashSet::new(),
             images,
             pending_event: None,
+            selected: None,
+            picker: None,
             _task: task,
             _images: observer,
             #[cfg(test)]
@@ -260,6 +333,169 @@ impl TimelineView {
         self.loaded
     }
 
+    /// The message `item`, with what its previews show.
+    fn choice(&self, item: &TimelineItemId) -> Option<(MessageChoice, &TimelineEvent)> {
+        self.items.iter().find_map(|found| match &found.kind {
+            TimelineItemKind::Event(event) if &found.id == item => Some((
+                MessageChoice {
+                    target: MessageRef {
+                        item: found.id.clone(),
+                        event_id: event.event_id.clone(),
+                    },
+                    sender: event.sender_label(),
+                    text: message_text(event),
+                },
+                event,
+            )),
+            _ => None,
+        })
+    }
+
+    /// The message with `event_id`, with what its previews show.
+    pub(crate) fn choice_for_event(&self, event_id: &OwnedEventId) -> Option<MessageChoice> {
+        let item = self.items.iter().find_map(|item| match &item.kind {
+            TimelineItemKind::Event(event) if event.event_id.as_ref() == Some(event_id) => {
+                Some(item.id.clone())
+            }
+            _ => None,
+        })?;
+        self.choice(&item).map(|(choice, _)| choice)
+    }
+
+    /// The messages that have actions, oldest first: their items, and
+    /// whether each is the account's own and editable.
+    fn actionable(&self) -> Vec<(TimelineItemId, bool, bool)> {
+        self.items
+            .iter()
+            .filter_map(|item| match &item.kind {
+                TimelineItemKind::Event(event) => {
+                    actions_for(event).map(|(own, editable)| (item.id.clone(), own, editable))
+                }
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// The selected message.
+    pub(crate) fn selected(&self) -> Option<&TimelineItemId> {
+        self.selected.as_ref()
+    }
+
+    /// Selects the message `step` places from the selected one (from the
+    /// newest when none is), and scrolls to it.
+    pub(crate) fn select_step(&mut self, step: isize, cx: &mut Context<Self>) {
+        let actionable = self.actionable();
+        if actionable.is_empty() {
+            return;
+        }
+        let last = actionable.len() as isize - 1;
+        let current = self
+            .selected
+            .as_ref()
+            .and_then(|selected| actionable.iter().position(|(item, _, _)| item == selected));
+        let next = match current {
+            Some(index) => (index as isize + step).clamp(0, last),
+            None if step < 0 => last,
+            None => return,
+        };
+        let item = actionable[usize::try_from(next).unwrap_or_default()]
+            .0
+            .clone();
+        self.select(Some(item), cx);
+    }
+
+    /// Selects `item` (or nothing), and scrolls to it.
+    pub(crate) fn select(&mut self, item: Option<TimelineItemId>, cx: &mut Context<Self>) {
+        self.picker = None;
+        self.selected = item;
+        if let Some(selected) = &self.selected
+            && let Some(row) = self.row_of(selected)
+        {
+            self.reveal_row(row);
+        }
+        cx.notify();
+    }
+
+    /// Scrolls to `row`; the newest row keeps the timeline following new
+    /// messages.
+    fn reveal_row(&self, row: usize) {
+        if row + 1 < self.rows.len() {
+            self.list.set_follow_mode(FollowMode::Normal);
+            self.list.scroll_to_reveal_item(row);
+        }
+    }
+
+    fn row_of(&self, item: &TimelineItemId) -> Option<usize> {
+        self.rows
+            .iter()
+            .position(|row| row.items().any(|index| &self.items[index].id == item))
+    }
+
+    /// The message an action from the keyboard is about: the selected one,
+    /// else the newest one that passes `accept` (`own`, `editable`).
+    pub(crate) fn chosen(&self, accept: impl Fn(bool, bool) -> bool) -> Option<MessageChoice> {
+        let actionable = self.actionable();
+        let item = match &self.selected {
+            Some(selected) => actionable
+                .iter()
+                .find(|(item, own, editable)| item == selected && accept(*own, *editable)),
+            None => actionable
+                .iter()
+                .rev()
+                .find(|(_, own, editable)| accept(*own, *editable)),
+        }?;
+        self.choice(&item.0).map(|(choice, _)| choice)
+    }
+
+    /// Opens the quick reaction picker on `item` (the selected or newest
+    /// message when `None`).
+    pub(crate) fn open_picker(&mut self, item: Option<TimelineItemId>, cx: &mut Context<Self>) {
+        let item = item.or_else(|| self.chosen(|_, _| true).map(|choice| choice.target.item));
+        if let Some(item) = &item
+            && let Some(row) = self.row_of(item)
+        {
+            self.reveal_row(row);
+        }
+        self.picker = item;
+        cx.notify();
+    }
+
+    /// Whether the quick reaction picker is open (tests).
+    #[cfg_attr(not(test), allow(dead_code))]
+    pub(crate) fn picker_open(&self) -> bool {
+        self.picker.is_some()
+    }
+
+    /// Closes the picker and the selection; `false` when neither was open.
+    pub(crate) fn dismiss(&mut self, cx: &mut Context<Self>) -> bool {
+        let open = self.picker.take().is_some() | self.selected.take().is_some();
+        cx.notify();
+        open
+    }
+
+    fn react(&mut self, item: TimelineItemId, key: &str, cx: &mut Context<Self>) {
+        self.picker = None;
+        if let Some((choice, _)) = self.choice(&item) {
+            cx.emit(TimelineViewEvent::React {
+                target: choice.target,
+                key: key.to_owned(),
+            });
+        }
+        cx.notify();
+    }
+
+    fn message_action(&mut self, item: TimelineItemId, action: RowAction, cx: &mut Context<Self>) {
+        self.picker = None;
+        if let Some((choice, _)) = self.choice(&item) {
+            cx.emit(match action {
+                RowAction::Reply => TimelineViewEvent::Reply(choice),
+                RowAction::Edit => TimelineViewEvent::Edit(choice),
+                RowAction::Delete => TimelineViewEvent::Delete(choice),
+            });
+        }
+        cx.notify();
+    }
+
     /// Applies a batch of updates and measures again only the rows that
     /// changed.
     fn apply(&mut self, batch: Vec<TimelineUpdate>, cx: &mut Context<Self>) {
@@ -293,6 +529,16 @@ impl TimelineView {
             self.fingerprints = fingerprints;
             self.loaded = true;
             self.reveal_pending_event();
+            if self
+                .selected
+                .as_ref()
+                .is_some_and(|selected| self.row_of(selected).is_none())
+            {
+                self.selected = None;
+            }
+            if self.list.is_following_tail() {
+                cx.emit(TimelineViewEvent::ReadToEnd);
+            }
         }
         cx.notify();
     }
@@ -589,10 +835,31 @@ impl TimelineView {
         let label = accessible_label(&sender, &time, event);
         let name_color = avatar_color(&sender, Some(event.sender.as_str()));
         let body = self.render_body(row, id, event, colors, cx);
+        let selected = self.selected.as_ref() == Some(id);
+        let picker = self.picker.as_ref() == Some(id);
+        let toolbar = actions_for(event).map(|(own, editable)| {
+            self.render_toolbar(
+                row,
+                id,
+                &sender,
+                own,
+                editable,
+                selected || picker,
+                picker,
+                colors,
+                cx,
+            )
+        });
+        let reactions_row = (!event.reactions.is_empty())
+            .then(|| self.render_reactions(row, id, &event.reactions, colors, cx));
+        let group: SharedString = format!("timeline-row-{row}").into();
         div()
             .id(("timeline-row", row as u64))
+            .group(group)
+            .relative()
             .w_full()
             .accessible(Role::ListItem, label)
+            .when(selected, |this| this.bg(rgb(colors.selected_background)))
             .flex()
             .gap(px(SPACE_3))
             .px(px(SPACE_6))
@@ -641,10 +908,239 @@ impl TimelineView {
                     )
                     .child(body)
                     .children(meta_line(event, colors))
-                    .when(!event.reactions.is_empty(), |this| {
-                        this.child(reactions(row, &event.reactions, colors))
-                    }),
+                    .children(reactions_row),
             )
+            .children(toolbar)
+            .into_any_element()
+    }
+
+    /// A message's actions: shown while it is hovered, selected, or its
+    /// picker is open.
+    #[allow(clippy::too_many_arguments)]
+    fn render_toolbar(
+        &self,
+        row: usize,
+        id: &TimelineItemId,
+        sender: &str,
+        own: bool,
+        editable: bool,
+        shown: bool,
+        picker: bool,
+        colors: &UiColors,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let group: SharedString = format!("timeline-row-{row}").into();
+        let item = id.clone();
+        let whose = if own {
+            "your message".to_owned()
+        } else {
+            format!("{sender}'s message")
+        };
+        let button = |name: &str, icon_name: &'static str, label: String, action: RowAction| {
+            let item = item.clone();
+            IconButton::new(
+                ElementId::NamedInteger(format!("timeline-{name}").into(), row as u64),
+                icon_name,
+                label,
+            )
+            .on_click(cx.listener(move |this, _, _, cx| {
+                this.message_action(item.clone(), action, cx);
+            }))
+        };
+        let react_item = item.clone();
+        div()
+            .id(("timeline-actions", row as u64))
+            .accessible(Role::Toolbar, format!("Actions for {whose}"))
+            .absolute()
+            .top(px(-SPACE_2))
+            .right(px(SPACE_6))
+            .flex()
+            .items_center()
+            .gap(px(SPACE_0_5))
+            .p(px(SPACE_0_5))
+            .rounded(px(RADIUS_MD))
+            .border_1()
+            .border_color(rgb(colors.border))
+            .bg(rgb(colors.surface))
+            .shadow_sm()
+            .when(!shown, |this| {
+                this.invisible().group_hover(group, |style| style.visible())
+            })
+            .child(
+                IconButton::new(
+                    ("timeline-react", row as u64),
+                    "face-slightly-smiling-plus",
+                    format!("React to {whose}"),
+                )
+                .selected(picker)
+                .shortcut(crate::signin::primary_key("ReactToMessage"))
+                .on_click(cx.listener(move |this, _, _, cx| {
+                    let open = this.picker.as_ref() != Some(&react_item);
+                    this.open_picker(open.then(|| react_item.clone()), cx);
+                    if !open {
+                        this.picker = None;
+                    }
+                })),
+            )
+            .child(
+                button(
+                    "reply",
+                    "reply",
+                    format!("Reply to {whose}"),
+                    RowAction::Reply,
+                )
+                .shortcut(crate::signin::primary_key("ReplyToMessage")),
+            )
+            .when(editable, |this| {
+                this.child(
+                    button(
+                        "edit",
+                        "pencil",
+                        "Edit your message".to_owned(),
+                        RowAction::Edit,
+                    )
+                    .shortcut(crate::signin::primary_key("EditMessage")),
+                )
+            })
+            .when(own, |this| {
+                this.child(
+                    button(
+                        "delete",
+                        "trash-2",
+                        "Delete your message".to_owned(),
+                        RowAction::Delete,
+                    )
+                    .shortcut(crate::signin::primary_key("DeleteMessage")),
+                )
+            })
+            .when(picker, |this| {
+                this.child(self.render_picker(row, id, colors, cx))
+            })
+            .into_any_element()
+    }
+
+    /// The quick reaction picker, under the message's actions.
+    fn render_picker(
+        &self,
+        row: usize,
+        id: &TimelineItemId,
+        colors: &UiColors,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        // Above the actions: the newest messages are at the bottom.
+        div()
+            .absolute()
+            .bottom_full()
+            .right_0()
+            .mb(px(SPACE_1))
+            .child(
+                div()
+                    .id(("timeline-picker", row as u64))
+                    .accessible(Role::Toolbar, "Quick reactions")
+                    .flex()
+                    .gap(px(SPACE_0_5))
+                    .p(px(SPACE_1))
+                    .rounded(px(RADIUS_LG))
+                    .border_1()
+                    .border_color(rgb(colors.border))
+                    .bg(rgb(colors.surface))
+                    .shadow_md()
+                    .occlude()
+                    .children(QUICK_REACTIONS.iter().enumerate().map(|(index, key)| {
+                        let item = id.clone();
+                        div()
+                            .id(ElementId::NamedInteger(
+                                "timeline-quick-reaction".into(),
+                                (row as u64) << 8 | index as u64,
+                            ))
+                            .hit_target(move || format!("timeline-quick-reaction-{row}-{index}"))
+                            .accessible(Role::Button, format!("React with {key}"))
+                            .flex()
+                            .items_center()
+                            .justify_center()
+                            .size(px(32.0))
+                            .rounded(px(RADIUS_MD))
+                            .cursor_pointer()
+                            .hover(|this| this.bg(rgb(colors.hover_background)))
+                            .text_size(px(18.0))
+                            .on_click(cx.listener(move |this, _, _, cx| {
+                                this.react(item.clone(), key, cx);
+                            }))
+                            .child(*key)
+                    })),
+            )
+            .into_any_element()
+    }
+
+    /// A message's reactions: each one adds or takes back the account's.
+    fn render_reactions(
+        &self,
+        row: usize,
+        id: &TimelineItemId,
+        reactions: &[Reaction],
+        colors: &UiColors,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        div()
+            .flex()
+            .flex_wrap()
+            .gap(px(SPACE_1))
+            .children(reactions.iter().enumerate().map(|(index, reaction)| {
+                let who = if reaction.senders.is_empty() {
+                    format!("{} people", reaction.count)
+                } else {
+                    reaction.senders.join(", ")
+                };
+                let label = if reaction.own {
+                    format!(
+                        "{} {}, {who}. Take back your reaction",
+                        reaction.key, reaction.count
+                    )
+                } else {
+                    format!(
+                        "{} {}, {who}. React with {}",
+                        reaction.key, reaction.count, reaction.key
+                    )
+                };
+                let tip: SharedString = format!("Reacted with {}: {who}", reaction.key).into();
+                let (fill, border) = if reaction.own {
+                    (mix(colors.background, colors.accent, 0.16), colors.accent)
+                } else {
+                    (colors.surface, colors.border)
+                };
+                let item = id.clone();
+                let key = reaction.key.clone();
+                div()
+                    .id(ElementId::NamedInteger(
+                        "timeline-reaction".into(),
+                        (row as u64) << 8 | index as u64,
+                    ))
+                    .hit_target(move || format!("timeline-reaction-{row}-{index}"))
+                    .accessible(Role::Button, label)
+                    .tooltip(Tooltip::text(tip))
+                    .flex()
+                    .items_center()
+                    .gap(px(SPACE_1))
+                    .h(px(24.0))
+                    .min_w(px(24.0))
+                    .px(px(SPACE_2))
+                    .rounded(px(RADIUS_FULL))
+                    .border_1()
+                    .border_color(rgb(border))
+                    .bg(rgb(fill))
+                    .cursor_pointer()
+                    .hover(|this| this.border_color(rgb(colors.accent)))
+                    .type_style(TYPE_CAPTION)
+                    .on_click(cx.listener(move |this, _, _, cx| {
+                        this.react(item.clone(), &key, cx);
+                    }))
+                    .child(reaction.key.clone())
+                    .child(
+                        div()
+                            .text_color(rgb(colors.muted))
+                            .child(reaction.count.to_string()),
+                    )
+            }))
             .into_any_element()
     }
 
@@ -1065,49 +1561,12 @@ fn meta_line(event: &TimelineEvent, colors: &UiColors) -> Option<AnyElement> {
     )
 }
 
-fn reactions(row: usize, reactions: &[Reaction], colors: &UiColors) -> AnyElement {
-    div()
-        .flex()
-        .flex_wrap()
-        .gap(px(SPACE_1))
-        .children(reactions.iter().enumerate().map(|(index, reaction)| {
-            let who = if reaction.senders.is_empty() {
-                format!("{} people", reaction.count)
-            } else {
-                reaction.senders.join(", ")
-            };
-            let label = format!("{} {}, {who}", reaction.key, reaction.count);
-            let tip: SharedString = format!("Reacted with {}: {who}", reaction.key).into();
-            let (fill, border) = if reaction.own {
-                (mix(colors.background, colors.accent, 0.16), colors.accent)
-            } else {
-                (colors.surface, colors.border)
-            };
-            div()
-                .id(ElementId::NamedInteger(
-                    "timeline-reaction".into(),
-                    (row as u64) << 8 | index as u64,
-                ))
-                .accessible(Role::Label, label)
-                .tooltip(Tooltip::text(tip))
-                .flex()
-                .items_center()
-                .gap(px(SPACE_1))
-                .h(px(24.0))
-                .px(px(SPACE_2))
-                .rounded(px(RADIUS_FULL))
-                .border_1()
-                .border_color(rgb(border))
-                .bg(rgb(fill))
-                .type_style(TYPE_CAPTION)
-                .child(reaction.key.clone())
-                .child(
-                    div()
-                        .text_color(rgb(colors.muted))
-                        .child(reaction.count.to_string()),
-                )
-        }))
-        .into_any_element()
+/// What a message's action button does.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum RowAction {
+    Reply,
+    Edit,
+    Delete,
 }
 
 fn date_divider(row: usize, label: &str, colors: &UiColors) -> AnyElement {
