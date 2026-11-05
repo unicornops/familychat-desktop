@@ -223,7 +223,14 @@ fn the_signed_in_view_reads_its_sync_state(cx: &mut TestAppContext) {
     let entries = redraw(cx);
     assert_all_named(&entries);
     assert!(has(&entries, Role::Status, "Sync: Paused"));
-    assert!(has(&entries, Role::Heading, "You're signed in"));
+    assert!(
+        audit::labels(&entries, Role::Alert)
+            .iter()
+            .chain(audit::labels(&entries, Role::Status).iter())
+            .any(|label| label.contains("Paused")),
+        "the banner says the account is paused: {entries:?}"
+    );
+    assert!(has(&entries, Role::Heading, "Rooms"));
 }
 
 #[gpui::test]
@@ -243,4 +250,176 @@ fn the_command_palette_names_its_results(cx: &mut TestAppContext) {
             .iter()
             .any(|label| label.contains(", 1 of ")),
     );
+}
+
+/// Every rooms screen the screenshot matrix shows.
+fn rooms_launches() -> Vec<(&'static str, crate::RoomsLaunch)> {
+    use familychat_core::rooms::RoomListFilter;
+    use familychat_test_support::fixtures::rooms::{
+        EMPTY_ROOM, FAMILY_ROOM, FOOTBALL_ROOM, HOLIDAY_ROOM, HOMEWORK_ROOM, INVITE_ROOM, MUM_ROOM,
+        PHOTOS_ROOM, SECRETS_ROOM,
+    };
+    let room = |id: &str| crate::RoomsLaunch {
+        room: Some(id.to_owned()),
+        ..crate::RoomsLaunch::default()
+    };
+    vec![
+        ("room list", crate::RoomsLaunch::default()),
+        (
+            "invites",
+            crate::RoomsLaunch {
+                filter: RoomListFilter::Invites,
+                ..crate::RoomsLaunch::default()
+            },
+        ),
+        ("family room", room(FAMILY_ROOM)),
+        ("direct chat", room(MUM_ROOM)),
+        ("rich text", room(HOLIDAY_ROOM)),
+        ("media", room(PHOTOS_ROOM)),
+        (
+            "room changes",
+            crate::RoomsLaunch {
+                expand_changes: true,
+                ..room(FOOTBALL_ROOM)
+            },
+        ),
+        ("unreadable", room(SECRETS_ROOM)),
+        ("not encrypted", room(HOMEWORK_ROOM)),
+        ("empty room", room(EMPTY_ROOM)),
+        ("invitation", room(INVITE_ROOM)),
+        (
+            "members",
+            crate::RoomsLaunch {
+                members: true,
+                ..room(FAMILY_ROOM)
+            },
+        ),
+        (
+            "link dialog",
+            crate::RoomsLaunch {
+                link: Some((
+                    "https://tickets.evil.example/claim".to_owned(),
+                    "https://www.bank.example".to_owned(),
+                )),
+                ..room(HOLIDAY_ROOM)
+            },
+        ),
+    ]
+}
+
+/// Opens the fixture family's rooms as `launch` says and waits for what it
+/// opens to load.
+pub(super) fn open_rooms_screen(
+    cx: &mut TestAppContext,
+    launch: crate::RoomsLaunch,
+) -> &mut VisualTestContext {
+    let opens_room = launch.room.is_some();
+    let members = launch.members;
+    let (view, cx, _session) = super::rooms::open_rooms(cx, launch);
+    let rooms = super::rooms::rooms_view(&view, cx);
+    if opens_room {
+        super::wait_until(cx, "the room", |cx| {
+            rooms.read_with(cx, |rooms, cx| {
+                rooms.selected().is_some()
+                    && rooms
+                        .timeline()
+                        .is_none_or(|timeline| timeline.read(cx).is_loaded())
+            })
+        });
+    }
+    if members {
+        super::wait_until(cx, "the members", |cx| {
+            rooms.read_with(cx, |rooms, _| rooms.members_open())
+        });
+        // The members arrive on the next frame.
+        cx.run_until_parked();
+    }
+    cx
+}
+
+#[gpui::test]
+fn every_rooms_screen_names_every_control(cx: &mut TestAppContext) {
+    for (screen, launch) in rooms_launches() {
+        let cx = open_rooms_screen(cx, launch);
+        let entries = redraw(cx);
+        assert_all_named(&entries);
+        assert!(has(&entries, Role::Navigation, "Rooms"), "{screen}");
+        assert!(has(&entries, Role::Heading, "Rooms"), "{screen}");
+        assert!(
+            audit::labels(&entries, Role::RadioButton).len() == 4,
+            "{screen}: the four filters"
+        );
+        match screen {
+            "room list" => {
+                assert!(
+                    audit::labels(&entries, Role::ListBoxOption)
+                        .iter()
+                        .any(|label| label.starts_with("Smith family, 3 unread, 1 mention")),
+                    "{entries:?}"
+                );
+                assert!(has(&entries, Role::Heading, "Pick a room"));
+            }
+            "family room" => {
+                assert!(has(&entries, Role::Heading, "Smith family"));
+                assert!(
+                    audit::labels(&entries, Role::Label)
+                        .iter()
+                        .any(|label| label.starts_with("Encrypted.")),
+                );
+                assert!(has(&entries, Role::Button, "Show the members"));
+                assert!(
+                    audit::labels(&entries, Role::ListItem)
+                        .iter()
+                        .any(|label| label.starts_with("Mum, ")),
+                );
+                assert!(has(&entries, Role::Label, "New messages"));
+            }
+            "media" => {
+                assert!(
+                    audit::labels(&entries, Role::Button)
+                        .iter()
+                        .any(|label| label.starts_with("Save ")),
+                    "{entries:?}"
+                );
+            }
+            "not encrypted" => {
+                assert!(
+                    audit::labels(&entries, Role::Status)
+                        .iter()
+                        .any(|label| label.contains("not end-to-end encrypted")),
+                    "{entries:?}"
+                );
+            }
+            "invitation" => {
+                assert!(has(&entries, Role::Heading, "Join Cousins?"));
+                for button in ["Decline", "Join the room"] {
+                    assert!(has(&entries, Role::Button, button), "{button}");
+                }
+            }
+            "members" => {
+                assert!(has(&entries, Role::Complementary, "Members"));
+                assert!(
+                    audit::labels(&entries, Role::ListItem)
+                        .iter()
+                        .any(|label| *label == "Mum, Admin"),
+                    "{entries:?}"
+                );
+            }
+            "link dialog" => {
+                assert!(
+                    has(&entries, Role::Dialog, "Open this link?"),
+                    "{entries:?}"
+                );
+                assert!(
+                    audit::labels(&entries, Role::Alert)
+                        .iter()
+                        .any(|label| label.starts_with("This link is not what it shows")),
+                );
+                for button in ["Copy Link", "Cancel", "Open Link"] {
+                    assert!(has(&entries, Role::Button, button), "{button}");
+                }
+            }
+            _ => {}
+        }
+    }
 }

@@ -282,9 +282,18 @@ impl ShellView {
             return;
         };
         let session = opened.session.clone();
-        let view = cx.new(|cx| SignedInView::new(session, account, window, cx));
+        let toasts = self.toasts.clone();
+        let launch = match self.initial_view.take() {
+            Some(InitialView::Rooms(launch)) => Some(launch),
+            other => {
+                self.initial_view = other;
+                None
+            }
+        };
+        let view = cx.new(|cx| SignedInView::new(session, account, toasts, launch, window, cx));
+        let focus = view.focus_handle(cx);
         self.screen = Screen::SignedIn(view);
-        window.focus(&self.focus_handle, cx);
+        window.focus(&focus, cx);
         cx.notify();
     }
 
@@ -299,7 +308,7 @@ impl ShellView {
         };
         let palette = initial == InitialView::CommandPalette;
         signin.update(cx, |signin, cx| match initial {
-            InitialView::Default | InitialView::CommandPalette => {}
+            InitialView::Default | InitialView::CommandPalette | InitialView::Rooms(_) => {}
             InitialView::CodeEntry => signin.show_code(None, window, cx),
             InitialView::CodeEntryNoQrCode => {
                 signin.show_image_problem(QrError::NoCode, window, cx);
@@ -352,11 +361,16 @@ impl ShellView {
             .focused(cx)
             .unwrap_or_else(|| self.focus_handle.clone());
         let signing_in = self.signin().is_some();
+        let signed_in = self.signed_in().is_some();
         let entries: Vec<PaletteEntry> = COMMANDS
             .iter()
             .filter(|command| {
                 command.id != "ToggleCommandPalette"
-                    && (command.scope == CommandScope::Global || signing_in)
+                    && match command.scope {
+                        CommandScope::Global => true,
+                        CommandScope::SignIn => signing_in,
+                        CommandScope::Rooms => signed_in,
+                    }
             })
             .filter_map(|command| PaletteEntry::for_command(command, cx))
             .collect();

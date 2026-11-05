@@ -1,6 +1,7 @@
-//! `SignedInView`: what the window shows once an account is signed in,
-//! until the room list and the timeline arrive (Phase 6): the account, its
-//! sync state in words, and a retry when the session waits for one.
+//! `SignedInView`: what the window shows once an account is signed in: its
+//! rooms and timelines ([`RoomsView`]), with a banner above them when the
+//! account's sync needs saying something about (offline, paused, signed
+//! out, not supported, an error), and Try again where a retry helps.
 //!
 //! [`sync_indicator`] is the small status pill the title bar shows for the
 //! account. Each state has its own colour and icon; the suspended state
@@ -14,26 +15,27 @@ use familychat_core::{
     sync::{AccountStatus, SyncState},
 };
 use gpui::{
-    AnyElement, Context, IntoElement, Render, Role, SharedString, Task, Window, div, prelude::*,
-    px, rgb,
+    AnyElement, App, AppContext as _, Context, Entity, FocusHandle, Focusable, IntoElement, Render,
+    Role, Task, Window, div, prelude::*, px, rgb,
 };
 use tokio::sync::watch;
 
-use crate::a11y::{A11yFlags, AccessibleExt, Politeness, readable};
-use crate::components::{Avatar, Banner, BannerTone, Button, ComponentTheme};
-use crate::signin::{CARD_WIDTH, brand_mark, spinner};
+use crate::a11y::{A11yFlags, AccessibleExt, Politeness};
+use crate::components::{Banner, BannerTone, Button, ComponentTheme, ToastHost};
+use crate::rooms::{RoomsLaunch, RoomsView};
+use crate::signin::spinner;
 use crate::styles::{
-    ICON_SIZE_SM, RADIUS_FULL, RADIUS_LG, RADIUS_XL, SPACE_1, SPACE_2, SPACE_3, SPACE_4, SPACE_6,
-    SPACE_8, TYPE_BODY, TYPE_BODY_STRONG, TYPE_CAPTION, TYPE_HEADLINE, TypeStyleExt, UiColors,
+    ICON_SIZE_SM, RADIUS_FULL, SPACE_1, SPACE_2, SPACE_4, TYPE_CAPTION, TypeStyleExt, UiColors,
     contrast::mix,
 };
 use crate::widgets::icon;
 
-/// The signed-in placeholder.
+/// The signed-in window: the sync banner and the rooms.
 pub(crate) struct SignedInView {
     session: Arc<dyn SessionApi>,
     account: AccountView,
     status: AccountStatus,
+    rooms: Entity<RoomsView>,
     _status_task: Task<()>,
 }
 
@@ -42,6 +44,8 @@ impl SignedInView {
     pub(crate) fn new(
         session: Arc<dyn SessionApi>,
         account: AccountView,
+        toasts: Entity<ToastHost>,
+        launch: Option<RoomsLaunch>,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
@@ -54,10 +58,16 @@ impl SignedInView {
             Some(receiver) => follow(receiver, window, cx),
             None => Task::ready(()),
         };
+        let rooms = {
+            let session = session.clone();
+            let account = account.clone();
+            cx.new(|cx| RoomsView::new(session, account, toasts, launch, window, cx))
+        };
         Self {
             session,
             account,
             status,
+            rooms,
             _status_task: task,
         }
     }
@@ -67,10 +77,75 @@ impl SignedInView {
         &self.status
     }
 
+    /// The rooms.
+    #[cfg_attr(not(test), allow(dead_code))]
+    pub(crate) fn rooms(&self) -> &Entity<RoomsView> {
+        &self.rooms
+    }
+
     /// Asks the session to try the sync again now.
     pub(crate) fn retry(&mut self, cx: &mut Context<Self>) {
         self.session.retry_sync(&self.account.key);
         cx.notify();
+    }
+
+    /// The banner the sync state needs, if any.
+    fn render_banner(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
+        let sync = &self.status.sync;
+        let can_retry = matches!(
+            sync,
+            SyncState::Offline { .. }
+                | SyncState::Error { .. }
+                | SyncState::NotSupported
+                | SyncState::SignedOut { .. }
+        );
+        let tone = match sync {
+            SyncState::Idle | SyncState::Connecting | SyncState::Running => None,
+            SyncState::Suspended { .. } => Some(BannerTone::Info),
+            SyncState::Offline { .. } => Some(BannerTone::Caution),
+            SyncState::NotSupported | SyncState::SignedOut { .. } | SyncState::Error { .. } => {
+                Some(BannerTone::Danger)
+            }
+        };
+        let banner = tone.map(|tone| {
+            let message = sync.message().unwrap_or_default();
+            Banner::new("signed-in-sync", message)
+                .tone(tone)
+                .title(sync.label())
+                .when(can_retry, |banner| {
+                    banner.action(
+                        Button::new("signed-in-retry", "Try again")
+                            .icon("refresh-cw")
+                            .on_click(cx.listener(|this, _, _, cx| this.retry(cx))),
+                    )
+                })
+                .into_any_element()
+        });
+        let problem = self.status.problem.clone().map(|problem| {
+            Banner::new("signed-in-problem", problem.message())
+                .tone(BannerTone::Caution)
+                .into_any_element()
+        });
+        if banner.is_none() && problem.is_none() {
+            return None;
+        }
+        Some(
+            div()
+                .flex()
+                .flex_col()
+                .gap(px(SPACE_2))
+                .px(px(SPACE_4))
+                .py(px(SPACE_2))
+                .children(banner)
+                .children(problem)
+                .into_any_element(),
+        )
+    }
+}
+
+impl Focusable for SignedInView {
+    fn focus_handle(&self, cx: &App) -> FocusHandle {
+        self.rooms.read(cx).focus_handle(cx)
     }
 }
 
@@ -149,156 +224,15 @@ pub(crate) fn sync_indicator(sync: &SyncState, colors: &UiColors) -> AnyElement 
 
 impl Render for SignedInView {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let colors = ComponentTheme::get(cx).colors;
-        let sync = self.status.sync.clone();
-        let user = self.account.user_id.to_string();
-        let server = self.account.user_id.server_name().to_string();
-        let (icon_name, color, fill) = look(&sync, &colors);
-        let message: SharedString = sync
-            .message()
-            .unwrap_or_else(|| match sync {
-                SyncState::Running => "New messages arrive as they are sent.".to_owned(),
-                _ => "Family Chat is connecting to your server.".to_owned(),
-            })
-            .into();
-        let can_retry = matches!(
-            sync,
-            SyncState::Offline { .. }
-                | SyncState::Error { .. }
-                | SyncState::NotSupported
-                | SyncState::SignedOut { .. }
-        );
+        let banner = self.render_banner(cx);
+        let _ = ComponentTheme::get(cx);
         div()
             .id("signed-in")
             .size_full()
             .flex()
             .flex_col()
-            .items_center()
-            .overflow_y_scroll()
-            .px(px(SPACE_6))
-            .py(px(SPACE_8))
-            .child(
-                div()
-                    .id("signed-in-card")
-                    .accessible(Role::Main, "Your account")
-                    .w_full()
-                    .max_w(px(CARD_WIDTH))
-                    .my_auto()
-                    .flex()
-                    .flex_col()
-                    .gap(px(SPACE_6))
-                    .p(px(SPACE_8))
-                    .rounded(px(RADIUS_XL))
-                    .bg(rgb(colors.background))
-                    .border_1()
-                    .border_color(rgb(colors.border))
-                    .shadow_lg()
-                    .child(
-                        div()
-                            .flex()
-                            .items_center()
-                            .gap(px(SPACE_4))
-                            .child(
-                                Avatar::new(self.account.user_id.localpart().to_owned())
-                                    .address(user.clone())
-                                    .size(56.0),
-                            )
-                            .child(
-                                div()
-                                    .flex()
-                                    .flex_col()
-                                    .min_w_0()
-                                    .gap(px(SPACE_1))
-                                    .child(
-                                        div()
-                                            .id("signed-in-heading")
-                                            .accessible(Role::Heading, "You're signed in")
-                                            .aria_level(1)
-                                            .type_style(TYPE_HEADLINE)
-                                            .child("You're signed in"),
-                                    )
-                                    .child(
-                                        div()
-                                            .type_style(TYPE_BODY)
-                                            .text_color(rgb(colors.muted))
-                                            .child(readable("signed-in-user", user)),
-                                    ),
-                            ),
-                    )
-                    .child(
-                        div()
-                            .id("signed-in-sync")
-                            .accessible(Role::Status, format!("{}. {message}", sync.label()))
-                            .flex()
-                            .items_start()
-                            .gap(px(SPACE_3))
-                            .p(px(SPACE_4))
-                            .rounded(px(RADIUS_LG))
-                            .bg(rgb(fill))
-                            .child(icon(icon_name, 20.0, color))
-                            .child(
-                                div()
-                                    .flex()
-                                    .flex_col()
-                                    .flex_1()
-                                    .min_w_0()
-                                    .gap(px(SPACE_1))
-                                    .child(
-                                        div()
-                                            .type_style(TYPE_BODY_STRONG)
-                                            .text_color(rgb(colors.foreground))
-                                            .child(sync.label()),
-                                    )
-                                    .child(
-                                        div()
-                                            .type_style(TYPE_BODY)
-                                            .text_color(rgb(colors.foreground))
-                                            .child(message),
-                                    )
-                                    .child(
-                                        div()
-                                            .type_style(TYPE_CAPTION)
-                                            .text_color(rgb(colors.muted))
-                                            .child(format!("Server: {server}")),
-                                    ),
-                            )
-                            .when(can_retry, |this| {
-                                this.child(
-                                    Button::new("signed-in-retry", "Try again")
-                                        .icon("refresh-cw")
-                                        .on_click(cx.listener(|this, _, _, cx| this.retry(cx))),
-                                )
-                            }),
-                    )
-                    .when_some(self.status.problem.clone(), |this, problem| {
-                        this.child(
-                            Banner::new("signed-in-problem", problem.message())
-                                .tone(BannerTone::Caution),
-                        )
-                    })
-                    .child(
-                        div()
-                            .flex()
-                            .items_center()
-                            .gap(px(SPACE_3))
-                            .pt(px(SPACE_4))
-                            .border_t_1()
-                            .border_color(rgb(colors.border))
-                            .child(brand_mark(&colors, 28.0))
-                            .child(
-                                div()
-                                    .flex_1()
-                                    .min_w_0()
-                                    .type_style(TYPE_CAPTION)
-                                    .text_color(rgb(colors.muted))
-                                    .child(readable(
-                                        "signed-in-next",
-                                        "Your rooms and messages appear here in the next \
-                                         release of this alpha.",
-                                    )),
-                            ),
-                    ),
-            )
+            .children(banner)
+            .child(div().flex_1().min_h_0().child(self.rooms.clone()))
     }
 }
 

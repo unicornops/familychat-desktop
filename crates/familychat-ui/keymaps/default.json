@@ -19,5 +19,21 @@
       "secondary-shift-v": "familychat::PasteSignInCode",
       "escape": "familychat::GoBack"
     }
+  },
+  {
+    "context": "Rooms",
+    "bindings": {
+      "alt-down": "familychat::NextRoom",
+      "alt-up": "familychat::PreviousRoom",
+      "alt-shift-down": "familychat::NextUnreadRoom",
+      "alt-shift-up": "familychat::PreviousUnreadRoom",
+      "shift-pageup": "familychat::JumpToOldestUnread",
+      "secondary-end": "familychat::JumpToLatest",
+      "secondary-.": "familychat::ToggleMemberList",
+      "secondary-alt-1": "familychat::ShowAllRooms",
+      "secondary-alt-2": "familychat::ShowUnreadRooms",
+      "secondary-alt-3": "familychat::ShowPeople",
+      "secondary-alt-4": "familychat::ShowInvites"
+    }
   }
 ]

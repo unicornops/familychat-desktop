@@ -33,6 +33,8 @@ use crate::{InitialView, LaunchOptions, ShellView, appearance_for, decorations_f
 
 mod a11y;
 mod hit_targets;
+mod perf;
+mod rooms;
 mod signin;
 
 pub(super) fn bootstrap() -> AppBootstrap {

@@ -13,6 +13,7 @@
 //! |---|---|
 //! | `Shell` | the window root |
 //! | `Signin` | the sign-in screens |
+//! | `Rooms` | the room list, the open room and its timeline |
 //! | `CommandPalette` | the command palette's search field and results |
 //! | `Modal`, `Menu` | an open dialog or menu (the components' own keys) |
 //! | `TextInput` | any text field (owned by the text input component) |
@@ -38,6 +39,28 @@ actions!(
         PasteSignInCode,
         /// Leave the current step.
         GoBack,
+        /// Open the room below in the room list.
+        NextRoom,
+        /// Open the room above in the room list.
+        PreviousRoom,
+        /// Open the next unread room below.
+        NextUnreadRoom,
+        /// Open the next unread room above.
+        PreviousUnreadRoom,
+        /// Scroll the timeline to the read marker.
+        JumpToOldestUnread,
+        /// Scroll the timeline to the newest message.
+        JumpToLatest,
+        /// Show or hide the member list.
+        ToggleMemberList,
+        /// List every room.
+        ShowAllRooms,
+        /// List the unread rooms.
+        ShowUnreadRooms,
+        /// List the direct chats.
+        ShowPeople,
+        /// List the invitations.
+        ShowInvites,
         /// Quit Family Chat.
         Quit,
         /// Hide Family Chat (macOS).
