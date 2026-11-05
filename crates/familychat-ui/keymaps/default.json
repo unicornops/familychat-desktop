@@ -1,0 +1,23 @@
+[
+  {
+    "bindings": {
+      "secondary-q": "familychat::Quit"
+    }
+  },
+  {
+    "context": "Shell",
+    "bindings": {
+      "secondary-k": "familychat::ToggleCommandPalette"
+    }
+  },
+  {
+    "context": "Signin",
+    "bindings": {
+      "secondary-1": "familychat::SignInWithCode",
+      "secondary-2": "familychat::SignInWithPassword",
+      "secondary-3": "familychat::UseAnotherServer",
+      "secondary-shift-v": "familychat::PasteSignInCode",
+      "escape": "familychat::GoBack"
+    }
+  }
+]

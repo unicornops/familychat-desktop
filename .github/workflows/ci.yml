@@ -21,6 +21,7 @@ jobs:
         outputs:
             app_code: ${{ steps.detect.outputs.app_code }}
             workspace_checks: ${{ steps.detect.outputs.workspace_checks }}
+            ui: ${{ steps.detect.outputs.ui }}
 
         steps:
             - name: Checkout
@@ -36,13 +37,26 @@ jobs:
                   if [[ "${{ github.event_name }}" != "pull_request" ]]; then
                     echo "app_code=true" >> "$GITHUB_OUTPUT"
                     echo "workspace_checks=true" >> "$GITHUB_OUTPUT"
+                    echo "ui=true" >> "$GITHUB_OUTPUT"
                     exit 0
                   fi
 
                   app_code=false
                   workspace_checks=false
+                  ui=false
                   while IFS= read -r file; do
                     [[ -z "$file" ]] && continue
+
+                    # UI changes get the screenshot matrix (ui_screenshots):
+                    # the window, its theme and assets, the fixtures and the
+                    # sentences the screens show.
+                    case "$file" in
+                      crates/familychat-ui/*|crates/familychat-theme/*|crates/familychat-assets/*|themes/*|assets/icons/*|assets/fonts/*|crates/familychat-app/src/ui_fixture.rs|crates/familychat-test-support/src/fixtures.rs|crates/familychat-core/src/signin.rs|crates/familychat-core/src/startup.rs|crates/familychat-core/src/commands.rs|crates/familychat-core/src/sync.rs|crates/familychat-signin/src/wording.rs|scripts/capture-ui-screenshots.sh|.github/workflows/ci.yml)
+                        if [[ "$file" != *.md ]]; then
+                          ui=true
+                        fi
+                        ;;
+                    esac
 
                     case "$file" in
                       Cargo.toml|Cargo.lock|rust-toolchain.toml|.cargo/*|.github/workflows/ci.yml|scripts/window-smoke.*|scripts/keychain-session.sh)
@@ -55,7 +69,7 @@ jobs:
                           workspace_checks=true
                         fi
                         ;;
-                      about.toml|about.hbs|deny.toml|scripts/homeserver-harness.sh|scripts/check-release-features.sh|scripts/check-dependency-boundaries.sh)
+                      about.toml|about.hbs|deny.toml|scripts/homeserver-harness.sh|scripts/check-release-features.sh|scripts/check-dependency-boundaries.sh|scripts/capture-ui-screenshots.sh)
                         workspace_checks=true
                         ;;
                       docker/homeserver-harness/*)
@@ -68,6 +82,7 @@ jobs:
 
                   echo "app_code=$app_code" >> "$GITHUB_OUTPUT"
                   echo "workspace_checks=$workspace_checks" >> "$GITHUB_OUTPUT"
+                  echo "ui=$ui" >> "$GITHUB_OUTPUT"
 
     quality:
         needs: changes
@@ -139,6 +154,15 @@ jobs:
             - name: Workspace tests
               run: cargo test --workspace --locked
 
+            # The screenshot fixtures (`launch-ui-fixture`) are behind an
+            # opt-in feature the workspace run leaves off: their tests check
+            # every view has a fixture and a screenshot in dark and light.
+            - name: UI fixture tests
+              run: cargo test -p familychat-app --features ui-fixture --locked
+
+            - name: Clippy (UI fixtures)
+              run: cargo clippy -p familychat-app --all-targets --features ui-fixture --locked -- -D warnings
+
             # familychat-test-support's `test-harness` feature trusts the
             # homeserver harness's throwaway CA (ADR 0004): no release build
             # of the app may reach it, on any target.
@@ -152,7 +176,7 @@ jobs:
               run: scripts/check-dependency-boundaries.sh
 
             - name: Lint the scripts
-              run: shellcheck scripts/homeserver-harness.sh scripts/check-release-features.sh scripts/check-dependency-boundaries.sh scripts/keychain-session.sh
+              run: shellcheck scripts/homeserver-harness.sh scripts/check-release-features.sh scripts/check-dependency-boundaries.sh scripts/keychain-session.sh scripts/capture-ui-screenshots.sh
 
             # The live homeserver harness (ADR 0004): Palpo at Family Chat's
             # image with its Postgres sidecar, Synapse, and the TLS front end.
@@ -353,3 +377,65 @@ jobs:
               with:
                   name: ${{ matrix.artifact_name }}
                   path: ${{ matrix.binary_path }}
+
+    # The UI screenshot matrix (PLAN.md, section 9; Zmail's job): every
+    # fixture view in dark and light, from a release build with the
+    # `ui-fixture` feature, under Xvfb with openbox and lavapipe. Uploaded
+    # as the `ui-screenshots` artefact for review on UI pull requests.
+    ui_screenshots:
+        name: UI Screenshots
+        needs: changes
+        if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && needs.changes.outputs.ui == 'true')
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+            # GPUI renders through wgpu, which loads the Vulkan loader
+            # (libvulkan1) and, failing that, EGL/GL at runtime;
+            # mesa-vulkan-drivers supplies the lavapipe software Vulkan
+            # driver the headless capture uses.
+            - name: Install Linux build and capture dependencies
+              run: sudo apt-get update && sudo apt-get install -y pkg-config libdbus-1-dev libasound2-dev libxcb1-dev libxkbcommon-dev libxkbcommon-x11-dev libfontconfig1-dev libfreetype6-dev libvulkan1 libgl1 libegl1 libgl1-mesa-dri mesa-vulkan-drivers xvfb openbox xdotool imagemagick
+
+            - name: Read the pinned Rust toolchain
+              id: toolchain
+              shell: bash
+              run: echo "channel=$(sed -n 's/^channel = "\(.*\)"/\1/p' rust-toolchain.toml)" >> "$GITHUB_OUTPUT"
+
+            - name: Install Rust
+              uses: dtolnay/rust-toolchain@89b12181fb390509a0842a86cc55eeb8eb928c1d # stable
+              with:
+                  toolchain: ${{ steps.toolchain.outputs.channel }}
+
+            - name: Cache Cargo git dependencies
+              uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+              with:
+                  path: ~/.cargo/git/db
+                  key: cargo-git-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+                  restore-keys: cargo-git-${{ runner.os }}-
+
+            - name: Build the release binary with the UI fixtures
+              run: cargo build -p familychat-app --release --locked --features ui-fixture
+
+            - name: Capture the screenshot matrix
+              env:
+                  FAMILYCHAT_CAPTURE_LOG_DIR: ${{ runner.temp }}/ui-screenshot-logs
+              run: xvfb-run -a --server-args="-screen 0 1920x1080x24" bash scripts/capture-ui-screenshots.sh --matrix artifacts/ui-screenshots
+
+            - name: Upload screenshots
+              uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+              with:
+                  name: ui-screenshots
+                  path: artifacts/ui-screenshots/*.png
+                  if-no-files-found: error
+                  retention-days: 30
+
+            - name: Upload capture logs
+              if: failure()
+              uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+              with:
+                  name: ui-screenshot-logs
+                  path: ${{ runner.temp }}/ui-screenshot-logs
+                  if-no-files-found: ignore

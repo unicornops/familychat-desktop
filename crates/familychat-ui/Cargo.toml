@@ -13,8 +13,38 @@ familychat-assets = { path = "../familychat-assets" }
 familychat-core = { path = "../familychat-core" }
 gpui.workspace = true
 gpui_platform.workspace = true
+# Decoding a pasted or dropped QR image locally (PLAN.md, sections 4 and
+# 6.7): PNG, JPEG, GIF, BMP, TIFF and WebP, the formats a clipboard or a
+# screenshot gives. Already in the graph through GPUI with these formats;
+# no new code is built.
+image = { version = "0.25", default-features = false, features = ["bmp", "gif", "jpeg", "png", "tiff", "webp"] }
+# Finding and decoding the QR code in that image, in pure Rust (PLAN.md,
+# section 4); the image never leaves the computer.
+rqrr = { version = "0.11", default-features = false }
+# The runtime-agnostic channels the session, the sign-in and the startup
+# answer on (`familychat-core`'s watch and oneshot receivers), awaited in
+# GPUI tasks: Tokio's sync primitives only, no runtime.
+tokio = { version = "1", default-features = false, features = ["sync"] }
+# The keymap files (`keymaps/*.json`), parsed as Zmail's are.
+serde_json.workspace = true
+# Text input editing by grapheme, as Zmail's text input does.
+unicode-segmentation = "1"
+# Wiping a pasted sign-in link from the text field once it is handed on.
+zeroize.workspace = true
+
+# High contrast (`styles/high_contrast.rs`) and reduced motion
+# (`motion.rs`): the platforms' settings, read through safe APIs, as
+# Zmail's UI does. Both are already in the graph through GPUI.
+[target.'cfg(target_os = "windows")'.dependencies]
+windows-registry = "0.6"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2-app-kit = { version = "0.3.2", default-features = false, features = ["std", "NSAccessibility", "NSWorkspace"] }
 
 [dev-dependencies]
+# The fixture session and sign-in the view tests drive (PLAN.md, section
+# 9). The frontend itself never depends on it.
+familychat-test-support = { path = "../familychat-test-support", features = ["fixtures"] }
 # The background runtime, for the test that a GPUI task can await work done
 # on Tokio (PLAN.md, section 5.2). The frontend itself never depends on the
 # session crate's Matrix half (section 5.1).

@@ -1,7 +1,7 @@
 # Family Chat Desktop
 
 > [!WARNING]
-> **Family Chat Desktop is alpha software and is in no way ready for real use.** Right now it opens an empty window and a placeholder terminal UI: you cannot sign in or chat yet. Expect bugs, missing features and breaking changes between releases. Use the Family Chat apps for iOS, Android or the web in the meantime.
+> **Family Chat Desktop is alpha software and is in no way ready for real use.** Right now the window signs you in and shows your account's sync state, and the terminal UI is a placeholder: you cannot read or send messages yet. Expect bugs, missing features and breaking changes between releases. Use the Family Chat apps for iOS, Android or the web in the meantime.
 
 Family Chat Desktop (`familychat`) is a native desktop chat client for macOS, Linux and Windows, written in Rust, with a graphical UI built on GPUI and a terminal UI built on ratatui. It is a standards-compliant Matrix client that works with any homeserver supporting what modern Matrix clients need, and its first job is to be the best way to use [Family Chat](https://safechat.family), the family-safe hosted Matrix service, including easy sign-in with a code from a parent.
 
@@ -25,7 +25,7 @@ Phase 1, secrets and the local store ([#2](https://github.com/unicornops/familyc
 - an app store (accounts registry, preferences, UI state) in SQLite, with every Matrix ID, homeserver and room ID encrypted with matrix-sdk's store cipher
 - one Family Chat per profile: a second one says it is already open
 - a recovery path when the key to the local data is gone: `familychat start-over` moves the old data aside
-- `familychat accounts` lists the accounts (none yet: signing in is Phase 4)
+- `familychat accounts` lists the accounts
 - local, redacted logs and a crash log in the profile's `logs/`; nothing is uploaded
 
 Phase 3, the Matrix session core ([#4](https://github.com/unicornops/familychat-desktop/issues/4), [ADR 0005](./docs/adr/0005-matrix-session-runtime-and-bridging.md)):
@@ -43,7 +43,16 @@ Phase 4, the sign-in core ([#5](https://github.com/unicornops/familychat-desktop
 - password sign-in for Family Chat and for any other Matrix server over HTTPS; a rate limit is shown with its wait, never retried
 - tokens and passwords never in logs, debug output, panic messages or on disk; proven against the local homeserver harness from its access log
 
-There are no sign-in screens yet (the window in Phase 5, the terminal UI in Phase 10). Drawing rooms and the timeline, sending, encryption, notifications and the rest follow in the later phases.
+Phase 5, the window's shell and sign-in screens ([#6](https://github.com/unicornops/familychat-desktop/issues/6), [ADR 0011](./docs/adr/0011-gui-shell-sign-in-screens-and-fixtures.md)):
+
+- Zmail's component set and window frame, so the window draws its own title bar everywhere (GNOME on Wayland included), in the Family Chat light and dark themes, with keymaps and a command palette (Ctrl+K, or Cmd+K on macOS) built from one commands table
+- sign in with a code from a parent: paste the sign-in link, or paste or drop the QR code image (read on your computer, never uploaded); "Sign in as …?" is always asked before a code is used, and a used or expired code falls back to your password
+- sign in with your password, to your family's server or any other Matrix server, with the wait counted down when the server asks to slow down
+- the keychain and lost-key screens (Try again, Start over) when the local data can't be opened
+- once signed in, the account and its sync state (including "Paused" for a Family Chat curfew); rooms and messages are Phase 6
+- `familychat launch-ui-fixture` (a build feature) and a screenshot of every sign-in screen in dark and light on each pull request that touches the UI
+
+The terminal UI signs in from Phase 10. Drawing rooms and the timeline, sending, encryption, notifications and the rest follow in the later phases.
 
 ## Building
 
@@ -75,6 +84,15 @@ cargo clippy --workspace --all-targets --locked -- -D warnings
 cargo test --workspace --locked
 cargo deny check licenses advisories bans sources
 cargo audit
+```
+
+The window's screens can be opened on fixtures, with no network, keychain or profile, and captured in dark and light under Xvfb (CI uploads them as the `ui-screenshots` artefact on pull requests that touch the UI):
+
+```bash
+cargo build -p familychat-app --release --locked --features ui-fixture
+target/release/familychat launch-ui-fixture --list
+target/release/familychat launch-ui-fixture confirm dark
+xvfb-run -a --server-args="-screen 0 1920x1080x24" scripts/capture-ui-screenshots.sh --matrix artifacts/ui-screenshots
 ```
 
 See [`AGENTS.md`](./AGENTS.md) for the crates, commands and rules.

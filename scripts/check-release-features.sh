@@ -12,9 +12,12 @@ set -euo pipefail
 # builds, with its default features, for every target platform (normal and
 # build dependencies; dev-dependencies never reach the binary), and then
 # self-tests: the same check over familychat-test-support with its feature
-# on, and over familychat-signin with each of its two, must fire, and
-# familychat-signin must be in the release graph, so a change in cargo
-# tree's output cannot make it pass vacuously.
+# on, over familychat-signin with each of its two, and over familychat-app
+# with its opt-in `ui-fixture` feature (the screenshot fixtures, which pull
+# familychat-test-support in) must fire, and familychat-signin must be in
+# the release graph, so a change in cargo tree's output cannot make it pass
+# vacuously. The `ui-fixture` feature must also stay out of the default
+# features.
 #
 # Usage: scripts/check-release-features.sh
 
@@ -52,9 +55,20 @@ if ! grep -q '^familychat-signin ' <<<"${release_tree}"; then
   exit 1
 fi
 
-for self_test in "familychat-test-support test-harness" "familychat-signin test-harness" "familychat-signin staging"; do
+if grep -q '^familychat-app .*ui-fixture' <<<"${release_tree}"; then
+  echo "check-release-features: familychat-app's default features include ui-fixture (the screenshot fixtures)" >&2
+  exit 1
+fi
+
+for self_test in "familychat-test-support test-harness" "familychat-signin test-harness" "familychat-signin staging" "familychat-app ui-fixture"; do
   read -r package feature <<<"${self_test}"
-  if [[ -z "$(tree --package "${package}" --features "${feature}" | grep "^${package} " | offending)" ]]; then
+  # The app's own feature shows as familychat-test-support in its graph.
+  if [[ "${package}" == familychat-app ]]; then
+    found="$(tree --package "${package}" --features "${feature}" | offending)"
+  else
+    found="$(tree --package "${package}" --features "${feature}" | grep "^${package} " | offending)"
+  fi
+  if [[ -z "${found}" ]]; then
     echo "check-release-features: self-test failed: the check does not see ${package}'s ${feature} feature" >&2
     exit 1
   fi

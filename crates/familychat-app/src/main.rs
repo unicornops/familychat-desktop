@@ -1,10 +1,13 @@
 //! `familychat`: the Family Chat desktop client's entry point and CLI.
 //!
-//! With no arguments it opens the GPUI window; `familychat tui` runs the
-//! terminal UI; `familychat accounts` lists the accounts registry and
-//! `familychat start-over` moves unreadable data aside. More account and
-//! diagnostics commands arrive with the phases that need them (PLAN.md,
-//! section 5.1).
+//! With no arguments it opens the GPUI window, which opens the profile
+//! through [`startup::LiveStartup`] (the keychain, the store, the accounts'
+//! sessions and the sign-in, on the background runtime); `familychat tui`
+//! runs the terminal UI; `familychat accounts` lists the accounts registry
+//! and `familychat start-over` moves unreadable data aside. Builds with the
+//! `ui-fixture` feature add `familychat launch-ui-fixture VIEW [dark|light]`
+//! for the screenshot matrix. More account and diagnostics commands arrive
+//! with the phases that need them (PLAN.md, section 5.1).
 //!
 //! Every command that uses the profile takes its lock first (PLAN.md,
 //! section 5.5), so a second Family Chat on the same profile, window or
@@ -25,6 +28,10 @@ use familychat_session::BackgroundRuntime;
 use familychat_store::{DataDir, Profile, ProfileLock, ProfileState};
 use familychat_theme::{ThemeFamily, bundled};
 
+mod startup;
+#[cfg(feature = "ui-fixture")]
+mod ui_fixture;
+
 /// The app's version, as released.
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 /// Zed commit GPUI is built from, read from `Cargo.lock` by `build.rs`.
@@ -36,11 +43,15 @@ const RUNTIME_WORKER_THREADS: usize = 4;
 
 fn main() -> Result<()> {
     match Command::parse_args(std::env::args().skip(1))? {
-        Command::Gui => {
-            // Held until the window closes. Opening the store and the
-            // sessions in the window arrives with Phase 3 and 5.
-            let _profile = hold_profile()?;
-            launch_gui()
+        // The lock is held until the window closes; the window opens the
+        // keychain and the store through it.
+        Command::Gui => launch_gui(hold_profile()?),
+        #[cfg(feature = "ui-fixture")]
+        Command::LaunchUiFixture { view, theme } => launch_ui_fixture(&view, theme),
+        #[cfg(feature = "ui-fixture")]
+        Command::ListUiFixtures => {
+            println!("{}", ui_fixture::VIEWS.join("\n"));
+            Ok(())
         }
         #[cfg(feature = "tui")]
         Command::Tui => {
@@ -72,6 +83,13 @@ fn main() -> Result<()> {
 #[derive(Debug, PartialEq, Eq)]
 enum Command {
     Gui,
+    #[cfg(feature = "ui-fixture")]
+    LaunchUiFixture {
+        view: String,
+        theme: Option<familychat_core::ThemeAppearance>,
+    },
+    #[cfg(feature = "ui-fixture")]
+    ListUiFixtures,
     #[cfg(feature = "tui")]
     Tui,
     Accounts,
@@ -86,6 +104,19 @@ impl Command {
             return Ok(Self::Gui);
         };
         let parsed = match command.as_str() {
+            #[cfg(feature = "ui-fixture")]
+            "launch-ui-fixture" => {
+                let view = args
+                    .next()
+                    .context("launch-ui-fixture needs a view (or --list)")?;
+                if view == "--list" {
+                    Self::ListUiFixtures
+                } else {
+                    ui_fixture::check_view(&view)?;
+                    let theme = ui_fixture::parse_theme(args.next().as_deref())?;
+                    Self::LaunchUiFixture { view, theme }
+                }
+            }
             #[cfg(feature = "tui")]
             "tui" => Self::Tui,
             "accounts" => Self::Accounts,
@@ -113,6 +144,10 @@ fn print_help() {
     println!("  {BINARY_NAME} tui           Use {APP_NAME} in the terminal");
     println!("  {BINARY_NAME} accounts      List the signed-in accounts");
     println!("  {BINARY_NAME} start-over    Move data that can't be read aside and start again");
+    #[cfg(feature = "ui-fixture")]
+    println!(
+        "  {BINARY_NAME} launch-ui-fixture VIEW [dark|light]  Open the window on a fixture (--list)"
+    );
     println!("  {BINARY_NAME} --version     Show the version");
     println!("  {BINARY_NAME} help          Show this help");
 }
@@ -195,11 +230,42 @@ fn ready_or_explain(state: ProfileState) -> Result<Profile> {
     }
 }
 
-fn launch_gui() -> Result<()> {
+/// The window: the background runtime, then GPUI over the live startup,
+/// which opens the profile `lock` holds with the OS keychain. When the
+/// window closes the accounts' syncs stop before the runtime does.
+fn launch_gui(lock: ProfileLock) -> Result<()> {
     let runtime = BackgroundRuntime::start(RUNTIME_WORKER_THREADS)?;
     let bootstrap = build_bootstrap(runtime.summary())?;
-    familychat_ui::run(FamilyChatAssets, bootstrap);
+    let keychain: Arc<dyn Keychain> = Arc::new(OsKeychain::new());
+    let startup = Arc::new(startup::LiveStartup::new(
+        lock,
+        keychain,
+        runtime.handle().clone(),
+    ));
+    familychat_ui::run(
+        FamilyChatAssets,
+        bootstrap,
+        startup.clone(),
+        familychat_ui::LaunchOptions::default(),
+    );
+    if let Some(manager) = startup.manager() {
+        runtime.handle().block_on(manager.shutdown());
+    }
+    drop(startup);
     drop(runtime);
+    Ok(())
+}
+
+/// `launch-ui-fixture`: the window on a fixture, with no profile, keychain
+/// or network.
+#[cfg(feature = "ui-fixture")]
+fn launch_ui_fixture(view: &str, theme: Option<familychat_core::ThemeAppearance>) -> Result<()> {
+    let (startup, options) = ui_fixture::startup(view, theme)?;
+    let bootstrap = build_bootstrap(RuntimeSummary {
+        worker_threads: 0,
+        bridge_verified: false,
+    })?;
+    familychat_ui::run(FamilyChatAssets, bootstrap, startup, options);
     Ok(())
 }
 

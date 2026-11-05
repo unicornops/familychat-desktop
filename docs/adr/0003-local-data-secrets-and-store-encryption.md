@@ -190,8 +190,9 @@ words both frontends will show:
   replaced only when there is no data it could belong to.
 
 `familychat accounts` reports the non-ready states and exits non-zero;
-`familychat start-over` is the CLI's start over (the recovery screens
-are Phase 5 and 10). It refuses when the data opens, and when the keychain
+`familychat start-over` is the CLI's start over (the window's keychain and
+recovery screens arrived in Phase 5, ADR 0011; the terminal UI's are
+Phase 10). It refuses when the data opens, and when the keychain
 is merely unavailable.
 
 ### 7. Logs and the crash log

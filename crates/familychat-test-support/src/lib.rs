@@ -1,5 +1,10 @@
 //! Test support for Family Chat Desktop.
 //!
+//! With the `fixtures` feature, [`fixtures`] has the fixture
+//! implementations of `familychat-core`'s `SessionApi`, `SigninApi` and
+//! `StartupApi` that the window's view tests and
+//! `familychat launch-ui-fixture` (the screenshot matrix) draw from.
+//!
 //! [`HarnessEnv`] reads the settings `scripts/homeserver-harness.sh up`
 //! writes for the local homeserver harness (ADR 0004,
 //! `docker/homeserver-harness`). With the `test-harness` feature, which only
@@ -14,6 +19,8 @@ compile_error!(
 );
 
 mod env;
+#[cfg(feature = "fixtures")]
+pub mod fixtures;
 
 pub use env::{DEFAULT_STATE_DIR, ENV_FILE_VAR, HarnessEnv, STATE_DIR_VAR, parse_env_file};
 

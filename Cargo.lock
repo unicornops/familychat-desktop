@@ -2103,9 +2103,11 @@ dependencies = [
  "familychat-session",
  "familychat-signin",
  "familychat-store",
+ "familychat-test-support",
  "familychat-theme",
  "familychat-tui",
  "familychat-ui",
+ "tokio",
  "tracing",
  "winresource",
 ]
@@ -2210,6 +2212,10 @@ name = "familychat-test-support"
 version = "0.0.1"
 dependencies = [
  "anyhow",
+ "familychat-core",
+ "familychat-security",
+ "familychat-signin",
+ "familychat-store",
  "familychat-test-support",
  "reqwest",
  "serde_json",
@@ -2243,10 +2249,18 @@ dependencies = [
  "familychat-assets",
  "familychat-core",
  "familychat-session",
+ "familychat-test-support",
  "familychat-theme",
  "gpui",
  "gpui_platform",
+ "image",
+ "objc2-app-kit 0.3.2",
+ "rqrr",
+ "serde_json",
  "tokio",
+ "unicode-segmentation",
+ "windows-registry",
+ "zeroize",
 ]
 
 [[package]]
@@ -2579,6 +2593,34 @@ checksum = "54614a3312934d066701a80f20f15fa3b56d67ac7722b39eea5b4c9dd1d66c94"
 dependencies = [
  "thread_local",
 ]
+
+[[package]]
+name = "g2gen"
+version = "1.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c5a7e0eb46f83a20260b850117d204366674e85d3a908d90865c78df9a6b1dfc"
+dependencies = [
+ "g2poly",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.119",
+]
+
+[[package]]
+name = "g2p"
+version = "1.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "539e2644c030d3bf4cd208cb842d2ce2f80e82e6e8472390bcef83ceba0d80ad"
+dependencies = [
+ "g2gen",
+ "g2poly",
+]
+
+[[package]]
+name = "g2poly"
+version = "1.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "312d2295c7302019c395cfb90dacd00a82a2eabd700429bba9c7a3f38dbbe11b"
 
 [[package]]
 name = "generator"
@@ -6506,6 +6548,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9da7f59328b09405b181fee1018925fad50f157afb43c0c0f5c522c256dd5907"
 dependencies = [
  "memchr",
+]
+
+[[package]]
+name = "rqrr"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8d084c50c5cfa397a081850da329566c8667b0b6c4e81da16abff1fef27de93b"
+dependencies = [
+ "g2p",
+ "lru",
 ]
 
 [[package]]

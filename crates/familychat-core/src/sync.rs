@@ -73,6 +73,21 @@ impl SyncState {
         )
     }
 
+    /// A short name for the state, as a status indicator shows it. The
+    /// suspended state has its own ("Paused"): it is not an error.
+    pub fn label(&self) -> &'static str {
+        match self {
+            Self::Idle => "Not syncing",
+            Self::Connecting => "Connecting…",
+            Self::Running => "Up to date",
+            Self::Offline { .. } => "Offline",
+            Self::Suspended { .. } => "Paused",
+            Self::NotSupported => "Not supported",
+            Self::SignedOut { .. } => "Signed out",
+            Self::Error { .. } => "Sync problem",
+        }
+    }
+
     /// Whether this is a state the user should see a sentence for.
     pub fn message(&self) -> Option<String> {
         Some(match self {
@@ -160,5 +175,19 @@ mod tests {
                 .contains("sliding sync")
         );
         assert!(!SyncState::SignedOut { soft_logout: false }.retries());
+    }
+
+    #[test]
+    fn suspended_has_its_own_label() {
+        let suspended = SyncState::Suspended {
+            recheck_in: Duration::from_secs(30),
+        };
+        assert_eq!(suspended.label(), "Paused");
+        let error = SyncState::Error {
+            message: "x".to_owned(),
+            retry_in: Duration::from_secs(1),
+        };
+        assert_ne!(suspended.label(), error.label());
+        assert_eq!(SyncState::Running.label(), "Up to date");
     }
 }

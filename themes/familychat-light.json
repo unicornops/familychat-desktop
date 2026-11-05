@@ -8,7 +8,7 @@
       "appearance": "light",
       "style": {
         "accents": [
-          "#0D9488",
+          "#0F766E",
           "#F97316"
         ],
         "background": "#FFFFFF",
@@ -21,11 +21,11 @@
         "element.hover": "#F5F5F4",
         "text": "#1C1917",
         "text.muted": "#57534E",
-        "error": "#DC2626",
+        "error": "#B91C1C",
         "error.background": "#FEF2F2",
         "warning": "#C2410C",
         "warning.background": "#FFF7ED",
-        "success": "#059669",
+        "success": "#047857",
         "success.background": "#ECFDF5",
         "info": "#0F766E"
       }

@@ -1,0 +1,9 @@
+[
+  {
+    "bindings": {
+      "cmd-h": "familychat::Hide",
+      "alt-cmd-h": "familychat::HideOthers",
+      "cmd-m": "familychat::Minimize"
+    }
+  }
+]

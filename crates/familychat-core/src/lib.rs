@@ -5,6 +5,10 @@
 //! `scripts/check-dependency-boundaries.sh` checks it). It holds:
 //!
 //! - [`identity`]: the app's names and identifiers;
+//! - [`commands`]: the commands table both frontends build their keys,
+//!   menus and palettes from, with [`fuzzy`], the palettes' matcher;
+//! - [`startup`]: opening the profile, as the window draws it
+//!   ([`StartupApi`](startup::StartupApi));
 //! - [`session`]: the [`SessionApi`](session::SessionApi) both frontends
 //!   consume, and the channels its answers arrive on (ADR 0005);
 //! - [`signin`]: the sign-in steps and answers both frontends exchange
@@ -16,11 +20,14 @@
 //!   timelines arrive as;
 //! - what the shell shows about itself.
 
+pub mod commands;
 pub mod diff;
+pub mod fuzzy;
 pub mod identity;
 pub mod rooms;
 pub mod session;
 pub mod signin;
+pub mod startup;
 pub mod sync;
 pub mod timeline;
 
