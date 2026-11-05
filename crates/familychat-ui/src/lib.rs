@@ -3,8 +3,7 @@
 //! The window is one [`ShellView`]: it opens the profile through the
 //! app's [`StartupApi`], shows the keychain and lost-key screens when the
 //! profile is not ready, the sign-in screens while nobody is signed in,
-//! and the signed-in placeholder with the account's sync state after
-//! (rooms and the timeline are Phase 6). It is built from Zmail's
+//! and the account's rooms and timelines after, with its sync state. It is built from Zmail's
 //! component set and follows its patterns: every command is a GPUI action
 //! from the commands table, bound in the keymap files, and searchable in
 //! the command palette.
@@ -19,7 +18,8 @@
 //! | `shell` | `ShellView`: the window root, the screen it shows, the theme, the palette and toasts |
 //! | `profile_screens` | opening the profile, the keychain and lost-key screens |
 //! | `signin` | `SigninView`: welcome, the code page (link, pasted or dropped QR image), the confirmation, the password forms, the rate-limit countdown |
-//! | `signed_in` | `SignedInView`: the signed-in placeholder and the sync-state indicator |
+//! | `signed_in` | `SignedInView`: the sync banner over the rooms, and the sync-state indicator |
+//! | `rooms` | `RoomsView`: the room list, the room header, the member list, the timeline (`TimelineView`), rich text, the image cache and the link dialog (ADR 0007) |
 //! | `qr` | reading a sign-in QR code from an image, locally, with `rqrr` |
 //! | `command_palette` | `CommandPalette`: Secondary+K's search over the commands table |
 //! | `actions` | every command as a GPUI action |
@@ -54,6 +54,7 @@ mod menus;
 mod motion;
 mod profile_screens;
 mod qr;
+mod rooms;
 mod shell;
 mod signed_in;
 mod signin;
@@ -63,15 +64,16 @@ mod widgets;
 #[cfg(test)]
 mod view_tests;
 
+pub use rooms::RoomsLaunch;
 pub use shell::ShellView;
 
 use crate::components::title_bar::TRAFFIC_LIGHT_POSITION;
 use crate::styles::high_contrast::ContrastSetting;
 
 /// The window's size when it opens.
-pub const WINDOW_WIDTH: f32 = 1040.0;
+pub const WINDOW_WIDTH: f32 = 1180.0;
 /// The window's height when it opens.
-pub const WINDOW_HEIGHT: f32 = 760.0;
+pub const WINDOW_HEIGHT: f32 = 780.0;
 /// The smallest size the window can be resized to.
 const WINDOW_MIN_WIDTH: f32 = 560.0;
 const WINDOW_MIN_HEIGHT: f32 = 520.0;
@@ -97,6 +99,8 @@ pub enum InitialView {
     OtherServer,
     /// The welcome screen with the command palette open.
     CommandPalette,
+    /// The signed-in account's rooms, opened as described.
+    Rooms(RoomsLaunch),
 }
 
 /// How [`run`] opens the window.

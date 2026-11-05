@@ -120,3 +120,41 @@ fn the_command_palette_targets_are_at_least_24px(cx: &mut TestAppContext) {
     keys("secondary-k", cx);
     assert!(check_targets("command palette", cx) >= 5);
 }
+
+#[gpui::test]
+fn the_rooms_targets_are_at_least_24px(cx: &mut TestAppContext) {
+    use familychat_test_support::fixtures::rooms::{
+        FAMILY_ROOM, HOLIDAY_ROOM, INVITE_ROOM, PHOTOS_ROOM,
+    };
+    let room = |id: &str, members: bool| crate::RoomsLaunch {
+        room: Some(id.to_owned()),
+        members,
+        ..crate::RoomsLaunch::default()
+    };
+    for (screen, launch, at_least) in [
+        ("room list", crate::RoomsLaunch::default(), 8),
+        ("family room", room(FAMILY_ROOM, true), 10),
+        ("media", room(PHOTOS_ROOM, false), 10),
+        ("rich text", room(HOLIDAY_ROOM, false), 8),
+        ("invitation", room(INVITE_ROOM, false), 8),
+    ] {
+        let cx = super::a11y::open_rooms_screen(cx, launch);
+        assert!(check_targets(screen, cx) >= at_least, "{screen}");
+    }
+}
+
+#[gpui::test]
+fn the_rooms_targets_hold_on_a_narrow_window(cx: &mut TestAppContext) {
+    use familychat_test_support::fixtures::rooms::FAMILY_ROOM;
+    let cx = super::a11y::open_rooms_screen(
+        cx,
+        crate::RoomsLaunch {
+            room: Some(FAMILY_ROOM.to_owned()),
+            ..crate::RoomsLaunch::default()
+        },
+    );
+    cx.simulate_resize(gpui::size(px(560.), px(720.)));
+    cx.run_until_parked();
+    assert!(check_targets("narrow room", cx) >= 3);
+    assert!(cx.debug_bounds("button-room-back").is_some(), "a way back");
+}

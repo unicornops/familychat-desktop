@@ -34,9 +34,11 @@ OPENBOX_LOG="${LOG_DIR}/familychat-ui-screenshots-openbox.log"
 APP_PID=""
 OPENBOX_PID=""
 
-# The matrix: NAME VIEW THEME WIDTH HEIGHT. 1040x760 is the window's
-# default size; a few states are also captured at the minimum width (560)
-# to show the layout holds. Every fixture view is captured in dark and
+# The matrix: NAME VIEW THEME WIDTH HEIGHT. 1040x760 is the sign-in
+# screens' size and 1180x780 the rooms' (the window's default); a few
+# states are also captured at the minimum width (560), where the rooms show
+# the list or the room, and wide (1600), where the member list sits beside
+# the timeline, to show the layout holds. Every fixture view is captured in dark and
 # light (crates/familychat-app/src/ui_fixture.rs checks this list against
 # its views).
 MATRIX=(
@@ -78,21 +80,71 @@ MATRIX=(
   "keychain-unavailable-light keychain-unavailable light 1040 760"
   "lost-key-dark lost-key dark 1040 760"
   "lost-key-light lost-key light 1040 760"
-  "signed-in-dark signed-in dark 1040 760"
-  "signed-in-light signed-in light 1040 760"
-  "signed-in-connecting-dark signed-in-connecting dark 1040 760"
-  "signed-in-connecting-light signed-in-connecting light 1040 760"
-  "signed-in-offline-dark signed-in-offline dark 1040 760"
-  "signed-in-offline-light signed-in-offline light 1040 760"
-  "signed-in-suspended-dark signed-in-suspended dark 1040 760"
-  "signed-in-suspended-light signed-in-suspended light 1040 760"
-  "signed-in-signed-out-dark signed-in-signed-out dark 1040 760"
-  "signed-in-signed-out-light signed-in-signed-out light 1040 760"
-  "signed-in-not-supported-dark signed-in-not-supported dark 1040 760"
-  "signed-in-not-supported-light signed-in-not-supported light 1040 760"
+  "signed-in-dark signed-in dark 1180 780"
+  "signed-in-light signed-in light 1180 780"
+  "signed-in-connecting-dark signed-in-connecting dark 1180 780"
+  "signed-in-connecting-light signed-in-connecting light 1180 780"
+  "signed-in-offline-dark signed-in-offline dark 1180 780"
+  "signed-in-offline-light signed-in-offline light 1180 780"
+  "signed-in-suspended-dark signed-in-suspended dark 1180 780"
+  "signed-in-suspended-light signed-in-suspended light 1180 780"
+  "signed-in-signed-out-dark signed-in-signed-out dark 1180 780"
+  "signed-in-signed-out-light signed-in-signed-out light 1180 780"
+  "signed-in-not-supported-dark signed-in-not-supported dark 1180 780"
+  "signed-in-not-supported-light signed-in-not-supported light 1180 780"
   "welcome-dark-560 welcome dark 560 720"
   "code-light-560 code light 560 720"
   "password-dark-560 password dark 560 720"
+  "rooms-unread-dark rooms-unread dark 1180 780"
+  "rooms-unread-light rooms-unread light 1180 780"
+  "rooms-people-dark rooms-people dark 1180 780"
+  "rooms-people-light rooms-people light 1180 780"
+  "rooms-invites-dark rooms-invites dark 1180 780"
+  "rooms-invites-light rooms-invites light 1180 780"
+  "rooms-filter-empty-dark rooms-filter-empty dark 1180 780"
+  "rooms-filter-empty-light rooms-filter-empty light 1180 780"
+  "rooms-empty-dark rooms-empty dark 1180 780"
+  "rooms-empty-light rooms-empty light 1180 780"
+  "rooms-loading-dark rooms-loading dark 1180 780"
+  "rooms-loading-light rooms-loading light 1180 780"
+  "room-dark room dark 1180 780"
+  "room-light room light 1180 780"
+  "room-dm-dark room-dm dark 1180 780"
+  "room-dm-light room-dm light 1180 780"
+  "room-rich-dark room-rich dark 1180 780"
+  "room-rich-light room-rich light 1180 780"
+  "room-media-dark room-media dark 1180 780"
+  "room-media-light room-media light 1180 780"
+  "room-changes-dark room-changes dark 1180 780"
+  "room-changes-light room-changes light 1180 780"
+  "room-changes-expanded-dark room-changes-expanded dark 1180 780"
+  "room-changes-expanded-light room-changes-expanded light 1180 780"
+  "room-unreadable-dark room-unreadable dark 1180 780"
+  "room-unreadable-light room-unreadable light 1180 780"
+  "room-not-encrypted-dark room-not-encrypted dark 1180 780"
+  "room-not-encrypted-light room-not-encrypted light 1180 780"
+  "room-empty-dark room-empty dark 1180 780"
+  "room-empty-light room-empty light 1180 780"
+  "room-members-dark room-members dark 1180 780"
+  "room-members-light room-members light 1180 780"
+  "room-invite-dark room-invite dark 1180 780"
+  "room-invite-light room-invite light 1180 780"
+  "link-prompt-dark link-prompt dark 1180 780"
+  "link-prompt-light link-prompt light 1180 780"
+  "link-prompt-mismatched-dark link-prompt-mismatched dark 1180 780"
+  "link-prompt-mismatched-light link-prompt-mismatched light 1180 780"
+  "room-large-dark room-large dark 1180 780"
+  "room-large-light room-large light 1180 780"
+  "signed-in-dark-560 signed-in dark 560 720"
+  "room-dark-560 room dark 560 720"
+  "room-media-dark-560 room-media dark 560 720"
+  "room-members-dark-1600 room-members dark 1600 900"
+  "room-rich-dark-1600 room-rich dark 1600 900"
+  "signed-in-light-560 signed-in light 560 720"
+  "room-light-560 room light 560 720"
+  "room-media-light-560 room-media light 560 720"
+  "room-members-light-1600 room-members light 1600 900"
+  "room-rich-light-1600 room-rich light 1600 900"
 )
 
 usage() {
@@ -178,6 +230,8 @@ capture_state() {
   xdotool windowactivate "${window_id}" >/dev/null 2>&1 || true
   xdotool windowmove "${window_id}" 0 0 >/dev/null 2>&1 || true
   xdotool windowsize "${window_id}" "${width}" "${height}"
+  # The pointer off the window, so no row shows its hover state.
+  xdotool mousemove 1919 1079 >/dev/null 2>&1 || true
 
   # Wait for the window manager to apply the size, then for GPUI to draw
   # the new frame.

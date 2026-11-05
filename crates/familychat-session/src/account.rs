@@ -9,7 +9,8 @@
 //! response can't move the account to another server; refresh tokens
 //! handled by the SDK, with every rotated token written to the keychain's
 //! `account-<uuid>-session` before the request that needed it is retried;
-//! native sliding sync, found through `/versions`.
+//! native sliding sync, found through `/versions`; and media fetched only
+//! through authenticated media, capped and timed (`media`).
 
 use std::{
     path::Path,
@@ -40,7 +41,10 @@ use tokio::{
 };
 use tracing::{info, warn};
 
-use crate::{PostLoginCheck, SessionConfig, backoff::Backoff, failure::Failure};
+use crate::{
+    PostLoginCheck, SessionConfig, backoff::Backoff, failure::Failure,
+    media::AuthenticatedMediaFetcher,
+};
 
 /// Offline and server errors: one second, doubling to a minute.
 const OFFLINE_BACKOFF: (Duration, Duration) = (Duration::from_secs(1), Duration::from_secs(60));
@@ -352,6 +356,9 @@ async fn build_client(
         .homeserver_url(&params.session.homeserver_url)
         .sqlite_store_with_cache_path(sdk_dir, cache_dir, Some(passphrase))
         .http_client(params.config.http.clone())
+        .media_fetcher(Arc::new(AuthenticatedMediaFetcher::new(
+            params.config.http.clone(),
+        )))
         .respect_login_well_known(false)
         .handle_refresh_tokens()
         .sliding_sync_version_builder(version)

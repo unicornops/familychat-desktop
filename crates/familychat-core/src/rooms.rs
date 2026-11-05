@@ -1,7 +1,12 @@
 //! The room list: one [`RoomSummary`] per room, and the filters both
-//! frontends offer (PLAN.md, section 5.6).
+//! frontends offer (PLAN.md, section 5.6); a room's members
+//! ([`RoomMember`]); and the sentences both frontends say about them.
 
-use ruma::OwnedRoomId;
+use std::fmt;
+
+use ruma::{OwnedRoomId, OwnedUserId};
+
+use crate::timeline::MessageBody;
 
 /// The account's membership of a room.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -50,6 +55,17 @@ impl UnreadCounts {
     }
 }
 
+/// The latest message in a room, as the room list previews it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RoomPreview {
+    /// Who sent it: their display name, or their user id.
+    pub sender: String,
+    /// The account sent it.
+    pub is_own: bool,
+    /// One line of it: its text, or what it is ("Sent an image").
+    pub text: MessageBody,
+}
+
 /// A room in the room list.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RoomSummary {
@@ -68,6 +84,170 @@ pub struct RoomSummary {
     /// When the latest event the list knows of was sent, in milliseconds
     /// since the Unix epoch.
     pub last_activity_ms: Option<u64>,
+    /// The room's topic.
+    pub topic: Option<String>,
+    /// How many members have joined.
+    pub joined_members: u64,
+    /// The latest message, for the list's second line.
+    pub preview: Option<RoomPreview>,
+    /// For an invitation: who sent it, by name or user id.
+    pub invited_by: Option<String>,
+}
+
+impl RoomSummary {
+    /// A joined room called `name`, with nothing else known (fixtures and
+    /// tests fill in the rest).
+    pub fn new(room_id: OwnedRoomId, name: impl Into<String>) -> Self {
+        Self {
+            room_id,
+            name: name.into(),
+            membership: Membership::Joined,
+            is_direct: false,
+            encryption: Encryption::Unknown,
+            unread: UnreadCounts::default(),
+            last_activity_ms: None,
+            topic: None,
+            joined_members: 0,
+            preview: None,
+            invited_by: None,
+        }
+    }
+
+    /// Whether this is an invitation.
+    pub fn is_invite(&self) -> bool {
+        self.membership == Membership::Invited
+    }
+
+    /// The room list row's accessible name: the room, then what is new
+    /// ("Smith family, 3 unread, 1 mention").
+    pub fn accessible_label(&self) -> String {
+        let mut label = self.name.clone();
+        if self.is_invite() {
+            label.push_str(", invitation");
+            if let Some(inviter) = &self.invited_by {
+                label.push_str(&format!(" from {inviter}"));
+            }
+            return label;
+        }
+        if self.is_direct {
+            label.push_str(", direct chat");
+        }
+        let unread = self.unread;
+        if unread.notifications > 0 {
+            label.push_str(&format!(", {} unread", unread.notifications));
+        } else if unread.marked_unread {
+            label.push_str(", marked unread");
+        }
+        match unread.mentions {
+            0 => {}
+            1 => label.push_str(", 1 mention"),
+            mentions => label.push_str(&format!(", {mentions} mentions")),
+        }
+        label
+    }
+}
+
+impl Encryption {
+    /// The room header's words for it.
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Encrypted => "Encrypted",
+            Self::NotEncrypted => "Not encrypted",
+            Self::Unknown => "Encryption unknown",
+        }
+    }
+
+    /// The longer sentence the header's badge explains it with.
+    pub fn description(self) -> &'static str {
+        match self {
+            Self::Encrypted => {
+                "Messages here are end-to-end encrypted: only the people in the room can read them."
+            }
+            Self::NotEncrypted => {
+                "Messages here are not end-to-end encrypted: the server can read them."
+            }
+            Self::Unknown => "Family Chat doesn't know yet whether this room is encrypted.",
+        }
+    }
+}
+
+/// A member's role, from the room's power levels.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum MemberRole {
+    /// Power level 100 or more.
+    Admin,
+    /// Power level 50 or more.
+    Moderator,
+    /// Everyone else.
+    Member,
+}
+
+impl MemberRole {
+    /// The role for a power level.
+    pub fn from_power_level(level: i64) -> Self {
+        if level >= 100 {
+            Self::Admin
+        } else if level >= 50 {
+            Self::Moderator
+        } else {
+            Self::Member
+        }
+    }
+
+    /// Its name in the member list (`None` for an ordinary member).
+    pub fn label(self) -> Option<&'static str> {
+        match self {
+            Self::Admin => Some("Admin"),
+            Self::Moderator => Some("Moderator"),
+            Self::Member => None,
+        }
+    }
+}
+
+/// A member of a room.
+#[derive(Clone, PartialEq, Eq)]
+pub struct RoomMember {
+    /// Their user id.
+    pub user_id: OwnedUserId,
+    /// Their display name in this room, when they set one.
+    pub display_name: Option<String>,
+    /// Joined or invited.
+    pub membership: Membership,
+    /// Their role.
+    pub role: MemberRole,
+    /// The account itself.
+    pub is_own: bool,
+}
+
+impl fmt::Debug for RoomMember {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("RoomMember")
+            .field("membership", &self.membership)
+            .field("role", &self.role)
+            .finish_non_exhaustive()
+    }
+}
+
+impl RoomMember {
+    /// The name to show: the display name, or the user id.
+    pub fn name(&self) -> String {
+        self.display_name
+            .clone()
+            .filter(|name| !name.trim().is_empty())
+            .unwrap_or_else(|| self.user_id.to_string())
+    }
+}
+
+/// Sorts members as the member list shows them: joined before invited,
+/// admins and moderators first, then by name.
+pub fn sort_members(members: &mut [RoomMember]) {
+    members.sort_by_cached_key(|member| {
+        (
+            member.membership != Membership::Joined,
+            member.role,
+            member.name().to_lowercase(),
+        )
+    });
 }
 
 /// Which rooms the room list shows.
@@ -149,6 +329,45 @@ mod tests {
             }
             .is_unread()
         );
+    }
+
+    #[test]
+    fn rows_say_what_is_new() {
+        let mut room = RoomSummary::new(
+            "!a:smith.safechat.family".try_into().expect("a room id"),
+            "Smith family",
+        );
+        assert_eq!(room.accessible_label(), "Smith family");
+        room.unread.notifications = 3;
+        room.unread.mentions = 1;
+        assert_eq!(room.accessible_label(), "Smith family, 3 unread, 1 mention");
+        room.membership = Membership::Invited;
+        room.invited_by = Some("Ben".to_owned());
+        assert_eq!(room.accessible_label(), "Smith family, invitation from Ben");
+    }
+
+    #[test]
+    fn members_sort_by_role_then_name() {
+        let member = |name: &str, role, membership| RoomMember {
+            user_id: format!("@{}:x.org", name.to_lowercase())
+                .try_into()
+                .expect("a user id"),
+            display_name: Some(name.to_owned()),
+            membership,
+            role,
+            is_own: false,
+        };
+        let mut members = vec![
+            member("zed", MemberRole::Member, Membership::Joined),
+            member("Ann", MemberRole::Member, Membership::Invited),
+            member("Bob", MemberRole::Member, Membership::Joined),
+            member("Mum", MemberRole::Admin, Membership::Joined),
+        ];
+        sort_members(&mut members);
+        let names: Vec<_> = members.iter().map(RoomMember::name).collect();
+        assert_eq!(names, ["Mum", "Bob", "zed", "Ann"]);
+        assert_eq!(MemberRole::from_power_level(50), MemberRole::Moderator);
+        assert!(!format!("{:?}", members[0]).contains("Mum"));
     }
 
     #[test]

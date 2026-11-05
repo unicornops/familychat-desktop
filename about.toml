@@ -73,6 +73,24 @@ ignore-dev-dependencies = true
 #     (GPL-3.0-or-later, used under GPL-3.0-only) and
 #     crates/gpui/examples/window_shadow.rs (Apache License 2.0,
 #     crates/familychat-ui/LICENSE-APACHE) in Zed v1.24.2.
+# - Rooms and the timeline (Phase 6, ADR 0007), same copyright and licence;
+#   keep each file's header notice. Copied from Zmail's zmail-security:
+#   crates/familychat-security/src/matrix_html/elements.rs (src/html/
+#   elements.rs), crates/familychat-security/src/file_names.rs
+#   (src/attachment_safety.rs: the safe file name rules and their tests)
+#   and the fixtures crates/familychat-security/tests/fixtures/hostile_html/
+#   xss-vectors.html and mxss.html (tests/fixtures/hostile/). Adapted from
+#   it: crates/familychat-security/src/matrix_html/prepass.rs (src/html/
+#   prepass.rs), the tokenizer helper and the ammonia set-up in
+#   crates/familychat-security/src/matrix_html/mod.rs (src/html/mod.rs and
+#   text.rs), crates/familychat-security/tests/hostile_html.rs
+#   (tests/hostile_corpus.rs). Adapted from Zmail's zmail-ui: the link
+#   rules and the open-link dialog's wording in
+#   crates/familychat-core/src/links.rs and the dialog in
+#   crates/familychat-ui/src/rooms/mod.rs (src/reader/links.rs), the link
+#   drawing in crates/familychat-ui/src/rooms/rich_text.rs
+#   (src/reader/body.rs), and the benchmark
+#   crates/familychat-ui/src/view_tests/perf.rs (src/view_tests/perf.rs).
 # - crates/familychat-ui/src/testdata/signin-qr-screenshot.png is made for
 #   this project's tests (python-qrcode and Pillow), under its licence.
 #
@@ -97,6 +115,12 @@ ignore-dev-dependencies = true
 #   clipboard-paste, circle-check, circle-pause, globe, house, key-round,
 #   link, lock, lock-keyhole, log-out, message-circle-heart, qr-code,
 #   scan-qr-code and shield-check from Lucide 1.68.0
-#   (https://github.com/lucide-icons/lucide/tree/1.68.0/icons). Embedded
+#   (https://github.com/lucide-icons/lucide/tree/1.68.0/icons); in Phase 6
+#   file, file-image, file-text and trash-2 from Zmail's copy, and
+#   arrow-down, arrow-down-to-line, arrow-up, arrow-up-to-line,
+#   chevron-left, chevrons-down, chevrons-up, corner-down-right,
+#   hourglass, image, image-off, lock-open, mail-plus,
+#   message-circle-more, message-square-dashed, messages-square, pencil,
+#   shield-off and users from Lucide 1.68.0. Embedded
 #   in all builds; release archives ship the licence as
 #   licenses/Lucide-LICENSE.txt.

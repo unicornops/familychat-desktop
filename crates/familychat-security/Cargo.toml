@@ -5,11 +5,22 @@ edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
 publish = false
-description = "Family Chat's keychain access, typed secrets, log redaction and local logs"
+description = "Family Chat's keychain access, typed secrets, log redaction, local logs, and the content rules: the Matrix HTML sanitiser, image limits and safe file names"
 
 [dependencies]
+# The Matrix HTML sanitiser (`matrix_html`, ADR 0007): ammonia's allowlist
+# over html5ever's tree builder, the version Zmail uses. Its html5ever 0.40
+# is a second copy next to the 0.39 ruma-html brings (one line apart; it
+# folds into one when ruma moves to 0.40).
+ammonia = "4.2.4"
 familychat-core = { path = "../familychat-core" }
 getrandom.workspace = true
+# The sanitiser's own tokenizer passes (the caps before parsing, and the
+# rich-text tree from the sanitised markup): ammonia's html5ever.
+html5ever = "0.40.1"
+# Decoding message images within limits (`images`, ADR 0007): PNG, JPEG,
+# GIF and WebP only. Already in the graph through GPUI with these formats.
+image = { version = "0.25", default-features = false, features = ["gif", "jpeg", "png", "webp"] }
 keyring.workspace = true
 serde.workspace = true
 serde_json.workspace = true

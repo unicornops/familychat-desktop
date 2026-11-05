@@ -660,6 +660,82 @@ impl HomeserverHarness {
         .await
     }
 
+    /// Sends an HTML message (`org.matrix.custom.html`) as `session`, with
+    /// `plain` as its plain body.
+    pub async fn send_html(
+        &self,
+        session: &Session,
+        room_id: &str,
+        plain: &str,
+        html: &str,
+    ) -> Result<Reply> {
+        let txn = Self::unique_localpart("txn");
+        self.client_api(
+            Method::PUT,
+            &["v3", "rooms", room_id, "send", "m.room.message", &txn],
+            Some(session),
+            Some(&json!({
+                "msgtype": "m.text",
+                "body": plain,
+                "format": "org.matrix.custom.html",
+                "formatted_body": html,
+            })),
+        )
+        .await
+    }
+
+    /// Uploads `bytes` as `session` through the front end
+    /// (`POST /_matrix/media/v3/upload`) and returns the `mxc://` address.
+    pub async fn upload_media(
+        &self,
+        session: &Session,
+        bytes: Vec<u8>,
+        content_type: &str,
+        filename: &str,
+    ) -> Result<String> {
+        let mut url = Self::url(&self.env.hs1_url, &["_matrix", "media", "v3", "upload"])?;
+        url.query_pairs_mut().append_pair("filename", filename);
+        let request = self
+            .edge
+            .post(url)
+            .bearer_auth(session.access_token())
+            .header(reqwest::header::CONTENT_TYPE, content_type)
+            .body(bytes);
+        let reply = send(request).await?.ok("uploading media")?;
+        Ok(reply
+            .str_field("content_uri")
+            .context("the upload returned no content_uri")?
+            .to_owned())
+    }
+
+    /// Sends an `m.image` of the uploaded `mxc` as `session`, declaring its
+    /// size, type and file name.
+    #[allow(clippy::too_many_arguments)]
+    pub async fn send_image(
+        &self,
+        session: &Session,
+        room_id: &str,
+        mxc: &str,
+        filename: &str,
+        mimetype: &str,
+        (width, height): (u32, u32),
+        size: usize,
+    ) -> Result<Reply> {
+        let txn = Self::unique_localpart("txn");
+        self.client_api(
+            Method::PUT,
+            &["v3", "rooms", room_id, "send", "m.room.message", &txn],
+            Some(session),
+            Some(&json!({
+                "msgtype": "m.image",
+                "body": filename,
+                "url": mxc,
+                "info": { "w": width, "h": height, "mimetype": mimetype, "size": size },
+            })),
+        )
+        .await
+    }
+
     /// The latest timeline events of `room_id` as `session` sees them, newest
     /// first.
     pub async fn recent_events(&self, session: &Session, room_id: &str) -> Result<Vec<Value>> {

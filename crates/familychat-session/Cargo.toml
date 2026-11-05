@@ -14,9 +14,16 @@ familychat-security = { path = "../familychat-security" }
 familychat-store = { path = "../familychat-store" }
 futures-util = { version = "0.3", default-features = false, features = ["std"] }
 matrix-sdk.workspace = true
+# The attachment decryptor for encrypted media (`media`), which matrix-sdk
+# does not re-export. Already in the graph under matrix-sdk; pinned exactly
+# and moved with the other Matrix crates.
+matrix-sdk-base = { version = "=0.19.1", default-features = false, features = ["e2e-encryption"] }
 matrix-sdk-ui.workspace = true
 # Our own HTTP client for matrix-sdk (ADR 0005): the reqwest line it uses.
 reqwest.workspace = true
+# A media handle is the source's JSON (the mxc address, and an encrypted
+# file's key), opaque to the frontends (`mapping::handle`).
+serde_json.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 tracing.workspace = true
@@ -27,7 +34,6 @@ zeroize.workspace = true
 # harness hosts; it is injected through `SessionConfig::http_client`, so
 # nothing in this crate trusts the CA itself (ADR 0004).
 familychat-test-support = { path = "../familychat-test-support", features = ["test-harness"] }
-serde_json.workspace = true
 tracing-subscriber.workspace = true
 # The mocked homeserver for the tests that need no harness.
 wiremock = "0.6.5"

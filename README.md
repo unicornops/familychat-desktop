@@ -1,7 +1,7 @@
 # Family Chat Desktop
 
 > [!WARNING]
-> **Family Chat Desktop is alpha software and is in no way ready for real use.** Right now the window signs you in and shows your account's sync state, and the terminal UI is a placeholder: you cannot read or send messages yet. Expect bugs, missing features and breaking changes between releases. Use the Family Chat apps for iOS, Android or the web in the meantime.
+> **Family Chat Desktop is alpha software and is in no way ready for real use.** Right now the window signs you in and lets you read your rooms, and the terminal UI is a placeholder: you cannot send messages yet. Expect bugs, missing features and breaking changes between releases. Use the Family Chat apps for iOS, Android or the web in the meantime.
 
 Family Chat Desktop (`familychat`) is a native desktop chat client for macOS, Linux and Windows, written in Rust, with a graphical UI built on GPUI and a terminal UI built on ratatui. It is a standards-compliant Matrix client that works with any homeserver supporting what modern Matrix clients need, and its first job is to be the best way to use [Family Chat](https://safechat.family), the family-safe hosted Matrix service, including easy sign-in with a code from a parent.
 
@@ -49,10 +49,19 @@ Phase 5, the window's shell and sign-in screens ([#6](https://github.com/unicorn
 - sign in with a code from a parent: paste the sign-in link, or paste or drop the QR code image (read on your computer, never uploaded); "Sign in as …?" is always asked before a code is used, and a used or expired code falls back to your password
 - sign in with your password, to your family's server or any other Matrix server, with the wait counted down when the server asks to slow down
 - the keychain and lost-key screens (Try again, Start over) when the local data can't be opened
-- once signed in, the account and its sync state (including "Paused" for a Family Chat curfew); rooms and messages are Phase 6
+- once signed in, the account and its sync state (including "Paused" for a Family Chat curfew)
 - `familychat launch-ui-fixture` (a build feature) and a screenshot of every sign-in screen in dark and light on each pull request that touches the UI
 
-The terminal UI signs in from Phase 10. Drawing rooms and the timeline, sending, encryption, notifications and the rest follow in the later phases.
+Phase 6, rooms and the timeline in the window ([#7](https://github.com/unicornops/familychat-desktop/issues/7), [ADR 0007](./docs/adr/0007-message-rendering-and-media.md)):
+
+- the room list with all, unread, people and invitation filters, unread and mention badges, and invitations you accept or decline from the list
+- the open room's header with its encryption state (a banner in rooms that are not encrypted), and its member list with roles
+- the timeline, scrolling smoothly through tens of thousands of messages: text, notices, emotes, formatted messages (sanitised HTML drawn as styled text, never as a web page), replies, edits, deleted messages, reactions, the "New messages" marker, day dividers, folded room changes and a placeholder for messages this device can't read yet
+- images from your server through authenticated media, decoded on your computer within strict limits (SVG is never drawn); files saved where you choose, under a safe name
+- `matrix:` and `matrix.to` links open in the app; every other link shows its whole address and asks before your browser opens it, and warns when its text shows a different site
+- keyboard commands to move between rooms and unread rooms, jump to the oldest unread or the latest message, show the members and switch filters
+
+The terminal UI signs in from Phase 10. Sending, encryption, notifications and the rest follow in the later phases.
 
 ## Building
 

@@ -21,7 +21,7 @@ use std::{
 
 use anyhow::{Context, Result, bail, ensure};
 use common::{
-    TestProfile, account_session, assert_not_in_files, captured_logs, log_text, wait_for_sync,
+    TestProfile, account_session, assert_not_in_files, captured_logs, log_text, png, wait_for_sync,
 };
 use familychat_core::{
     OwnedRoomId,
@@ -29,7 +29,10 @@ use familychat_core::{
     rooms::{RoomListFilter, RoomSummary},
     session::{SessionApi, TimelineSubscription},
     sync::SyncState,
-    timeline::{PaginationState, TimelineContent, TimelineItem, TimelineItemKind, TimelineUpdate},
+    timeline::{
+        MessageKind, PaginationState, TimelineContent, TimelineEvent, TimelineItem,
+        TimelineItemKind, TimelineUpdate,
+    },
 };
 use familychat_security::{AccountId, keychain::load_session};
 use familychat_session::{AccountManager, AnyHomeserver, LiveSession, account_key};
@@ -128,6 +131,20 @@ impl Followed {
             TimelineUpdate::Pagination(state) => self.pagination = state,
         }
         Ok(())
+    }
+
+    fn events(&self) -> impl Iterator<Item = &TimelineEvent> {
+        self.items.iter().filter_map(|item| match &item.kind {
+            TimelineItemKind::Event(event) => Some(event),
+            _ => None,
+        })
+    }
+
+    /// The message whose plain body is `body`.
+    fn message(&self, body: &str) -> Option<&TimelineEvent> {
+        self.events().find(|event| {
+            matches!(&event.content, TimelineContent::Message { body: found, .. } if found.as_str() == body)
+        })
     }
 
     fn bodies(&self) -> Vec<String> {
@@ -463,5 +480,187 @@ async fn rotated_tokens_are_persisted_and_survive_a_restart() -> Result<()> {
         !text.contains(&user.password),
         "the log contains a password"
     );
+    Ok(())
+}
+
+/// Palpo (Family Chat's server): another member's plain message, HTML
+/// message and image reach the account's timeline through `SessionApi`;
+/// the HTML arrives as the sanitised rich-text tree (bold, and its link),
+/// the image as its media, which `SessionApi::image` fetches through
+/// authenticated media only and decodes; the members list both; and the
+/// log holds none of the text.
+#[tokio::test]
+#[ignore = "needs the homeserver harness: scripts/homeserver-harness.sh up"]
+async fn messages_and_an_image_from_another_user_appear() -> Result<()> {
+    captured_logs();
+    let harness = harness()?;
+    let alice = harness.new_user("media-alice").await?;
+    let bob = harness.new_user("media-bob").await?;
+    let marker = HomeserverHarness::unique_localpart("rich");
+    let room: OwnedRoomId = harness
+        .create_room(
+            &bob.session,
+            &format!("Media {marker}"),
+            &[alice.user_id.as_str()],
+        )
+        .await?
+        .try_into()?;
+    harness.join_room(&alice.session, room.as_str()).await?;
+
+    let test = TestProfile::new("live-media");
+    let manager = Arc::new(test.manager(harness.client().clone())?);
+    let id = manager
+        .add_account(session_for(&alice, harness.hs1_url()), &AnyHomeserver)
+        .await?;
+    running(&manager, id).await?;
+    let session = LiveSession::new(manager.clone(), tokio::runtime::Handle::current());
+    room_appears(&session, id, &room).await?;
+    let mut timeline = Followed::open(&session, id, &room).await?;
+
+    let plain = format!("plain {marker}");
+    harness
+        .send_text(&bob.session, room.as_str(), &plain)
+        .await?
+        .ok("bob's plain message")?;
+    let html_plain = format!("bold {marker} https://example.org/{marker}");
+    let html = format!(
+        "<strong>bold {marker}</strong> <a href=\"https://example.org/{marker}\">the link</a>\
+         <script>alert(1)</script>"
+    );
+    harness
+        .send_html(&bob.session, room.as_str(), &html_plain, &html)
+        .await?
+        .ok("bob's HTML message")?;
+    let (width, height) = (6, 4);
+    let bytes = png(width, height);
+    let size = bytes.len();
+    let mxc = harness
+        .upload_media(&bob.session, bytes, "image/png", "pixels.png")
+        .await?;
+    let media_id = mxc.rsplit('/').next().unwrap_or_default().to_owned();
+    harness
+        .send_image(
+            &bob.session,
+            room.as_str(),
+            &mxc,
+            "pixels.png",
+            "image/png",
+            (width, height),
+            size,
+        )
+        .await?
+        .ok("bob's image")?;
+
+    timeline
+        .until(Duration::from_secs(20), "the three messages", |timeline| {
+            timeline.message(&plain).is_some()
+                && timeline.message(&html_plain).is_some()
+                && timeline.message("pixels.png").is_some()
+        })
+        .await?;
+
+    // The plain message, from bob.
+    let event = timeline.message(&plain).context("the plain message")?;
+    ensure!(event.sender.as_str() == bob.user_id && !event.is_own);
+    let TimelineContent::Message { kind, rich, .. } = &event.content else {
+        bail!("not a message");
+    };
+    ensure!(*kind == MessageKind::Text && rich.plain_text() == plain);
+
+    // The HTML message: sanitised into the tree, script gone.
+    let event = timeline.message(&html_plain).context("the HTML message")?;
+    let TimelineContent::Message { rich, .. } = &event.content else {
+        bail!("not a message");
+    };
+    let text = rich.plain_text();
+    ensure!(
+        text.contains(&format!("bold {marker}")) && text.contains("the link"),
+        "the formatted body was not drawn: {} blocks",
+        rich.blocks.len()
+    );
+    ensure!(!text.contains("alert"), "the script's text survived");
+    let bold = rich.blocks.iter().any(|block| {
+        block
+            .spans
+            .iter()
+            .any(|span| span.style.bold && block.text[span.range.clone()].contains(&marker))
+    });
+    ensure!(bold, "no bold span");
+    ensure!(
+        rich.links
+            .iter()
+            .any(|link| link.href == format!("https://example.org/{marker}")),
+        "the link was lost"
+    );
+
+    // The image: its media, fetched and decoded.
+    let event = timeline.message("pixels.png").context("the image")?;
+    let TimelineContent::Message {
+        kind,
+        media: Some(media),
+        ..
+    } = &event.content
+    else {
+        bail!("the image has no media");
+    };
+    ensure!(*kind == MessageKind::Image, "{kind:?}");
+    ensure!(
+        media.filename == "pixels.png"
+            && media.declared_size() == Some((width, height))
+            && media.mimetype.as_deref() == Some("image/png"),
+        "{media:?}"
+    );
+    let image = session
+        .image(&account_key(id), media)
+        .await
+        .context("the image answers")?
+        .map_err(|error| anyhow::anyhow!("the image did not decode: {error}"))?;
+    // The file itself, or a server thumbnail of it: the same shape.
+    ensure!(
+        image.width * height == image.height * width && !image.frames.is_empty(),
+        "the image is {}x{}",
+        image.width,
+        image.height
+    );
+    println!("the image decoded at {}x{}", image.width, image.height);
+    // Every request for it went to the authenticated endpoints.
+    harness
+        .wait_for_access("the image download", |line| line.path.contains(&media_id))
+        .await?;
+    let requests: Vec<String> = harness
+        .access_log()?
+        .into_iter()
+        .filter(|line| line.path.contains(&media_id))
+        .map(|line| line.path)
+        .collect();
+    ensure!(
+        requests
+            .iter()
+            .all(|path| path.starts_with("/_matrix/client/v1/media/")),
+        "unauthenticated media requests: {requests:?}"
+    );
+
+    // Both members, by name or id.
+    let members = session
+        .members(&account_key(id), &room)
+        .await
+        .context("the members answer")??;
+    for user in [&alice.user_id, &bob.user_id] {
+        ensure!(
+            members.iter().any(|member| member.user_id.as_str() == user),
+            "{user} is not listed"
+        );
+    }
+    ensure!(members.iter().filter(|member| member.is_own).count() == 1);
+
+    drop(timeline);
+    manager.shutdown().await;
+    let log = log_text();
+    for secret in [marker.as_str(), alice.session.access_token()] {
+        ensure!(
+            !log.contains(secret),
+            "the log contains a message or a token"
+        );
+    }
     Ok(())
 }

@@ -15,14 +15,16 @@ use std::{sync::Arc, time::Duration};
 use anyhow::{Result, bail};
 use familychat_core::{
     ThemeAppearance,
+    rooms::RoomListFilter,
     signin::{SigninStep, Working},
     sync::SyncState,
 };
 use familychat_test_support::fixtures::{
     FIXTURE_LINK, FixtureProfile, FixtureSession, FixtureSignin, FixtureStartup, fixture_user,
+    rooms::{self, LARGE_EVENTS, LARGE_ROOMS},
     steps,
 };
-use familychat_ui::{InitialView, LaunchOptions};
+use familychat_ui::{InitialView, LaunchOptions, RoomsLaunch};
 
 /// Every fixture view, in the screenshot matrix's order.
 pub(crate) const VIEWS: &[&str] = &[
@@ -51,7 +53,42 @@ pub(crate) const VIEWS: &[&str] = &[
     "signed-in-suspended",
     "signed-in-signed-out",
     "signed-in-not-supported",
+    "rooms-unread",
+    "rooms-people",
+    "rooms-invites",
+    "rooms-filter-empty",
+    "rooms-empty",
+    "rooms-loading",
+    "room",
+    "room-dm",
+    "room-rich",
+    "room-media",
+    "room-changes",
+    "room-changes-expanded",
+    "room-unreadable",
+    "room-not-encrypted",
+    "room-empty",
+    "room-members",
+    "room-invite",
+    "link-prompt",
+    "link-prompt-mismatched",
+    "room-large",
 ];
+
+/// The rooms a signed-in fixture has.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Rooms {
+    /// The Smith family's.
+    Family,
+    /// The family's, without the invitation.
+    FamilyNoInvites,
+    /// None at all.
+    None,
+    /// Still loading.
+    Loading,
+    /// The 1,000-room, 10,000-event fixture.
+    Large,
+}
 
 /// What a fixture view opens on.
 #[derive(Debug)]
@@ -62,6 +99,8 @@ struct Fixture {
     step: Option<SigninStep>,
     /// A signed-in account in this sync state.
     account: Option<SyncState>,
+    /// Its rooms.
+    rooms: Rooms,
 }
 
 impl Fixture {
@@ -71,6 +110,7 @@ impl Fixture {
             initial_view,
             step: None,
             account: None,
+            rooms: Rooms::Family,
         }
     }
 
@@ -92,6 +132,35 @@ impl Fixture {
             ..Self::signin(InitialView::Default)
         }
     }
+
+    /// The family's rooms, opened as `launch` says.
+    fn rooms(launch: RoomsLaunch) -> Self {
+        Self {
+            initial_view: InitialView::Rooms(launch),
+            ..Self::signed_in(SyncState::Running)
+        }
+    }
+
+    /// The family's rooms with `room` open.
+    fn room(room: &str) -> Self {
+        Self::rooms(RoomsLaunch {
+            room: Some(room.to_owned()),
+            ..RoomsLaunch::default()
+        })
+    }
+
+    fn with_rooms(mut self, rooms: Rooms) -> Self {
+        self.rooms = rooms;
+        self
+    }
+}
+
+/// The family's room list on `filter`.
+fn filtered(filter: RoomListFilter) -> Fixture {
+    Fixture::rooms(RoomsLaunch {
+        filter,
+        ..RoomsLaunch::default()
+    })
 }
 
 fn fixture(view: &str) -> Result<Fixture> {
@@ -134,6 +203,50 @@ fn fixture(view: &str) -> Result<Fixture> {
         }),
         "signed-in-signed-out" => Fixture::signed_in(SyncState::SignedOut { soft_logout: false }),
         "signed-in-not-supported" => Fixture::signed_in(SyncState::NotSupported),
+        "rooms-unread" => filtered(RoomListFilter::Unread),
+        "rooms-people" => filtered(RoomListFilter::People),
+        "rooms-invites" => filtered(RoomListFilter::Invites),
+        "rooms-filter-empty" => {
+            filtered(RoomListFilter::Invites).with_rooms(Rooms::FamilyNoInvites)
+        }
+        "rooms-empty" => Fixture::signed_in(SyncState::Running).with_rooms(Rooms::None),
+        "rooms-loading" => Fixture::signed_in(SyncState::Connecting).with_rooms(Rooms::Loading),
+        "room" => Fixture::room(rooms::FAMILY_ROOM),
+        "room-dm" => Fixture::room(rooms::MUM_ROOM),
+        "room-rich" => Fixture::room(rooms::HOLIDAY_ROOM),
+        "room-media" => Fixture::room(rooms::PHOTOS_ROOM),
+        "room-changes" => Fixture::room(rooms::FOOTBALL_ROOM),
+        "room-changes-expanded" => Fixture::rooms(RoomsLaunch {
+            room: Some(rooms::FOOTBALL_ROOM.to_owned()),
+            expand_changes: true,
+            ..RoomsLaunch::default()
+        }),
+        "room-unreadable" => Fixture::room(rooms::SECRETS_ROOM),
+        "room-not-encrypted" => Fixture::room(rooms::HOMEWORK_ROOM),
+        "room-empty" => Fixture::room(rooms::EMPTY_ROOM),
+        "room-members" => Fixture::rooms(RoomsLaunch {
+            room: Some(rooms::FAMILY_ROOM.to_owned()),
+            members: true,
+            ..RoomsLaunch::default()
+        }),
+        "room-invite" => Fixture::room(rooms::INVITE_ROOM),
+        "link-prompt" => Fixture::rooms(RoomsLaunch {
+            room: Some(rooms::HOLIDAY_ROOM.to_owned()),
+            link: Some((
+                "https://cottages.example/booking/4471".to_owned(),
+                "cottages.example".to_owned(),
+            )),
+            ..RoomsLaunch::default()
+        }),
+        "link-prompt-mismatched" => Fixture::rooms(RoomsLaunch {
+            room: Some(rooms::HOLIDAY_ROOM.to_owned()),
+            link: Some((
+                "https://tickets.evil.example/claim".to_owned(),
+                "https://www.bank.example".to_owned(),
+            )),
+            ..RoomsLaunch::default()
+        }),
+        "room-large" => Fixture::room(rooms::FAMILY_ROOM).with_rooms(Rooms::Large),
         other => bail!(
             "unknown fixture view `{other}`; the views are: {}",
             VIEWS.join(", ")
@@ -165,6 +278,22 @@ pub(crate) fn startup(
     let session = FixtureSession::new();
     if let Some(sync) = fixture.account {
         session.add_account(&fixture_user(), sync);
+        match fixture.rooms {
+            Rooms::Family => session.with_family(),
+            Rooms::FamilyNoInvites => {
+                session.with_family();
+                session.set_rooms(
+                    session
+                        .rooms()
+                        .into_iter()
+                        .filter(|room| !room.is_invite())
+                        .collect(),
+                );
+            }
+            Rooms::None => {}
+            Rooms::Loading => session.set_rooms_loading(true),
+            Rooms::Large => session.with_large(LARGE_ROOMS, LARGE_EVENTS),
+        }
     }
     let signin = FixtureSignin::new(session.clone());
     if let Some(step) = fixture.step {

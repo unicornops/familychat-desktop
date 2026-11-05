@@ -1,0 +1,15 @@
+<p><a href="https://bank.example/login">https://bank.example/login</a> goes where it says.</p>
+<p><a href="https://evil.example/steal">https://bank.example/login</a> does not.</p>
+<p><a href="https://bank.example@evil.example/">bank.example</a> hides its host after the at sign.</p>
+<p><a href="javascript:alert(1)">js</a> <a href="JaVaScRiPt:alert(2)">js</a> <a href=" javascript:alert(3)">js</a>
+<a href="&#106;avascript:alert(4)">js</a> <a href="java&#x09;script:alert(5)">js</a> <a href="vbscript:x">vbs</a>
+<a href="data:text/html,<script>alert(6)</script>">data</a> <a href="file:///etc/passwd">file</a>
+<a href="//evil.example/protocol-relative">rel</a> <a href="/root">root</a> <a href="#frag">frag</a> <a href="?q=1">query</a>
+<a href="ftp://ftp.example/">ftp</a> <a href="magnet:?xt=urn:x">magnet</a> <a href="tel:+353">tel</a> <a href="sms:+353">sms</a>
+<a href="mxc://example.org/media">mxc link</a> <a href="cid:part">cid</a></p>
+<p><a href="mailto:help@example.org">help@example.org</a> <a href="matrix:u/ana:example.org">Ana</a>
+<a href="https://matrix.to/#/@ana:example.org">Ana again</a> <a href="https://matrix.to/#/#family:example.org">#family</a></p>
+<p><a href="https://outer.example/"><a href="https://inner.example/">nested</a> after</a></p>
+<p><a href="https://ok.example/" onclick="alert(7)" target="_blank" rel="opener" ping="https://evil.example/">attributes</a></p>
+<p><a>no href</a> <a href="">empty href</a> <a href="https:">scheme only</a></p>
+<p><a href="https://example.org/&#0;null">null entity</a> <a href="https://example.org/%E2%80%AEreversed">encoded RLO</a></p>

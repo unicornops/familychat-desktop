@@ -10,13 +10,20 @@ use std::{
 };
 
 use anyhow::{Context, Result, ensure};
-use common::{TestProfile, account_session, wait_for_sync};
-use familychat_core::sync::SyncState;
+use common::{TestProfile, account_session, png, wait_for_sync};
+use familychat_core::{
+    media::{MediaError, MediaHandle, MediaInfo},
+    session::SessionApi,
+    sync::SyncState,
+};
 use familychat_security::{
     MemoryKeychain,
     keychain::{load_session, save_session},
 };
-use familychat_session::{AddAccountError, AnyHomeserver, OpenError, PostLoginCheck};
+use familychat_session::{
+    AccountManager, AddAccountError, AnyHomeserver, LiveSession, OpenError, PostLoginCheck,
+    account_key,
+};
 use familychat_store::NewAccount;
 use serde_json::json;
 use wiremock::{
@@ -396,5 +403,208 @@ async fn a_refused_sign_in_is_signed_out_and_forgotten() -> Result<()> {
         "the refused account's files were kept"
     );
     server.verify().await;
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Media (ADR 0007): authenticated media only, capped, through the cache.
+// ---------------------------------------------------------------------------
+
+const MEDIA_ID: &str = "pic";
+const DOWNLOAD: &str = "/_matrix/client/v1/media/download/mock.test/pic";
+const THUMBNAIL: &str = "/_matrix/client/v1/media/thumbnail/mock.test/pic";
+
+/// `/versions` with `versions` and native sliding sync.
+async fn mock_versions_list(server: &MockServer, versions: &[&str]) {
+    Mock::given(method("GET"))
+        .and(path("/_matrix/client/versions"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "versions": versions,
+            "unstable_features": { "org.matrix.simplified_msc3575": true },
+        })))
+        .with_priority(1)
+        .mount(server)
+        .await;
+}
+
+/// Everything not mocked otherwise is refused as for a suspended account,
+/// which stops the sync early; media requests are mocked at a higher
+/// priority.
+async fn mock_the_rest(server: &MockServer) {
+    Mock::given(wiremock::matchers::any())
+        .respond_with(suspended())
+        .with_priority(10)
+        .mount(server)
+        .await;
+}
+
+/// A restored account over `server`, and the session over its manager.
+async fn media_session(
+    server: &MockServer,
+    name: &str,
+) -> Result<(
+    TestProfile,
+    Arc<AccountManager>,
+    LiveSession,
+    familychat_core::session::AccountKey,
+)> {
+    let test = TestProfile::new(name);
+    register(&test, &server.uri(), "access", None)?;
+    let manager = Arc::new(test.manager(mock_client())?);
+    let restored = manager.restore_all().await?;
+    ensure!(
+        restored.len() == 1 && restored[0].result.is_ok(),
+        "{restored:?}"
+    );
+    let key = account_key(restored[0].id);
+    let session = LiveSession::new(manager.clone(), tokio::runtime::Handle::current());
+    Ok((test, manager, session, key))
+}
+
+fn image_info(mimetype: &str) -> MediaInfo {
+    MediaInfo {
+        source: MediaHandle::new(format!(r#"{{"url":"mxc://mock.test/{MEDIA_ID}"}}"#)),
+        thumbnail: None,
+        filename: "photo.png".to_owned(),
+        mimetype: Some(mimetype.to_owned()),
+        size: None,
+        width: Some(4),
+        height: Some(3),
+    }
+}
+
+async fn media_requests(server: &MockServer) -> Vec<String> {
+    server
+        .received_requests()
+        .await
+        .unwrap_or_default()
+        .iter()
+        .map(|request| request.url.path().to_owned())
+        .filter(|path| path.contains("/media/"))
+        .collect()
+}
+
+/// A server without authenticated media (Matrix 1.11) gets no media
+/// request at all.
+#[tokio::test]
+async fn media_is_never_fetched_without_authenticated_media() -> Result<()> {
+    let server = MockServer::start().await;
+    mock_versions_list(&server, &["v1.5", "v1.10"]).await;
+    mock_the_rest(&server).await;
+    let (_test, manager, session, key) = media_session(&server, "no-auth-media").await?;
+
+    let answer = session.image(&key, &image_info("image/png")).await?;
+    ensure!(
+        answer == Err(MediaError::NoAuthenticatedMedia),
+        "{answer:?}"
+    );
+    let path = std::env::temp_dir().join(format!("familychat-no-auth-{}.png", std::process::id()));
+    let saved = session
+        .save_file(&key, &image_info("image/png"), path.clone())
+        .await?;
+    ensure!(saved == Err(MediaError::NoAuthenticatedMedia), "{saved:?}");
+    ensure!(!path.exists(), "nothing was written");
+    let requests = media_requests(&server).await;
+    ensure!(requests.is_empty(), "media was requested: {requests:?}");
+    manager.shutdown().await;
+    Ok(())
+}
+
+/// With authenticated media, an image comes through the authenticated
+/// endpoints with the account's token (the file when the server has no
+/// thumbnail), decodes, and the second time comes from the encrypted media
+/// cache; SVG is refused before any request.
+#[tokio::test]
+async fn an_image_comes_through_authenticated_media_and_decodes() -> Result<()> {
+    let server = MockServer::start().await;
+    mock_versions_list(&server, &["v1.11"]).await;
+    Mock::given(method("GET"))
+        .and(path(THUMBNAIL))
+        .respond_with(ResponseTemplate::new(404).set_body_json(json!({
+            "errcode": "M_NOT_FOUND",
+            "error": "No thumbnail",
+        })))
+        .with_priority(1)
+        .mount(&server)
+        .await;
+    Mock::given(method("GET"))
+        .and(path(DOWNLOAD))
+        .and(header("authorization", "Bearer access"))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .insert_header("content-type", "image/png")
+                .set_body_bytes(png(4, 3)),
+        )
+        .with_priority(1)
+        .mount(&server)
+        .await;
+    mock_the_rest(&server).await;
+    let (_test, manager, session, key) = media_session(&server, "auth-media").await?;
+
+    let image = session
+        .image(&key, &image_info("image/png"))
+        .await?
+        .map_err(|error| anyhow::anyhow!("the image did not decode: {error}"))?;
+    ensure!(
+        (image.width, image.height, image.frames.len()) == (4, 3, 1),
+        "{image:?}"
+    );
+    ensure!(image.frames[0].rgba.len() == 4 * 3 * 4);
+    let again = session.image(&key, &image_info("image/png")).await?;
+    ensure!(again.is_ok(), "{again:?}");
+    let requests = media_requests(&server).await;
+    ensure!(
+        requests
+            .iter()
+            .all(|path| path.starts_with("/_matrix/client/v1/media/")),
+        "an unauthenticated media request: {requests:?}"
+    );
+    let downloads = requests.iter().filter(|path| *path == DOWNLOAD).count();
+    ensure!(
+        downloads == 1,
+        "the cached image was fetched again: {requests:?}"
+    );
+
+    let svg = session.image(&key, &image_info("image/svg+xml")).await?;
+    ensure!(svg == Err(MediaError::Svg), "{svg:?}");
+    ensure!(
+        media_requests(&server).await.len() == requests.len(),
+        "the SVG was requested"
+    );
+
+    // Saving writes the whole file where the person chose.
+    let dir = std::env::temp_dir().join(format!("familychat-save-{}", std::process::id()));
+    std::fs::create_dir_all(&dir)?;
+    let path = dir.join("photo.png");
+    session
+        .save_file(&key, &image_info("image/png"), path.clone())
+        .await?
+        .map_err(|error| anyhow::anyhow!("not saved: {error}"))?;
+    ensure!(std::fs::read(&path)? == png(4, 3), "the saved file differs");
+    let _ = std::fs::remove_dir_all(&dir);
+    manager.shutdown().await;
+    Ok(())
+}
+
+/// A response over the image cap is refused, not held.
+#[tokio::test]
+async fn an_oversized_image_is_refused() -> Result<()> {
+    let server = MockServer::start().await;
+    mock_versions_list(&server, &["v1.11"]).await;
+    let limit = familychat_security::images::TIMELINE_IMAGE_LIMITS.max_bytes;
+    let oversized = vec![0u8; usize::try_from(limit)? + 1];
+    for endpoint in [THUMBNAIL, DOWNLOAD] {
+        Mock::given(method("GET"))
+            .and(path(endpoint))
+            .respond_with(ResponseTemplate::new(200).set_body_bytes(oversized.clone()))
+            .with_priority(1)
+            .mount(&server)
+            .await;
+    }
+    mock_the_rest(&server).await;
+    let (_test, manager, session, key) = media_session(&server, "oversized").await?;
+    let answer = session.image(&key, &image_info("image/png")).await?;
+    ensure!(answer == Err(MediaError::TooLarge { limit }), "{answer:?}");
+    manager.shutdown().await;
     Ok(())
 }

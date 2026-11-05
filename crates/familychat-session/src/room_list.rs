@@ -12,8 +12,9 @@ use familychat_core::{
 use futures_util::StreamExt as _;
 use matrix_sdk_ui::{
     RoomListService,
+    eyeball_im::VectorDiff,
     room_list_service::{
-        RoomList, RoomListLoadingState,
+        RoomList, RoomListItem, RoomListLoadingState,
         filters::{
             self, BoxedFilterFn, ReadReceiptsCategory, RoomCategory, new_filter_all,
             new_filter_category, new_filter_deduplicate_versions, new_filter_invite,
@@ -80,6 +81,36 @@ fn loading(state: RoomListLoadingState) -> RoomListLoading {
     }
 }
 
+/// A batch of SDK changes as core changes. Each room's summary reads its
+/// latest message and invitation from the local stores, which is async, so
+/// the values are mapped first and the changes rebuilt around them.
+async fn summaries(batch: Vec<VectorDiff<RoomListItem>>) -> Vec<ListDiff<RoomSummary>> {
+    let mut mapped = Vec::with_capacity(batch.len());
+    for diff in batch {
+        let rooms: Vec<RoomListItem> = match &diff {
+            VectorDiff::Append { values } | VectorDiff::Reset { values } => {
+                values.iter().cloned().collect()
+            }
+            VectorDiff::PushFront { value }
+            | VectorDiff::PushBack { value }
+            | VectorDiff::Insert { value, .. }
+            | VectorDiff::Set { value, .. } => vec![value.clone()],
+            _ => Vec::new(),
+        };
+        let mut summaries = Vec::with_capacity(rooms.len());
+        for room in &rooms {
+            summaries.push(room_summary(room).await);
+        }
+        let mut summaries = summaries.into_iter();
+        mapped.push(list_diff(diff, |_| {
+            summaries
+                .next()
+                .unwrap_or_else(|| unreachable!("one summary per room"))
+        }));
+    }
+    mapped
+}
+
 /// Bridges the list until the frontend drops its subscription.
 async fn run(
     list: RoomList,
@@ -98,10 +129,7 @@ async fn run(
         tokio::select! {
             batch = entries.next() => {
                 let Some(batch) = batch else { break };
-                let batch: Vec<_> = batch
-                    .into_iter()
-                    .map(|diff| list_diff(diff, |room| room_summary(&room)))
-                    .collect();
+                let batch = summaries(batch).await;
                 if updates.send(batch).await.is_err() {
                     break;
                 }

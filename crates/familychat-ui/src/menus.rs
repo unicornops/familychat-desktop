@@ -1,6 +1,6 @@
 //! The macOS menu bar, from the commands table: the app menu (the command
-//! palette, Hide, Hide Others, Quit) and a Sign In menu with the sign-in
-//! commands. AppKit shows each command's first key from the keymap as its
+//! palette, Hide, Hide Others, Quit), a Sign In menu with the sign-in
+//! commands and a Rooms menu with the room and timeline commands. AppKit shows each command's first key from the keymap as its
 //! key equivalent. Windows and Linux have no menu bar; their commands are
 //! in the command palette (Secondary+K).
 
@@ -53,6 +53,7 @@ pub(crate) fn menus(cx: &App) -> Vec<Menu> {
     vec![
         Menu::new(APP_NAME).items(app_menu),
         Menu::new("Sign In").items(command_items(CommandScope::SignIn)),
+        Menu::new("Rooms").items(command_items(CommandScope::Rooms)),
     ]
 }
 
