@@ -1,6 +1,11 @@
 //! A room's timeline, bridged: matrix-sdk-ui's `Timeline` items polled on
 //! the Tokio runtime, mapped to [`TimelineItem`] diffs, with back-pagination
 //! on request.
+//!
+//! An open room is subscribed in sliding sync (`set_room_subscriptions`, as
+//! Element X does) for as long as its timeline is open: the room list asks
+//! for only the latest event of each room, so without the subscription a
+//! burst of messages would arrive as the newest one and a gap.
 
 use std::sync::Arc;
 
@@ -11,15 +16,19 @@ use familychat_core::{
 };
 use futures_util::StreamExt as _;
 use matrix_sdk::{Room, ruma::OwnedUserId};
-use matrix_sdk_ui::Timeline;
 use matrix_sdk_ui::timeline::RoomExt as _;
+use matrix_sdk_ui::{RoomListService, Timeline};
 use tokio::sync::{Mutex, mpsc};
 use tracing::info;
 
 use crate::mapping::{list_diff, timeline_item};
 
 /// Opens the room's live timeline and starts the task that bridges it.
-pub(crate) async fn open(room: Room) -> Result<TimelineSubscription, SessionError> {
+pub(crate) async fn open(
+    room: Room,
+    service: Arc<RoomListService>,
+) -> Result<TimelineSubscription, SessionError> {
+    service.set_room_subscriptions(&[room.room_id()]).await;
     let timeline = room
         .timeline()
         .await
@@ -27,7 +36,12 @@ pub(crate) async fn open(room: Room) -> Result<TimelineSubscription, SessionErro
     let (updates_tx, updates) = mpsc::channel(SUBSCRIPTION_BUFFER);
     let (commands, commands_rx) = mpsc::unbounded_channel();
     let own_user = room.own_user_id().to_owned();
-    tokio::spawn(run(Arc::new(timeline), own_user, updates_tx, commands_rx));
+    let room_id = room.room_id().to_owned();
+    tokio::spawn(async move {
+        run(Arc::new(timeline), own_user, updates_tx, commands_rx).await;
+        // The room's events no longer need to arrive in full.
+        service.remove_room_subscriptions(&[&room_id]);
+    });
     Ok(TimelineSubscription::new(updates, commands))
 }
 

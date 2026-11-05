@@ -137,7 +137,7 @@ impl SessionApi for LiveSession {
                 .client
                 .get_room(&room)
                 .ok_or(SessionError::UnknownRoom)?;
-            timeline::open(room).await
+            timeline::open(room, ready.sync.room_list_service()).await
         })
     }
 
