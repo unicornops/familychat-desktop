@@ -519,6 +519,65 @@ jobs:
                   path: ${{ runner.temp }}/ui-screenshot-logs
                   if-no-files-found: ignore
 
+    # The performance budgets (ADR 0007's benchmark, PLAN.md section
+    # 13.13; Zmail's job): the real window over the 1,000-room,
+    # 10,000-event fixture with the platform's text system, in a release
+    # build. Shared runners are noisy, so the job reports the numbers and
+    # fails only when a median is over three times its budget
+    # (FAMILYCHAT_PERF_GATE), a gross regression.
+    performance:
+        name: Performance budgets
+        needs: changes
+        if: github.event_name != 'pull_request' || needs.changes.outputs.ui == 'true'
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+            - name: Install Linux build dependencies
+              run: sudo apt-get update && sudo apt-get install -y pkg-config libdbus-1-dev libasound2-dev libxcb1-dev libxkbcommon-dev libxkbcommon-x11-dev libfontconfig1-dev libfreetype6-dev
+
+            - name: Read the pinned Rust toolchain
+              id: toolchain
+              shell: bash
+              run: echo "channel=$(sed -n 's/^channel = "\(.*\)"/\1/p' rust-toolchain.toml)" >> "$GITHUB_OUTPUT"
+
+            - name: Install Rust
+              uses: dtolnay/rust-toolchain@89b12181fb390509a0842a86cc55eeb8eb928c1d # stable
+              with:
+                  toolchain: ${{ steps.toolchain.outputs.channel }}
+
+            - name: Cache Cargo git dependencies
+              uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+              with:
+                  path: ~/.cargo/git/db
+                  key: cargo-git-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+                  restore-keys: cargo-git-${{ runner.os }}-
+
+            - name: Run the performance budgets
+              env:
+                  FAMILYCHAT_PERF_REPORT: artifacts/performance
+                  FAMILYCHAT_PERF_GATE: "3"
+              run: cargo test --release --locked -p familychat-ui --lib performance_budgets -- --ignored --nocapture
+
+            - name: Summarise the results
+              if: always()
+              shell: bash
+              run: |
+                  if [[ -f artifacts/performance/performance.md ]]; then
+                    cat artifacts/performance/performance.md >> "$GITHUB_STEP_SUMMARY"
+                  fi
+
+            - name: Upload the results
+              if: always()
+              uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+              with:
+                  name: performance
+                  path: artifacts/performance
+                  if-no-files-found: ignore
+                  retention-days: 90
+
     # Fuzz smoke (PLAN.md, sections 7 and 9): a minute of coverage-guided
     # fuzzing each for the sign-in link and server-name parsers and the
     # Matrix HTML sanitiser, the two parsers that read text an attacker
