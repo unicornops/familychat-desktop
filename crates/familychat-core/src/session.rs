@@ -28,8 +28,8 @@ use tokio::sync::{mpsc, oneshot, watch};
 use crate::{
     diff::ListDiff,
     media::{DecodedImage, MediaError, MediaInfo},
-    notifications::IncomingNotification,
     messaging::{Draft, MediaLimits, NewRoom, RoomDone, RoomRequest, ServerDefaults},
+    notifications::IncomingNotification,
     rooms::{RoomListCommand, RoomListFilter, RoomListLoading, RoomMember, RoomSummary},
     sync::AccountStatus,
     timeline::{TimelineCommand, TimelineUpdate},
