@@ -1,16 +1,28 @@
 //! `familychat`: the Family Chat desktop client's entry point and CLI.
 //!
 //! With no arguments it opens the GPUI window; `familychat tui` runs the
-//! terminal UI. Account and diagnostics commands arrive with the phases
-//! that need them (PLAN.md, section 5.1).
+//! terminal UI; `familychat accounts` lists the accounts registry and
+//! `familychat start-over` moves unreadable data aside. More account and
+//! diagnostics commands arrive with the phases that need them (PLAN.md,
+//! section 5.1).
+//!
+//! Every command that uses the profile takes its lock first (PLAN.md,
+//! section 5.5), so a second Family Chat on the same profile, window or
+//! terminal, stops with "already open" before it touches the keychain or
+//! the store. Logging into the profile's `logs/` starts once the lock is
+//! held.
 
-use anyhow::{Context, Result, bail};
+use std::sync::Arc;
+
+use anyhow::{Context, Result, anyhow, bail};
 use familychat_assets::FamilyChatAssets;
 use familychat_core::{
     AppBootstrap, RuntimeSummary, ThemeSummary, UpstreamPins,
     identity::{APP_NAME, BINARY_NAME},
 };
+use familychat_security::{Keychain, OsKeychain, logging};
 use familychat_session::BackgroundRuntime;
+use familychat_store::{DataDir, Profile, ProfileLock, ProfileState};
 use familychat_theme::{ThemeFamily, bundled};
 
 /// The app's version, as released.
@@ -24,9 +36,27 @@ const RUNTIME_WORKER_THREADS: usize = 4;
 
 fn main() -> Result<()> {
     match Command::parse_args(std::env::args().skip(1))? {
-        Command::Gui => launch_gui(),
+        Command::Gui => {
+            // Held until the window closes. Opening the store and the
+            // sessions in the window arrives with Phase 3 and 5.
+            let _profile = hold_profile()?;
+            launch_gui()
+        }
         #[cfg(feature = "tui")]
-        Command::Tui => launch_tui(),
+        Command::Tui => {
+            let _profile = hold_profile()?;
+            launch_tui()
+        }
+        Command::Accounts => {
+            let state = open_profile(hold_profile()?)?;
+            println!("{}", accounts_report(state)?);
+            Ok(())
+        }
+        Command::StartOver => {
+            let state = open_profile(hold_profile()?)?;
+            println!("{}", start_over(state)?);
+            Ok(())
+        }
         Command::Version => {
             println!("{}", version_text());
             Ok(())
@@ -44,6 +74,8 @@ enum Command {
     Gui,
     #[cfg(feature = "tui")]
     Tui,
+    Accounts,
+    StartOver,
     Version,
     Help,
 }
@@ -56,6 +88,8 @@ impl Command {
         let parsed = match command.as_str() {
             #[cfg(feature = "tui")]
             "tui" => Self::Tui,
+            "accounts" => Self::Accounts,
+            "start-over" => Self::StartOver,
             "--version" | "-V" | "version" => Self::Version,
             "--help" | "-h" | "help" => Self::Help,
             other => bail!("unknown command `{other}`; run `{BINARY_NAME} help` for the commands"),
@@ -77,8 +111,88 @@ fn print_help() {
     println!("  {BINARY_NAME}               Open the {APP_NAME} window");
     #[cfg(feature = "tui")]
     println!("  {BINARY_NAME} tui           Use {APP_NAME} in the terminal");
+    println!("  {BINARY_NAME} accounts      List the signed-in accounts");
+    println!("  {BINARY_NAME} start-over    Move data that can't be read aside and start again");
     println!("  {BINARY_NAME} --version     Show the version");
     println!("  {BINARY_NAME} help          Show this help");
+}
+
+/// Takes the profile's lock, then starts logging into its `logs/`. A
+/// profile another process has open stops here, before the keychain or the
+/// store is touched.
+fn hold_profile() -> Result<ProfileLock> {
+    let dir = DataDir::resolve()?;
+    let lock = ProfileLock::acquire(&dir)?;
+    // The app works without a log file; it says so once.
+    if let Err(error) = logging::init(&dir.logs_dir()) {
+        eprintln!("warning: no log file will be kept: {error}");
+    }
+    tracing::info!(version = VERSION, "{BINARY_NAME} started");
+    Ok(lock)
+}
+
+/// Opens the profile with the OS keychain.
+fn open_profile(lock: ProfileLock) -> Result<ProfileState> {
+    let keychain: Arc<dyn Keychain> = Arc::new(OsKeychain::new());
+    Ok(Profile::open_locked(lock, keychain)?)
+}
+
+/// `accounts`: the registry, or what is stopping it from being read.
+fn accounts_report(state: ProfileState) -> Result<String> {
+    let profile = ready_or_explain(state)?;
+    let accounts = profile.accounts()?;
+    if accounts.is_empty() {
+        return Ok("No accounts yet.".to_owned());
+    }
+    Ok(accounts
+        .iter()
+        .map(|account| {
+            format!(
+                "{}  {}  ({})",
+                account.user_id, account.homeserver_url, account.id
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\n"))
+}
+
+/// `start-over`: moves data that can't be read aside and starts a new
+/// store. Refuses when the data can be read, or the keychain can't be
+/// reached (the data may be fine; only the keychain is missing).
+fn start_over(state: ProfileState) -> Result<String> {
+    match state {
+        ProfileState::Unreadable(unreadable) => {
+            let started = unreadable.start_over()?;
+            let next = match started.state {
+                ProfileState::Ready(_) => format!("{APP_NAME} has started again; sign in again."),
+                ProfileState::KeychainUnavailable(blocked) => blocked.message(),
+                ProfileState::Unreadable(unreadable) => unreadable.message(),
+            };
+            Ok(format!(
+                "Moved the data that can't be read to {}. Delete it once you are sure its key \
+                 won't turn up. {next}",
+                started.moved_to.display()
+            ))
+        }
+        ProfileState::KeychainUnavailable(blocked) => {
+            Err(anyhow!("{} Not starting over.", blocked.message()))
+        }
+        ProfileState::Ready(_) => {
+            bail!("{APP_NAME}'s data opens with its key; there is nothing to start over")
+        }
+    }
+}
+
+/// The open profile, or an error that says what the user can do.
+fn ready_or_explain(state: ProfileState) -> Result<Profile> {
+    match state {
+        ProfileState::Ready(profile) => Ok(profile),
+        ProfileState::KeychainUnavailable(blocked) => Err(anyhow!("{}", blocked.message())),
+        ProfileState::Unreadable(unreadable) => Err(anyhow!(
+            "{} Run `{BINARY_NAME} start-over` to do that.",
+            unreadable.message()
+        )),
+    }
 }
 
 fn launch_gui() -> Result<()> {
@@ -122,6 +236,8 @@ fn bundled_theme(json: &str) -> Result<ThemeSummary> {
 #[cfg(test)]
 mod tests {
     use familychat_core::ThemeAppearance;
+    use familychat_security::{KeychainEntry, KeychainFailure, MemoryKeychain};
+    use familychat_store::NewAccount;
 
     use super::*;
 
@@ -140,6 +256,106 @@ mod tests {
         for help in ["--help", "-h", "help"] {
             assert_eq!(parse(&[help]).expect("help"), Command::Help);
         }
+    }
+
+    #[test]
+    fn parses_the_profile_commands() {
+        assert_eq!(parse(&["accounts"]).expect("accounts"), Command::Accounts);
+        assert_eq!(
+            parse(&["start-over"]).expect("start-over"),
+            Command::StartOver
+        );
+        assert!(parse(&["accounts", "--all"]).is_err());
+    }
+
+    /// The profile in a fresh temporary directory, with the mock keychain:
+    /// the commands' logic without the real keychain.
+    struct TestProfile {
+        root: std::path::PathBuf,
+        keychain: Arc<MemoryKeychain>,
+    }
+
+    impl TestProfile {
+        fn new(name: &str) -> Self {
+            let nanos = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_nanos();
+            Self {
+                root: std::env::temp_dir().join(format!(
+                    "familychat-app-{name}-{}-{nanos}",
+                    std::process::id()
+                )),
+                keychain: Arc::new(MemoryKeychain::new()),
+            }
+        }
+
+        fn open(&self) -> ProfileState {
+            Profile::open(&DataDir::at(&self.root), self.keychain.clone()).expect("opens")
+        }
+    }
+
+    impl Drop for TestProfile {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.root);
+        }
+    }
+
+    #[test]
+    fn accounts_lists_the_registry() {
+        let test = TestProfile::new("accounts");
+        assert_eq!(
+            accounts_report(test.open()).expect("ready"),
+            "No accounts yet."
+        );
+        let ProfileState::Ready(profile) = test.open() else {
+            panic!("ready");
+        };
+        let id = profile
+            .add_account(&NewAccount {
+                user_id: "@alice:example.org".to_owned(),
+                homeserver_url: "https://matrix.example.org".to_owned(),
+            })
+            .expect("added");
+        drop(profile);
+        assert_eq!(
+            accounts_report(test.open()).expect("ready"),
+            format!("@alice:example.org  https://matrix.example.org  ({id})")
+        );
+    }
+
+    #[test]
+    fn accounts_explains_a_locked_keychain_and_a_missing_key() {
+        let test = TestProfile::new("accounts-states");
+        test.keychain.fail_with(Some(KeychainFailure::Locked));
+        let error = accounts_report(test.open()).expect_err("locked");
+        assert!(error.to_string().contains("keychain is locked"), "{error}");
+        let error = start_over(test.open()).expect_err("not with a locked keychain");
+        assert!(error.to_string().contains("Not starting over"), "{error}");
+
+        test.keychain.fail_with(None);
+        assert!(
+            start_over(test.open()).is_err(),
+            "readable data is not moved"
+        );
+        test.keychain
+            .delete(&KeychainEntry::AppStore)
+            .expect("the key is gone");
+        let error = accounts_report(test.open()).expect_err("unreadable");
+        assert!(
+            error.to_string().contains("familychat start-over"),
+            "{error}"
+        );
+        let report = start_over(test.open()).expect("started over");
+        assert!(
+            report.starts_with("Moved the data that can't be read to"),
+            "{report}"
+        );
+        assert!(report.contains("unreadable-"), "{report}");
+        assert_eq!(
+            accounts_report(test.open()).expect("ready"),
+            "No accounts yet."
+        );
     }
 
     #[test]

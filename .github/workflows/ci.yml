@@ -45,7 +45,7 @@ jobs:
                     [[ -z "$file" ]] && continue
 
                     case "$file" in
-                      Cargo.toml|Cargo.lock|rust-toolchain.toml|.cargo/*|.github/workflows/ci.yml|scripts/window-smoke.*)
+                      Cargo.toml|Cargo.lock|rust-toolchain.toml|.cargo/*|.github/workflows/ci.yml|scripts/window-smoke.*|scripts/keychain-session.sh)
                         app_code=true
                         workspace_checks=true
                         ;;
@@ -145,8 +145,8 @@ jobs:
             - name: Release builds never enable the test harness
               run: scripts/check-release-features.sh
 
-            - name: Lint the harness scripts
-              run: shellcheck scripts/homeserver-harness.sh scripts/check-release-features.sh
+            - name: Lint the scripts
+              run: shellcheck scripts/homeserver-harness.sh scripts/check-release-features.sh scripts/keychain-session.sh
 
             # The live homeserver harness (ADR 0004): Palpo at Family Chat's
             # image with its Postgres sidecar, Synapse, and the TLS front end.
@@ -210,10 +210,12 @@ jobs:
             # The window smoke test runs the app under Xvfb: GPUI renders
             # through wgpu, which loads the Vulkan loader (libvulkan1) and,
             # failing that, EGL/GL at runtime; mesa-vulkan-drivers supplies
-            # the lavapipe software Vulkan driver.
+            # the lavapipe software Vulkan driver. The keychain steps run
+            # against a throwaway Secret Service (scripts/keychain-session.sh),
+            # which needs dbus-run-session and gnome-keyring.
             - name: Install Linux build and smoke test dependencies
               if: runner.os == 'Linux'
-              run: sudo apt-get update && sudo apt-get install -y pkg-config libdbus-1-dev libasound2-dev libxcb1-dev libxkbcommon-dev libxkbcommon-x11-dev libfontconfig1-dev libfreetype6-dev libvulkan1 libgl1 libegl1 libgl1-mesa-dri mesa-vulkan-drivers xvfb xdotool imagemagick
+              run: sudo apt-get update && sudo apt-get install -y pkg-config libdbus-1-dev libasound2-dev libxcb1-dev libxkbcommon-dev libxkbcommon-x11-dev libfontconfig1-dev libfreetype6-dev libvulkan1 libgl1 libegl1 libgl1-mesa-dri mesa-vulkan-drivers xvfb xdotool imagemagick dbus gnome-keyring
 
             - name: Read the pinned Rust toolchain
               id: toolchain
@@ -245,12 +247,46 @@ jobs:
               if: runner.os != 'Linux'
               run: cargo test --workspace --locked
 
+            # The keychain tests the workspace run ignores, against the real
+            # keychain of this platform: the login keychain on macOS,
+            # Credential Manager on Windows, and a throwaway Secret Service
+            # on Linux. They use a test-only service id.
+            - name: Real keychain tests (this platform)
+              timeout-minutes: 10
+              shell: bash
+              run: |
+                  if [[ "$RUNNER_OS" == Linux ]]; then
+                    scripts/keychain-session.sh cargo test -p familychat-security --locked -- --ignored real_keychain
+                  else
+                    cargo test -p familychat-security --locked -- --ignored real_keychain
+                  fi
+
             - name: Build release binary
               run: cargo build -p familychat-app --release --locked
 
             - name: Version
               shell: bash
               run: ${{ matrix.binary_path }} --version
+
+            # `familychat accounts` through the real path: the profile lock,
+            # the platform keychain (a new app-store passphrase on the first
+            # run, read back on the second) and the encrypted app store.
+            - name: Profile smoke test
+              timeout-minutes: 5
+              shell: bash
+              env:
+                  FAMILYCHAT_DATA_DIR: ${{ runner.temp }}/familychat-profile
+              run: |
+                  run() {
+                    if [[ "$RUNNER_OS" == Linux ]]; then scripts/keychain-session.sh "$@"; else "$@"; fi
+                  }
+                  for attempt in first second; do
+                    output="$(run "${{ matrix.binary_path }}" accounts)"
+                    echo "$attempt run: $output"
+                    [[ "$output" == "No accounts yet." ]]
+                  done
+                  ls -la "$FAMILYCHAT_DATA_DIR" "$FAMILYCHAT_DATA_DIR/logs"
+                  [[ -f "$FAMILYCHAT_DATA_DIR/familychat.sqlite3" ]]
 
             # Tracked from Phase 0 (PLAN.md, section 12): GPUI with wgpu now,
             # matrix-sdk from Phase 3.

@@ -1,0 +1,22 @@
+[package]
+name = "familychat-store"
+version = "0.0.1"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+description = "Family Chat's local data: the data directory, the profile lock, the app store and the accounts registry"
+
+[dependencies]
+familychat-core = { path = "../familychat-core" }
+familychat-security = { path = "../familychat-security" }
+matrix-sdk-store-encryption.workspace = true
+rusqlite.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+zeroize.workspace = true
+
+[lints]
+workspace = true

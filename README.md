@@ -19,6 +19,15 @@ Phase 0, the repository scaffold ([#1](https://github.com/unicornops/familychat-
 - the dedicated Tokio runtime every Matrix call will run on, with a test that a GPUI task awaits work done on it
 - CI on Linux, macOS and Windows (lint, tests, a release build and a window smoke test with a screenshot on each), and releases from Conventional Commits with release-please
 
+Phase 1, secrets and the local store ([#2](https://github.com/unicornops/familychat-desktop/issues/2), [ADR 0003](./docs/adr/0003-local-data-secrets-and-store-encryption.md)):
+
+- secrets only in the OS keychain (macOS login keychain, Windows Credential Manager, the Secret Service on Linux), never with a plaintext fallback
+- an app store (accounts registry, preferences, UI state) in SQLite, with every Matrix ID, homeserver and room ID encrypted with matrix-sdk's store cipher
+- one Family Chat per profile: a second one says it is already open
+- a recovery path when the key to the local data is gone: `familychat start-over` moves the old data aside
+- `familychat accounts` lists the accounts (none yet: signing in is Phase 4)
+- local, redacted logs and a crash log in the profile's `logs/`; nothing is uploaded
+
 Signing in, rooms, the timeline, encryption, notifications and the rest follow in the later phases.
 
 ## Building
@@ -37,8 +46,11 @@ GPUI renders through Vulkan (`libvulkan1`) or EGL/GL (`libegl1`) at runtime. On 
 cargo build -p familychat-app --release --locked
 target/release/familychat             # the window
 target/release/familychat tui         # the terminal UI
+target/release/familychat accounts    # the accounts registry
 target/release/familychat --version
 ```
+
+Family Chat keeps its data in `~/Library/Application Support/Family Chat` (macOS), `~/.local/share/familychat` (Linux) or `%APPDATA%\Family Chat` (Windows); `FAMILYCHAT_DATA_DIR` picks another directory. On Linux it needs a Secret Service (GNOME Keyring or KWallet) running in your session.
 
 Checks before a pull request:
 
