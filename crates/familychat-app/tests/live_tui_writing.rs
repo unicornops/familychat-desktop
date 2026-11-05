@@ -54,6 +54,16 @@ use tokio::sync::{Mutex as AsyncMutex, mpsc, oneshot};
 /// How long a step may take on a busy CI runner.
 const WAIT: Duration = Duration::from_secs(120);
 
+/// How long a request to confirm a device waits for the other device
+/// before it is cancelled and sent again: matrix-sdk 0.19.1 drops a
+/// request from a device the receiving device has no keys for yet (ADR
+/// 0009), and the receiving device learns them only when its sync reports
+/// the device-list change.
+const ASK_AGAIN: Duration = Duration::from_secs(15);
+
+/// How many times a request to confirm a device is sent.
+const TRIES: usize = 8;
+
 /// One test at a time: the harness is one peer for Palpo's rate limits.
 static SERIAL: AsyncMutex<()> = AsyncMutex::const_new(());
 
@@ -379,6 +389,44 @@ impl LiveTerminal {
         self.until(wanted, |_, text| text.contains(wanted)).await
     }
 
+    /// Ticks and draws for up to `wait`, saying whether it showed `wanted`.
+    async fn shows_within(&mut self, wanted: &str, wait: Duration) -> Result<bool> {
+        let deadline = Instant::now() + wait;
+        loop {
+            self.app.tick();
+            if self.text()?.contains(wanted) {
+                return Ok(true);
+            }
+            if Instant::now() >= deadline {
+                return Ok(false);
+            }
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        }
+    }
+
+    /// Ticks and draws for up to `wait`, until `incoming` hands over a
+    /// request.
+    async fn request_within(
+        &mut self,
+        incoming: &mut mpsc::Receiver<IncomingVerification>,
+        wait: Duration,
+    ) -> Result<Option<VerificationFlow>> {
+        let deadline = Instant::now() + wait;
+        loop {
+            self.app.tick();
+            self.text()?;
+            match incoming.try_recv() {
+                Ok((_, flow)) => return Ok(Some(flow)),
+                Err(mpsc::error::TryRecvError::Empty) => {}
+                Err(mpsc::error::TryRecvError::Disconnected) => bail!("the requests stopped"),
+            }
+            if Instant::now() >= deadline {
+                return Ok(None);
+            }
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        }
+    }
+
     fn key(&mut self, code: KeyCode) {
         self.app
             .handle_event(Event::Key(KeyEvent::new(code, KeyModifiers::NONE)));
@@ -615,15 +663,6 @@ async fn step(
     }
 }
 
-/// The next request on `incoming`.
-async fn request(incoming: &mut mpsc::Receiver<IncomingVerification>) -> Result<VerificationFlow> {
-    let (_, flow) = tokio::time::timeout(WAIT, incoming.recv())
-        .await
-        .context("no request arrived")?
-        .context("the requests stopped")?;
-    Ok(flow)
-}
-
 /// Checks the terminal shows every emoji of `emoji`'s names.
 fn shows_names(text: &str, step: &VerificationStep) -> Result<()> {
     let VerificationStep::CompareEmoji(emoji) = step else {
@@ -679,8 +718,23 @@ async fn the_terminal_verifies_by_emoji_with_another_device() -> Result<()> {
     tui.shows("Use another device").await?;
     knows_a_signed_sibling(&tui.session, &tui.key).await?;
     // d: another device. The first device gets the request and accepts.
-    tui.key(KeyCode::Char('d'));
-    let theirs = request(&mut first_incoming).await?;
+    // A request the first device drops (ASK_AGAIN) is cancelled with n and
+    // sent again, as a person would.
+    let mut asked = 0;
+    let theirs = loop {
+        asked += 1;
+        tui.key(KeyCode::Char('d'));
+        if let Some(flow) = tui.request_within(&mut first_incoming, ASK_AGAIN).await? {
+            break flow;
+        }
+        ensure!(
+            asked < TRIES,
+            "no request reached the first device in {asked} tries"
+        );
+        tui.key(KeyCode::Char('n'));
+        tui.shows("Use another device").await?;
+    };
+    eprintln!("the terminal's request got through on try {asked}");
     step(&theirs, "the incoming request", |step| {
         *step == VerificationStep::Incoming
     })
@@ -732,12 +786,27 @@ async fn the_terminal_verifies_by_emoji_with_another_device() -> Result<()> {
         )
         .await?;
     knows_a_signed_sibling(&third.session, &third.key).await?;
-    let ours = third
-        .session
-        .verify_this_device(&third.key)
-        .await
-        .context("verify_this_device answers")??;
-    tui.shows("wants to verify this device").await?;
+    let mut asked = 0;
+    let ours = loop {
+        asked += 1;
+        let ours = third
+            .session
+            .verify_this_device(&third.key)
+            .await
+            .context("verify_this_device answers")??;
+        if tui
+            .shows_within("wants to verify this device", ASK_AGAIN)
+            .await?
+        {
+            break ours;
+        }
+        ensure!(
+            asked < TRIES,
+            "no request reached the terminal in {asked} tries"
+        );
+        ensure!(ours.answer(VerificationAnswer::Cancel));
+    };
+    eprintln!("the third device's request got through on try {asked}");
     tui.key(KeyCode::Char('y'));
     step(&ours, "the terminal's acceptance", |step| {
         matches!(step, VerificationStep::Ready { .. })

@@ -81,17 +81,24 @@ fn enter_sends_markdown_and_the_new_line_keys_do_not() {
     let html = message.html.as_ref().map(MessageBody::as_str).unwrap_or("");
     assert!(html.contains("<strong>there</strong>"), "{html}");
     assert_eq!(composer_text(&app).as_deref(), Some(""), "the field clears");
-    // The room heard about the typing, and that it stopped.
-    let requests = startup.session().record().requests;
-    let typing: Vec<bool> = requests
-        .iter()
-        .filter_map(|(_, request)| match request {
-            RoomRequest::Typing(typing) => Some(*typing),
-            _ => None,
-        })
-        .collect();
-    assert_eq!(typing.first(), Some(&true));
-    assert_eq!(typing.last(), Some(&false));
+    // The room heard about the typing, and that it stopped. The notices
+    // go out on threads of their own, so wait for the last one.
+    let typing = || -> Vec<bool> {
+        startup
+            .session()
+            .record()
+            .requests
+            .iter()
+            .filter_map(|(_, request)| match request {
+                RoomRequest::Typing(typing) => Some(*typing),
+                _ => None,
+            })
+            .collect()
+    };
+    until(&mut app, &mut screen, "the typing notice stops", |_| {
+        typing().last() == Some(&false)
+    });
+    assert_eq!(typing().first(), Some(&true));
 }
 
 #[test]
