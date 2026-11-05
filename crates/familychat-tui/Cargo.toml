@@ -5,13 +5,41 @@ edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
 publish = false
-description = "Family Chat's terminal UI"
+description = "Family Chat's terminal UI (ADR 0008)"
 
 [dependencies]
 anyhow.workspace = true
+# OSC 52 copies: the selection in base64 (Zmail's clipboard.rs). Already in
+# the lock file through the GPUI and wiremock graphs.
+base64 = "0.22.1"
 crossterm.workspace = true
 familychat-core = { path = "../familychat-core" }
+# The terminal sanitiser every server string goes through, and the safe
+# file names the save question suggests. GPUI- and matrix-sdk-free.
+familychat-security = { path = "../familychat-security" }
 ratatui.workspace = true
+# The session's and the sign-in's channels, polled with try_recv on each
+# tick: the sync primitives only, no runtime.
+tokio = { version = "1", default-features = false, features = ["sync"] }
+tracing.workspace = true
+# Cell widths for truncation and wrapping (wide characters, emoji). The
+# version ratatui uses.
+unicode-width = "0.2.2"
+# Wiping the link and the password as they are typed.
+zeroize.workspace = true
+
+[dev-dependencies]
+# Snapshot times in UTC, so every machine draws the same.
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+# The fixture session, sign-in and startup the snapshots draw (PLAN.md,
+# section 9). The terminal UI itself never depends on it.
+familychat-test-support = { path = "../familychat-test-support", features = ["fixtures"] }
+
+[features]
+# `fixture_views`, the fixture views' names and states, for
+# `familychat launch-tui-fixture` (familychat-app's `ui-fixture`, never in a
+# release). Data only: no fixture code.
+fixture-views = []
 
 [lints]
 workspace = true

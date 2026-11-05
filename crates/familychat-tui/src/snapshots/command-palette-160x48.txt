@@ -1,0 +1,195 @@
+  FAMILY CHAT 0.0.0-test                                                    WELCOME
+  COMMANDS ON THIS SCREEN
+  Type to narrow the list. Enter runs the one under the cursor, Esc closes.
+
+    Enter  Choose                                Open the room, or use the option under the cursor.
+    c      Sign in with a code from your parent  Paste the sign-in link, or paste or drop the QR code image.
+    p      Sign in with your password            Sign in to your family's Family Chat server with your password.
+    o      Use another Matrix server             Sign in to any Matrix homeserver with a password.
+    ^V     Paste a sign-in link or QR code       Use the link or the QR code image on the clipboard to sign in.
+    q      Quit Family Chat                      Close every window and quit.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+:
+Enter Run
+Esc Close
+--- styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+BB
+RRRRR
+RRR
+--- NO_COLOR styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+
+
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+BB
+RRRRR
+RRR
+--- ASCII ---
+  FAMILY CHAT 0.0.0-test                                                    WELCOME
+  COMMANDS ON THIS SCREEN
+  Type to narrow the list. Enter runs the one under the cursor, Esc closes.
+
+    Enter  Choose                                Open the room, or use the option under the cursor.
+    c      Sign in with a code from your parent  Paste the sign-in link, or paste or drop the QR code image.
+    p      Sign in with your password            Sign in to your family's Family Chat server with your password.
+    o      Use another Matrix server             Sign in to any Matrix homeserver with a password.
+    ^V     Paste a sign-in link or QR code       Use the link or the QR code image on the clipboard to sign in.
+    q      Quit Family Chat                      Close every window and quit.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+:
+Enter Run
+Esc Close

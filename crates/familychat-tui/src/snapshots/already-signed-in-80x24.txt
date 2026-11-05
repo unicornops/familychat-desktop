@@ -1,0 +1,99 @@
+  FAMILY CHAT 0.0.0-test       ALREADY SIGNED IN
+
+
+
+
+
+
+
+   Already signed in
+
+   You're already signed in as @ana:smith.safechat.family on this computer.
+
+   Enter Back to sign-in
+
+
+
+
+
+
+
+
+
+Enter OK     ^C Quit
+Esc Back
+--- styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+
+
+
+
+
+
+
+   BBBBBBBBBBBBBBBBB
+
+
+
+   RRRRR
+
+
+
+
+
+
+
+
+
+RRRRR        RR
+RRR
+--- NO_COLOR styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+
+
+
+
+
+
+
+   BBBBBBBBBBBBBBBBB
+
+
+
+   RRRRR
+
+
+
+
+
+
+
+
+
+RRRRR        RR
+RRR
+--- ASCII ---
+  FAMILY CHAT 0.0.0-test       ALREADY SIGNED IN
+
+
+
+
+
+
+
+   Already signed in
+
+   You're already signed in as @ana:smith.safechat.family on this computer.
+
+   Enter Back to sign-in
+
+
+
+
+
+
+
+
+
+Enter OK     ^C Quit
+Esc Back

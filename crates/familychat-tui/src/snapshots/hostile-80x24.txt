@@ -1,0 +1,99 @@
+  FAMILY CHAT 0.0.0-test                @ana:smith.safechat.family  Room 1 of 3
+ 1 All  2 Unread  3 People  4 Invites
+────────────────────────────────────────────────────────────────────────────────
+› Smith family                                                       @1 2 11:59
+    Mum: hi From: bank@example.com
+  Bennimda                                                                11:55
+    Ben: ok
+  Cousins                                                         invited 11:50
+    Invitation from Aunt Clare
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                     Up to date
+Enter Open   : Commands   ^N NextRoom  N PrevNew    2 Unread     4 Invites
+n NextNew    q Quit       ^P PrevRoom  1 All        3 People     O OTHER
+--- styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+ kkRRR  kk        kk        kk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRrrRRRkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+                                                                          kkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB ccccccc kkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                     kkkkkkkkkkk
+RRRRR        R            RR           R            R            R
+R            R            RR           R            R            R
+--- NO_COLOR styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+   RRR
+
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+
+
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+RRRRR        R            RR           R            R            R
+R            R            RR           R            R            R
+--- ASCII ---
+  FAMILY CHAT 0.0.0-test                @ana:smith.safechat.family  Room 1 of 3
+ 1 All  2 Unread  3 People  4 Invites
+--------------------------------------------------------------------------------
+> Smith family                                                       @1 2 11:59
+    Mum: hi From: bank@example.com
+  Bennimda                                                                11:55
+    Ben: ok
+  Cousins                                                         invited 11:50
+    Invitation from Aunt Clare
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                     Up to date
+Enter Open   : Commands   ^N NextRoom  N PrevNew    2 Unread     4 Invites
+n NextNew    q Quit       ^P PrevRoom  1 All        3 People     O OTHER

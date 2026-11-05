@@ -1,0 +1,99 @@
+  FAMILY CHAT 0.0.0-test             ROOMS           @ana:smith.safechat.family
+ 1 All  2 Unread  3 People  4 Invites
+────────────────────────────────────────────────────────────────────────────────
+ No invitations
+ When someone invites you to a room, it shows up here.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                     Up to date
+Enter Open   : Commands   ^N NextRoom  N PrevNew    2 Unread     4 Invites
+n NextNew    q Quit       ^P PrevRoom  1 All        3 People     O OTHER
+--- styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+ kk     kk        kk        kkRRRRRRR
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+BBBBBBBBBBBBBBB
+ kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                     kkkkkkkkkkk
+RRRRR        R            RR           R            R            R
+R            R            RR           R            R            R
+--- NO_COLOR styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+                              RRRRRRR
+
+BBBBBBBBBBBBBBB
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+RRRRR        R            RR           R            R            R
+R            R            RR           R            R            R
+--- ASCII ---
+  FAMILY CHAT 0.0.0-test             ROOMS           @ana:smith.safechat.family
+ 1 All  2 Unread  3 People  4 Invites
+--------------------------------------------------------------------------------
+ No invitations
+ When someone invites you to a room, it shows up here.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                     Up to date
+Enter Open   : Commands   ^N NextRoom  N PrevNew    2 Unread     4 Invites
+n NextNew    q Quit       ^P PrevRoom  1 All        3 People     O OTHER

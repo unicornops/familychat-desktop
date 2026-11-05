@@ -1,0 +1,99 @@
+  FAMILY CHAT 0.0.0-test            KEYCHAIN
+
+
+
+
+
+    Family Chat can't reach the keychain
+
+    Family Chat can't reach the keychain, where it keeps the key to its data.
+    On Linux it needs a Secret Service, such as GNOME Keyring or KWallet,
+    running in your session. Try again once it is available. Family Chat never
+    keeps its data without encryption. (the keychain can't be reached: no
+    Secret Service is running in this session)
+
+    Press t to try again once the keychain is unlocked or running.
+
+
+
+
+
+
+
+t TryAgain   q Quit
+: Commands
+--- styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+
+
+
+
+
+    BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+
+
+
+
+
+
+
+    kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+
+
+
+
+
+
+
+R            R
+R
+--- NO_COLOR styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+
+
+
+
+
+    BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+R            R
+R
+--- ASCII ---
+  FAMILY CHAT 0.0.0-test            KEYCHAIN
+
+
+
+
+
+    Family Chat can't reach the keychain
+
+    Family Chat can't reach the keychain, where it keeps the key to its data.
+    On Linux it needs a Secret Service, such as GNOME Keyring or KWallet,
+    running in your session. Try again once it is available. Family Chat never
+    keeps its data without encryption. (the keychain can't be reached: no
+    Secret Service is running in this session)
+
+    Press t to try again once the keychain is unlocked or running.
+
+
+
+
+
+
+
+t TryAgain   q Quit
+: Commands

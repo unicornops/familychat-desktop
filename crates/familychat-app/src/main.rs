@@ -3,10 +3,11 @@
 //! With no arguments it opens the GPUI window, which opens the profile
 //! through [`startup::LiveStartup`] (the keychain, the store, the accounts'
 //! sessions and the sign-in, on the background runtime); `familychat tui`
-//! runs the terminal UI; `familychat accounts` lists the accounts registry
-//! and `familychat start-over` moves unreadable data aside. Builds with the
-//! `ui-fixture` feature add `familychat launch-ui-fixture VIEW [dark|light]`
-//! for the screenshot matrix. More account and diagnostics commands arrive
+//! runs the terminal UI over the same startup; `familychat accounts` lists
+//! the accounts registry and `familychat start-over` moves unreadable data
+//! aside. Builds with the `ui-fixture` feature add `familychat
+//! launch-ui-fixture VIEW [dark|light]` for the screenshot matrix and
+//! `familychat launch-tui-fixture VIEW` for the terminal UI's fixtures. More account and diagnostics commands arrive
 //! with the phases that need them (PLAN.md, section 5.1).
 //!
 //! Every command that uses the profile takes its lock first (PLAN.md,
@@ -29,6 +30,8 @@ use familychat_store::{DataDir, Profile, ProfileLock, ProfileState};
 use familychat_theme::{ThemeFamily, bundled};
 
 mod startup;
+#[cfg(all(feature = "ui-fixture", feature = "tui"))]
+mod tui_fixture;
 #[cfg(feature = "ui-fixture")]
 mod ui_fixture;
 
@@ -54,9 +57,13 @@ fn main() -> Result<()> {
             Ok(())
         }
         #[cfg(feature = "tui")]
-        Command::Tui => {
-            let _profile = hold_profile()?;
-            launch_tui()
+        Command::Tui(options) => launch_tui(hold_profile()?, options),
+        #[cfg(all(feature = "ui-fixture", feature = "tui"))]
+        Command::LaunchTuiFixture(view) => tui_fixture::launch(&view, VERSION),
+        #[cfg(all(feature = "ui-fixture", feature = "tui"))]
+        Command::ListTuiFixtures => {
+            println!("{}", familychat_tui::fixture_views::VIEWS.join("\n"));
+            Ok(())
         }
         Command::Accounts => {
             let state = open_profile(hold_profile()?)?;
@@ -91,7 +98,11 @@ enum Command {
     #[cfg(feature = "ui-fixture")]
     ListUiFixtures,
     #[cfg(feature = "tui")]
-    Tui,
+    Tui(TuiOptions),
+    #[cfg(all(feature = "ui-fixture", feature = "tui"))]
+    LaunchTuiFixture(String),
+    #[cfg(all(feature = "ui-fixture", feature = "tui"))]
+    ListTuiFixtures,
     Accounts,
     StartOver,
     Version,
@@ -118,7 +129,30 @@ impl Command {
                 }
             }
             #[cfg(feature = "tui")]
-            "tui" => Self::Tui,
+            "tui" => {
+                let mut options = TuiOptions::default();
+                for flag in args.by_ref() {
+                    match flag.as_str() {
+                        "--bell" => options.bell = true,
+                        "--ascii" => options.ascii = true,
+                        "--no-mouse" => options.no_mouse = true,
+                        other => bail!("`tui` takes --bell, --ascii and --no-mouse, not `{other}`"),
+                    }
+                }
+                Self::Tui(options)
+            }
+            #[cfg(all(feature = "ui-fixture", feature = "tui"))]
+            "launch-tui-fixture" => {
+                let view = args
+                    .next()
+                    .context("launch-tui-fixture needs a view (or --list)")?;
+                if view == "--list" {
+                    Self::ListTuiFixtures
+                } else {
+                    tui_fixture::check_view(&view)?;
+                    Self::LaunchTuiFixture(view)
+                }
+            }
             "accounts" => Self::Accounts,
             "start-over" => Self::StartOver,
             "--version" | "-V" | "version" => Self::Version,
@@ -141,13 +175,17 @@ fn print_help() {
     println!("{APP_NAME} commands:");
     println!("  {BINARY_NAME}               Open the {APP_NAME} window");
     #[cfg(feature = "tui")]
-    println!("  {BINARY_NAME} tui           Use {APP_NAME} in the terminal");
+    println!(
+        "  {BINARY_NAME} tui           Use {APP_NAME} in the terminal (--bell, --ascii, --no-mouse)"
+    );
     println!("  {BINARY_NAME} accounts      List the signed-in accounts");
     println!("  {BINARY_NAME} start-over    Move data that can't be read aside and start again");
     #[cfg(feature = "ui-fixture")]
     println!(
         "  {BINARY_NAME} launch-ui-fixture VIEW [dark|light]  Open the window on a fixture (--list)"
     );
+    #[cfg(all(feature = "ui-fixture", feature = "tui"))]
+    println!("  {BINARY_NAME} launch-tui-fixture VIEW  Open the terminal UI on a fixture (--list)");
     println!("  {BINARY_NAME} --version     Show the version");
     println!("  {BINARY_NAME} help          Show this help");
 }
@@ -269,12 +307,59 @@ fn launch_ui_fixture(view: &str, theme: Option<familychat_core::ThemeAppearance>
     Ok(())
 }
 
-/// `tui`: the terminal UI.
+/// What `familychat tui` was asked for.
 #[cfg(feature = "tui")]
-fn launch_tui() -> Result<()> {
-    familychat_tui::run(familychat_tui::Launch {
+#[derive(Debug, Default, PartialEq, Eq)]
+struct TuiOptions {
+    /// `--bell`: ring the terminal bell for new messages.
+    bell: bool,
+    /// `--ascii`: draw with ASCII only.
+    ascii: bool,
+    /// `--no-mouse`: leave the mouse to the terminal.
+    no_mouse: bool,
+}
+
+/// The program copies are piped to, instead of OSC 52 (`wl-copy`, `xclip
+/// -selection clipboard`); run without a shell.
+#[cfg(feature = "tui")]
+const COPY_COMMAND_VAR: &str = "FAMILYCHAT_TUI_COPY_COMMAND";
+
+/// `tui`: the terminal UI over the same startup as the window: the
+/// background runtime, then `LiveStartup` opening the profile `lock` holds
+/// with the OS keychain (the keychain and lost-key states included). When
+/// the terminal UI ends the accounts' syncs stop before the runtime does.
+#[cfg(feature = "tui")]
+fn launch_tui(lock: ProfileLock, options: TuiOptions) -> Result<()> {
+    let runtime = BackgroundRuntime::start(RUNTIME_WORKER_THREADS)?;
+    let keychain: Arc<dyn Keychain> = Arc::new(OsKeychain::new());
+    let startup = Arc::new(startup::LiveStartup::new(
+        lock,
+        keychain,
+        runtime.handle().clone(),
+    ));
+    let settings = familychat_tui::Settings {
+        bell: options.bell,
+        mouse: !options.no_mouse,
+        ascii: options.ascii,
+        copy: familychat_tui::CopySettings {
+            copy_command: std::env::var(COPY_COMMAND_VAR)
+                .ok()
+                .filter(|command| !command.trim().is_empty()),
+            ..familychat_tui::CopySettings::default()
+        },
+    };
+    let result = familychat_tui::run(familychat_tui::Launch {
+        startup: startup.clone(),
         version: VERSION.to_owned(),
-    })
+        settings,
+        initial: familychat_tui::InitialView::Default,
+    });
+    if let Some(manager) = startup.manager() {
+        runtime.handle().block_on(manager.shutdown());
+    }
+    drop(startup);
+    drop(runtime);
+    result
 }
 
 fn build_bootstrap(runtime: RuntimeSummary) -> Result<AppBootstrap> {
@@ -315,7 +400,21 @@ mod tests {
     fn parses_the_commands() {
         assert_eq!(parse(&[]).expect("no arguments"), Command::Gui);
         #[cfg(feature = "tui")]
-        assert_eq!(parse(&["tui"]).expect("tui"), Command::Tui);
+        {
+            assert_eq!(
+                parse(&["tui"]).expect("tui"),
+                Command::Tui(TuiOptions::default())
+            );
+            assert_eq!(
+                parse(&["tui", "--bell", "--ascii", "--no-mouse"]).expect("tui"),
+                Command::Tui(TuiOptions {
+                    bell: true,
+                    ascii: true,
+                    no_mouse: true,
+                })
+            );
+            assert!(parse(&["tui", "--colour"]).is_err());
+        }
         for version in ["--version", "-V", "version"] {
             assert_eq!(parse(&[version]).expect("version"), Command::Version);
         }

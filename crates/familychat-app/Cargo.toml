@@ -37,14 +37,28 @@ tracing.workspace = true
 default = ["tui"]
 tui = ["dep:familychat-tui"]
 # `familychat launch-ui-fixture VIEW [dark|light]`, the window on a fixture
-# state for the screenshot matrix (scripts/capture-ui-screenshots.sh). Off
+# state for the screenshot matrix (scripts/capture-ui-screenshots.sh), and
+# `familychat launch-tui-fixture VIEW`, the terminal UI on one. Off
 # by default and never in a release: CI's UI Screenshots job builds with
 # it, and scripts/check-release-features.sh fails if the release graph
 # reaches familychat-test-support.
-ui-fixture = ["dep:familychat-test-support", "familychat-test-support/fixtures"]
+ui-fixture = ["dep:familychat-test-support", "familychat-test-support/fixtures", "familychat-tui?/fixture-views"]
+
+[dev-dependencies]
+# tests/live_tui_signin.rs: the terminal UI's sign-in on the homeserver
+# harness, over the real sign-in and session (test builds only; the
+# release graph never has them: scripts/check-release-features.sh).
+crossterm.workspace = true
+familychat-signin = { path = "../familychat-signin", features = ["test-harness"] }
+familychat-test-support = { path = "../familychat-test-support", features = ["test-harness"] }
+ratatui.workspace = true
 
 [build-dependencies]
 winresource = "0.1"
+
+[[test]]
+name = "live_tui_signin"
+required-features = ["tui"]
 
 [lints]
 workspace = true

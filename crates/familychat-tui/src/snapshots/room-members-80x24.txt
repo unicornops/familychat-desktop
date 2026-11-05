@@ -1,0 +1,99 @@
+  FAMILY CHAT 0.0.0-test               @ana:smith.safechat.family  Room 2 of 11
+Smith family  Encrypted  5 members
+Plans, photos and who's picking up whom
+────────────────────────────────────────────────────────────────────────────────
+Joined, 5
+Dad                                                                        Admin
+Mum                                                                        Admin
+Grandad                                                                Moderator
+Ana (you)
+Ben
+
+Invited, 1
+Aunt Clare
+
+
+
+
+
+
+
+
+                                                                     Up to date
+< Rooms      PgDn Newer   l Link#      u FirstNew   m Members    : Commands
+PgUp Older   Tab NextLink s Save       G Latest     n NextNew    O OTHER
+--- styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+BBBBBBBBBBBBkkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+BBBBBBBBB
+                                                                          kkkkkk
+                                                                          kkkkkk
+                                                                      kkkkkkkkkk
+                                                                               k
+                                                                               k
+
+BBBBBBBBBB
+                                                                               k
+
+
+
+
+
+
+
+
+                                                                     kkkkkkkkkkk
+R            RRRR         R            R            R            R
+RRRR         RRR          R            R            R            R
+--- NO_COLOR styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+BBBBBBBBBBBB
+
+
+BBBBBBBBB
+
+
+
+
+
+
+BBBBBBBBBB
+
+
+
+
+
+
+
+
+
+
+R            RRRR         R            R            R            R
+RRRR         RRR          R            R            R            R
+--- ASCII ---
+  FAMILY CHAT 0.0.0-test               @ana:smith.safechat.family  Room 2 of 11
+Smith family  Encrypted  5 members
+Plans, photos and who's picking up whom
+--------------------------------------------------------------------------------
+Joined, 5
+Dad                                                                        Admin
+Mum                                                                        Admin
+Grandad                                                                Moderator
+Ana (you)
+Ben
+
+Invited, 1
+Aunt Clare
+
+
+
+
+
+
+
+
+                                                                     Up to date
+< Rooms      PgDn Newer   l Link#      u FirstNew   m Members    : Commands
+PgUp Older   Tab NextLink s Save       G Latest     n NextNew    O OTHER

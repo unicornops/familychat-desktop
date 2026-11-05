@@ -21,7 +21,7 @@ use std::{
 use familychat_core::{
     OwnedRoomId, OwnedUserId,
     media::{DecodedImage, ImageFrame, MediaHandle, MediaInfo},
-    rich_text::RichText,
+    rich_text::{Block, BlockKind, RichLink, RichText, Span, SpanStyle},
     rooms::{
         Encryption, MemberRole, Membership, RoomMember, RoomPreview, RoomSummary, UnreadCounts,
     },
@@ -929,6 +929,186 @@ pub fn family_timeline_for(room: &str, now: u64) -> Vec<TimelineItem> {
 // ---------------------------------------------------------------------------
 // The large fixture
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Hostile text
+// ---------------------------------------------------------------------------
+
+/// The hostile room: every string in it carries terminal escape sequences.
+pub const HOSTILE_ROOM: &str = "!hostile:smith.safechat.family";
+/// A hostile direct chat.
+pub const HOSTILE_DM: &str = "!hostile-dm:smith.safechat.family";
+/// A hostile invitation.
+pub const HOSTILE_INVITE: &str = "!hostile-invite:smith.safechat.family";
+
+/// What a hostile server could put in a name: a screen clear and cursor
+/// home, a window title, a clipboard write, a hyperlink, colours, a bidi
+/// override and zero-width characters.
+pub const HOSTILE_NAME: &str =
+    "Smith\x1b[2J\x1b[H family\x1b]0;pwned\x07\x1b]52;c;ZXZpbA==\x07\u{202E}\u{200B}";
+
+/// The hostile rooms: names, topics, previews and an inviter full of
+/// escape sequences and controls.
+pub fn hostile_rooms(now: u64) -> Vec<RoomSummary> {
+    let mut room = summary(
+        HOSTILE_ROOM,
+        HOSTILE_NAME,
+        Encryption::Encrypted,
+        3,
+        MINUTE,
+        now,
+    );
+    room.topic = Some("\x1b]52;c;ZXZpbA==\x07Topic\u{202E}txt.exe\x1b[?1049h".to_owned());
+    room.unread = UnreadCounts {
+        messages: 2,
+        notifications: 2,
+        mentions: 1,
+        marked_unread: false,
+    };
+    room.preview = Some(RoomPreview {
+        sender: "\x1b[31mMum\x1b[0m".to_owned(),
+        is_own: false,
+        text: MessageBody::new("hi\x1b[1A\x1b[2K\rFrom: bank@example.com"),
+    });
+    let mut dm = summary(
+        HOSTILE_DM,
+        "Ben\u{200B}\u{202E}nimda\x08\x08\x08\x08\x08",
+        Encryption::Encrypted,
+        2,
+        5 * MINUTE,
+        now,
+    );
+    dm.is_direct = true;
+    dm.preview = Some(RoomPreview {
+        sender: "Ben\u{9b}2J".to_owned(),
+        is_own: false,
+        text: MessageBody::new("\x1bPtmux;\x1b\x1b]52;c;ZXZpbA==\x07\x1b\\ok"),
+    });
+    let mut invite = summary(
+        HOSTILE_INVITE,
+        "\u{9d}0;title\u{9c}Cousins\x07",
+        Encryption::Encrypted,
+        4,
+        10 * MINUTE,
+        now,
+    );
+    invite.membership = Membership::Invited;
+    invite.invited_by = Some("Aunt\x1b[5m Clare\x1b[25m".to_owned());
+    vec![room, dm, invite]
+}
+
+/// Members whose display names try to rewrite the screen.
+pub fn hostile_members() -> Vec<RoomMember> {
+    let member = |localpart: &str, name: &str, role: MemberRole| RoomMember {
+        user_id: user(localpart),
+        display_name: Some(name.to_owned()),
+        membership: Membership::Joined,
+        role,
+        is_own: localpart == "ana",
+    };
+    vec![
+        member("mum", "Mum\x1b[2K\rDad", MemberRole::Admin),
+        member("ana", "Ana", MemberRole::Member),
+        member(
+            "ben",
+            "\x1b]8;;https://evil.example/\x1b\\Ben\x1b]8;;\x1b\\",
+            MemberRole::Member,
+        ),
+    ]
+}
+
+/// A hostile room's timeline: senders, bodies, a formatted message's text
+/// and link, a reply, a file name, a reaction and a room change, each with
+/// escape sequences in it.
+pub fn hostile_timeline(room: &str, now: u64) -> Vec<TimelineItem> {
+    let mut b = Builder::new(room);
+    let at = now - 30 * MINUTE;
+    b.day(at);
+    let first = b.text(
+        "mum",
+        at,
+        "Hello\x1b[31m red\x1b[0m\n\x1b]8;;https://evil.example/\x1b\\click\x1b]8;;\x1b\\\tthere\r\nok",
+    );
+    first.sender_name = Some("Mum\x1b[2K\rDad".to_owned());
+    // A formatted message whose text and link carry escapes (the session's
+    // HTML sanitiser never makes this; a hostile fixture can).
+    let text = "Visit \x1b[5mbank\x1b[0m now\u{202E}".to_owned();
+    let link_start = text.find("bank").unwrap_or(0) - "\x1b[5m".len();
+    let link_end = text.find(" now").unwrap_or(text.len());
+    let mut block = Block::new(BlockKind::Paragraph, text);
+    block.spans.push(Span {
+        range: link_start..link_end,
+        style: SpanStyle {
+            link: Some(0),
+            bold: true,
+            ..SpanStyle::default()
+        },
+    });
+    let mut quote = Block::new(BlockKind::Paragraph, "quoted \x1b]0;title\x07text");
+    quote.quote_depth = 1;
+    let rich = RichText {
+        blocks: vec![block, quote],
+        links: vec![RichLink {
+            href: "https://evil.example/\x1b]0;x\x07path".to_owned(),
+        }],
+    };
+    b.event(
+        "ben",
+        at + MINUTE,
+        TimelineContent::Message {
+            kind: MessageKind::Text,
+            body: MessageBody::new("Visit bank now"),
+            rich,
+            edited: true,
+            media: None,
+        },
+    )
+    .sender_name = Some("\x1b]8;;https://evil.example/\x1b\\Ben\x1b]8;;\x1b\\".to_owned());
+    let reply = b.reply_to(0).map(|reply| ReplyPreview {
+        sender: Some("\x1b]2;x\x07Ben".to_owned()),
+        text: Some(MessageBody::new("quoted\x1b[2J\x1b[H")),
+        ..reply
+    });
+    let answer = b.text("ana", at + 2 * MINUTE, "Not clicking that.");
+    answer.in_reply_to = reply;
+    answer.reactions = vec![Reaction {
+        key: "\x1b[5m😀".to_owned(),
+        count: 1,
+        own: false,
+        senders: vec!["\x1b[31mMum".to_owned()],
+    }];
+    b.event(
+        "mum",
+        at + 3 * MINUTE,
+        media_message(
+            MessageKind::File,
+            "report\x1b[8m.pdf",
+            media(
+                "fixture-media:hostile-file",
+                "report\x1b[8m.pdf\u{202E}fdp.exe",
+                "application/pdf",
+                1_000,
+                None,
+            ),
+        ),
+    );
+    b.event(
+        "mum",
+        at + 4 * MINUTE,
+        TimelineContent::Membership {
+            user_id: user("eve"),
+            display_name: Some("\x1b[1mEve\x1b[0m\x07".to_owned()),
+            change: MembershipChange::Joined,
+        },
+    );
+    b.kind(
+        "bot",
+        at + 5 * MINUTE,
+        MessageKind::Notice,
+        "\x1bPq#0;2;0;0;0\x1b\\Notice\x1b_Gf=100;AAAA\x1b\\ end",
+    );
+    b.finish()
+}
 
 /// The large fixture's room count (PLAN.md, section 13.6).
 pub const LARGE_ROOMS: usize = 1_000;

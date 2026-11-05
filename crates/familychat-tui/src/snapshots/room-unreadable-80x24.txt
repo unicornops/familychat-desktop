@@ -1,0 +1,99 @@
+  FAMILY CHAT 0.0.0-test              @ana:smith.safechat.family  Room 10 of 11
+Birthday surprise  Encrypted  4 members
+────────────────────────────────────────────────────────────────────────────────
+
+──────────────────────────────────── Monday ────────────────────────────────────
+  · Dad turned on end-to-end encryption
+Mum  10:01
+  Waiting for this message's key. It shows once a device that can read it shares
+  the key.
+  Waiting for this message's key. It shows once a device that can read it shares
+  the key.
+Dad  11:00
+  Cake is ordered. Chocolate, obviously.
+Ana  11:05
+  I'll make the banner. Purple and gold? (edited)
+Dad  12:00
+  Message deleted
+Grandad  13:00
+  Family Chat can't show this kind of message yet.
+Mum  14:00
+  [sticker] A party popper
+                                                                     Up to date
+< Rooms      PgDn Newer   l Link#      u FirstNew   m Members    : Commands
+PgUp Older   Tab NextLink s Save       G Latest     n NextNew    O OTHER
+--- styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+BBBBBBBBBBBBBBBBBkkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+  kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+BBB  kkkkk
+  kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+  kkkkkkkk
+  kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+  kkkkkkkk
+BBB  kkkkk
+kk
+ccc  kkkkk
+kk                                      kkkkkkkkk
+BBB  kkkkk
+  kkkkkkkkkkkkkkk
+BBBBBBB  kkkkk
+  kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+BBB  kkkkk
+  kkkkkkkkkkkkkkkkkkkkkkkk
+                                                                     kkkkkkkkkkk
+R            RRRR         R            R            R            R
+RRRR         RRR          R            R            R            R
+--- NO_COLOR styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+BBBBBBBBBBBBBBBBB
+
+
+
+
+BBB
+  IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+  IIIIIIII
+  IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+  IIIIIIII
+BBB
+
+BBB
+
+BBB
+  IIIIIIIIIIIIIII
+BBBBBBB
+  IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+BBB
+  IIIIIIIIIIIIIIIIIIIIIIII
+
+R            RRRR         R            R            R            R
+RRRR         RRR          R            R            R            R
+--- ASCII ---
+  FAMILY CHAT 0.0.0-test              @ana:smith.safechat.family  Room 10 of 11
+Birthday surprise  Encrypted  4 members
+--------------------------------------------------------------------------------
+
+------------------------------------ Monday ------------------------------------
+  - Dad turned on end-to-end encryption
+Mum  10:01
+  Waiting for this message's key. It shows once a device that can read it shares
+  the key.
+  Waiting for this message's key. It shows once a device that can read it shares
+  the key.
+Dad  11:00
+  Cake is ordered. Chocolate, obviously.
+Ana  11:05
+  I'll make the banner. Purple and gold? (edited)
+Dad  12:00
+  Message deleted
+Grandad  13:00
+  Family Chat can't show this kind of message yet.
+Mum  14:00
+  [sticker] A party popper
+                                                                     Up to date
+< Rooms      PgDn Newer   l Link#      u FirstNew   m Members    : Commands
+PgUp Older   Tab NextLink s Save       G Latest     n NextNew    O OTHER

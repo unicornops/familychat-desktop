@@ -1,7 +1,7 @@
 # Family Chat Desktop
 
 > [!WARNING]
-> **Family Chat Desktop is alpha software and is in no way ready for real use.** Right now the window signs you in and lets you read your rooms, and the terminal UI is a placeholder: you cannot send messages yet. Expect bugs, missing features and breaking changes between releases. Use the Family Chat apps for iOS, Android or the web in the meantime.
+> **Family Chat Desktop is alpha software and is in no way ready for real use.** Right now the window and the terminal UI sign you in and let you read your rooms: you cannot send messages yet. Expect bugs, missing features and breaking changes between releases. Use the Family Chat apps for iOS, Android or the web in the meantime.
 
 Family Chat Desktop (`familychat`) is a native desktop chat client for macOS, Linux and Windows, written in Rust, with a graphical UI built on GPUI and a terminal UI built on ratatui. It is a standards-compliant Matrix client that works with any homeserver supporting what modern Matrix clients need, and its first job is to be the best way to use [Family Chat](https://safechat.family), the family-safe hosted Matrix service, including easy sign-in with a code from a parent.
 
@@ -14,7 +14,7 @@ Phase 0, the repository scaffold ([#1](https://github.com/unicornops/familychat-
 - a Rust workspace in Zmail's style: edition 2024, the Rust toolchain Zed pins, GPL-3.0-only, strict lints, `cargo deny`, `cargo audit` and `cargo about` ([ADR 0001](./docs/adr/0001-architecture.md))
 - GPUI from Zed's `v1.27.0` stable release ([ADR 0002](./docs/adr/0002-gpui-zed-stable-pin.md), [`docs/upstream/zed.md`](./docs/upstream/zed.md)), bumped by a weekly workflow
 - `familychat` opens an empty Family Chat window in the light or dark theme that matches the system
-- `familychat tui` draws a placeholder in the terminal; `q` quits
+- `familychat tui` draws a placeholder in the terminal; `q` quits (signing in and reading came in Phase 10)
 - `familychat --version` prints the version and the GPUI it was built with
 - the dedicated Tokio runtime every Matrix call will run on, with a test that a GPUI task awaits work done on it
 - CI on Linux, macOS and Windows (lint, tests, a release build and a window smoke test with a screenshot on each), and releases from Conventional Commits with release-please
@@ -61,7 +61,17 @@ Phase 6, rooms and the timeline in the window ([#7](https://github.com/unicornop
 - `matrix:` and `matrix.to` links open in the app; every other link shows its whole address and asks before your browser opens it, and warns when its text shows a different site
 - keyboard commands to move between rooms and unread rooms, jump to the oldest unread or the latest message, show the members and switch filters
 
-The terminal UI signs in from Phase 10. Sending, encryption, notifications and the rest follow in the later phases.
+Phase 10, the terminal UI: sign-in and reading ([#11](https://github.com/unicornops/familychat-desktop/issues/11), [ADR 0008](./docs/adr/0008-terminal-ui.md)):
+
+- `familychat tui` in Zmail's terminal style: a title bar, the screen, a status line and a command bar that always shows the keys that work, built from the same commands table as the window; `:` opens a palette of them
+- the same start as the window, with the keychain and lost-key screens; it refuses to start while the window (or another terminal) has the profile open
+- sign in with a code from a parent by pasting the link (always asked "Sign in as …?" first, answered only with `y`), or with your password, to your family's server or any other
+- the room list and a room side by side from 120 columns (or one after the other), with filters, unread and mention badges and invitations; timelines with formatted text as terminal styles, replies, reactions, folded room changes and the sync state, "Paused" included
+- every link and file numbered: links show their whole address and ask before your browser opens them, files are saved where you type
+- the mouse (click, scroll, drag to select and copy, as in Zellij), new messages in the status line with an optional bell (`--bell`), `NO_COLOR` and ASCII drawing (`--ascii`)
+- every name, message and file name from a server is filtered for escape sequences before it reaches your terminal
+
+Sending, encryption, notifications in the window and the rest follow in the later phases.
 
 ## Building
 
@@ -78,7 +88,7 @@ GPUI renders through Vulkan (`libvulkan1`) or EGL/GL (`libegl1`) at runtime. On 
 ```bash
 cargo build -p familychat-app --release --locked
 target/release/familychat             # the window
-target/release/familychat tui         # the terminal UI
+target/release/familychat tui         # the terminal UI (--bell, --ascii, --no-mouse); q quits
 target/release/familychat accounts    # the accounts registry
 target/release/familychat --version
 ```
@@ -102,6 +112,13 @@ cargo build -p familychat-app --release --locked --features ui-fixture
 target/release/familychat launch-ui-fixture --list
 target/release/familychat launch-ui-fixture confirm dark
 xvfb-run -a --server-args="-screen 0 1920x1080x24" scripts/capture-ui-screenshots.sh --matrix artifacts/ui-screenshots
+```
+
+The terminal UI opens on the same fixtures (its snapshots are in `crates/familychat-tui/src/snapshots`):
+
+```bash
+cargo run -p familychat-app --features ui-fixture -- launch-tui-fixture --list
+cargo run -p familychat-app --features ui-fixture -- launch-tui-fixture room
 ```
 
 See [`AGENTS.md`](./AGENTS.md) for the crates, commands and rules.

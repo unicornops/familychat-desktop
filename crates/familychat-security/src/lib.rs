@@ -15,8 +15,8 @@
 //! - [`images`]: decoding message images within byte, size and frame
 //!   limits, never SVG.
 //! - [`file_names`]: safe names for downloaded files.
-//!
-//! The terminal sanitiser arrives with the terminal UI (Phase 10).
+//! - [`terminal`]: the terminal sanitiser every server string goes through
+//!   before the terminal UI draws it (ADR 0008).
 
 pub mod file_names;
 pub mod images;
@@ -25,6 +25,7 @@ pub mod logging;
 pub mod matrix_html;
 pub mod redact;
 pub mod secret;
+pub mod terminal;
 pub mod time;
 
 pub use keychain::{

@@ -5,7 +5,7 @@ edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
 publish = false
-description = "Family Chat's keychain access, typed secrets, log redaction, local logs, and the content rules: the Matrix HTML sanitiser, image limits and safe file names"
+description = "Family Chat's keychain access, typed secrets, log redaction, local logs, and the content rules: the Matrix HTML sanitiser, image limits, safe file names and the terminal sanitiser"
 
 [dependencies]
 # The Matrix HTML sanitiser (`matrix_html`, ADR 0007): ammonia's allowlist
@@ -29,6 +29,12 @@ tracing.workspace = true
 tracing-subscriber.workspace = true
 uuid.workspace = true
 zeroize.workspace = true
+
+[dev-dependencies]
+# The terminal corpus's seeded mutations and random text
+# (tests/terminal_corpus.rs, copied from Zmail with the same generator).
+# Already in the lock file through the GPUI graph; the dev build only.
+rand = "0.8"
 
 [lints]
 workspace = true

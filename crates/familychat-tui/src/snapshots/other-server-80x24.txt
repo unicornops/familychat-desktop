@@ -1,0 +1,99 @@
+  FAMILY CHAT 0.0.0-test     ANOTHER MATRIX SERVER
+
+
+
+
+
+
+   Use another Matrix server
+   Sign in to any Matrix homeserver with your username and password.
+
+   Homeserver             matrix.org
+   Username or Matrix ID
+   Password
+
+   Tab moves between the fields. Enter signs in from the password.
+
+
+
+
+
+
+
+Enter Next   Esc Back
+Tab NextFld  ^C Quit
+--- styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+
+
+
+
+
+
+   BBBBBBBBBBBBBBBBBBBBBBBBB
+   kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+
+   BBBBBBBBBBBBBBBBBBBBBBBkkkkkkkkkkR
+   BBBBBBBBBBBBBBBBBBBBBBB
+   BBBBBBBBBBBBBBBBBBBBBBB
+
+   kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+
+
+
+
+
+
+
+RRRRR        RRR
+RRR          RR
+--- NO_COLOR styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+
+
+
+
+
+
+   BBBBBBBBBBBBBBBBBBBBBBBBB
+
+
+   BBBBBBBBBBBBBBBBBBBBBBB          R
+   BBBBBBBBBBBBBBBBBBBBBBB
+   BBBBBBBBBBBBBBBBBBBBBBB
+
+
+
+
+
+
+
+
+
+RRRRR        RRR
+RRR          RR
+--- ASCII ---
+  FAMILY CHAT 0.0.0-test     ANOTHER MATRIX SERVER
+
+
+
+
+
+
+   Use another Matrix server
+   Sign in to any Matrix homeserver with your username and password.
+
+   Homeserver             matrix.org
+   Username or Matrix ID
+   Password
+
+   Tab moves between the fields. Enter signs in from the password.
+
+
+
+
+
+
+
+Enter Next   Esc Back
+Tab NextFld  ^C Quit

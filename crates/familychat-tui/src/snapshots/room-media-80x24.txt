@@ -1,0 +1,99 @@
+  FAMILY CHAT 0.0.0-test               @ana:smith.safechat.family  Room 5 of 11
+Holiday photos  Encrypted  5 members
+────────────────────────────────────────────────────────────────────────────────
+──────────────────────────────────── Today ─────────────────────────────────────
+Dad  06:00
+  [file] Cottage booking.pdf [1]  184 KB
+Mum  06:10
+  [audio] voice-message.ogg [2]  96 KB
+  Voice message
+Dad  06:20
+  [video] waves.mp4 [3]  1920×1080, 14.2 MB
+Ben  06:30
+  [image] drawing.svg [4]  800×600, 12 KB
+Grandad  06:40
+  [image] panorama.png [5]  40000×8000, 31.0 MB
+Mum  06:50
+  [image] lighthouse.jpg [6]  900×1200, 1.8 MB
+Dad  07:00
+  [image] sunset.jpg [7]  1600×1067, 2.4 MB
+  Beach at sunset
+  😍  3
+                                                                     Up to date
+< Rooms      PgDn Newer   l Link#      u FirstNew   m Members    : Commands
+PgUp Older   Tab NextLink s Save       G Latest     n NextNew    O OTHER
+--- styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+BBBBBBBBBBBBBBkkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+BBB  kkkkk
+kkkkkkkkkccccccccccccccccccccccckkkkkkkk
+BBB  kkkkk
+kkkkkkkkkkccccccccccccccccccccckkkkkkk
+kk
+BBB  kkkkk
+kkkkkkkkkkccccccccccccckkkkkkkkkkkkkkkkkkkk
+BBB  kkkkk
+kkkkkkkkkkccccccccccccccckkkkkkkkkkkkkkkk
+BBBBBBB  kkkkk
+kkkkkkkkkkcccccccccccccccckkkkkkkkkkkkkkkkkkkkk
+BBB  kkkkk
+kkkkkkkkkkcccccccccccccccccckkkkkkkkkkkkkkkkkk
+BBB  kkkkk
+kkkkkkkkkkcccccccccccccckkkkkkkkkkkkkkkkkkk
+kk
+  R RR
+                                                                     kkkkkkkkkkk
+R            RRRR         R            R            R            R
+RRRR         RRR          R            R            R            R
+--- NO_COLOR styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+BBBBBBBBBBBBBB
+
+
+BBB
+         UUUUUUUUUUUUUUUUUUUUUUU
+BBB
+          UUUUUUUUUUUUUUUUUUUUU
+
+BBB
+          UUUUUUUUUUUUU
+BBB
+          UUUUUUUUUUUUUUU
+BBBBBBB
+          UUUUUUUUUUUUUUUU
+BBB
+          UUUUUUUUUUUUUUUUUU
+BBB
+          UUUUUUUUUUUUUU
+
+  R RR
+
+R            RRRR         R            R            R            R
+RRRR         RRR          R            R            R            R
+--- ASCII ---
+  FAMILY CHAT 0.0.0-test               @ana:smith.safechat.family  Room 5 of 11
+Holiday photos  Encrypted  5 members
+--------------------------------------------------------------------------------
+------------------------------------ Today -------------------------------------
+Dad  06:00
+  [file] Cottage booking.pdf [1]  184 KB
+Mum  06:10
+  [audio] voice-message.ogg [2]  96 KB
+  Voice message
+Dad  06:20
+  [video] waves.mp4 [3]  1920x1080, 14.2 MB
+Ben  06:30
+  [image] drawing.svg [4]  800x600, 12 KB
+Grandad  06:40
+  [image] panorama.png [5]  40000x8000, 31.0 MB
+Mum  06:50
+  [image] lighthouse.jpg [6]  900x1200, 1.8 MB
+Dad  07:00
+  [image] sunset.jpg [7]  1600x1067, 2.4 MB
+  Beach at sunset
+  😍  3
+                                                                     Up to date
+< Rooms      PgDn Newer   l Link#      u FirstNew   m Members    : Commands
+PgUp Older   Tab NextLink s Save       G Latest     n NextNew    O OTHER

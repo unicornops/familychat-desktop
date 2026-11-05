@@ -220,6 +220,15 @@ jobs:
               timeout-minutes: 15
               run: cargo test -p familychat-signin --test live_signin --locked -- --ignored --nocapture
 
+            # The terminal UI's sign-in against the harness (ADR 0008): a
+            # pasted code used only after y (checked in the access log) and
+            # a typed password, driving the terminal UI's state over the
+            # real sign-in and session; the invitation's hostile room name
+            # comes back filtered.
+            - name: Live terminal UI tests
+              timeout-minutes: 15
+              run: cargo test -p familychat-app --test live_tui_signin --locked -- --ignored --nocapture
+
             - name: Homeserver harness logs
               if: failure()
               run: scripts/homeserver-harness.sh logs

@@ -1,0 +1,195 @@
+  FAMILY CHAT 0.0.0-test                                                     ROOMS                                      @ana:smith.safechat.family  Room 1 of 3
+ 1 All  2 Unread  3 People  4 Invites       │ Cousins  Encrypted  4 members
+────────────────────────────────────────────│ ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+› Smith family                   @1 3 11:58 │
+    Mum: Dinner at 7, don't be late! @Ana   │   Aunt Clare invited you to Cousins.
+  Grandad                           2 09:00 │
+    Grandad: Sent an image                  │   Join or decline it in the Family Chat window. Answering invitations in the terminal arrives in a later release.
+  Ben                           • Yesterday │
+    Ben: can I borrow your charger          │
+                                            │
+                                            │
+                                            │
+                                            │
+                                            │
+                                            │
+                                            │
+                                            │
+                                            │
+                                            │
+                                            │
+                                            │
+                                            │
+                                            │
+                                            │
+                                            │
+                                            │
+                                            │
+                                            │
+                                            │
+                                            │
+                                            │
+                                            │
+                                            │
+                                            │
+                                            │
+                                            │
+                                            │
+                                            │
+                                            │
+                                            │
+                                            │
+                                            │
+                                            │
+                                            │
+                                            │
+                                                                                                                                                     Up to date
+Enter Open          : Commands          ^N NextRoom         N PrevNew           2 Unread            4 Invites           y Copy
+n NextNew           q Quit              ^P PrevRoom         1 All               3 People            m Members           b Bell
+--- styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+ kk     kkRRRRRR  kk        kk              k BBBBBBBkkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRrrRRRkkkkk k
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk   BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB B kkkkk k
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk   kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBB B kkkkkkkkk k
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+                                            k
+                                            k
+                                            k
+                                            k
+                                            k
+                                            k
+                                            k
+                                            k
+                                            k
+                                            k
+                                            k
+                                            k
+                                            k
+                                            k
+                                            k
+                                            k
+                                            k
+                                            k
+                                            k
+                                            k
+                                            k
+                                            k
+                                            k
+                                            k
+                                            k
+                                            k
+                                            k
+                                            k
+                                            k
+                                            k
+                                            k
+                                            k
+                                            k
+                                            k
+                                            k
+                                            k
+                                                                                                                                                     kkkkkkkkkkk
+RRRRR               R                   RR                  R                   R                   R                   R
+R                   R                   RR                  R                   R                   R                   R
+--- NO_COLOR styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+          RRRRRR                              BBBBBBB
+
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR    BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB B
+
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBB B
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+RRRRR               R                   RR                  R                   R                   R                   R
+R                   R                   RR                  R                   R                   R                   R
+--- ASCII ---
+  FAMILY CHAT 0.0.0-test                                                     ROOMS                                      @ana:smith.safechat.family  Room 1 of 3
+ 1 All  2 Unread  3 People  4 Invites       | Cousins  Encrypted  4 members
+--------------------------------------------| ------------------------------------------------------------------------------------------------------------------
+> Smith family                   @1 3 11:58 |
+    Mum: Dinner at 7, don't be late! @Ana   |   Aunt Clare invited you to Cousins.
+  Grandad                           2 09:00 |
+    Grandad: Sent an image                  |   Join or decline it in the Family Chat window. Answering invitations in the terminal arrives in a later release.
+  Ben                           * Yesterday |
+    Ben: can I borrow your charger          |
+                                            |
+                                            |
+                                            |
+                                            |
+                                            |
+                                            |
+                                            |
+                                            |
+                                            |
+                                            |
+                                            |
+                                            |
+                                            |
+                                            |
+                                            |
+                                            |
+                                            |
+                                            |
+                                            |
+                                            |
+                                            |
+                                            |
+                                            |
+                                            |
+                                            |
+                                            |
+                                            |
+                                            |
+                                            |
+                                            |
+                                            |
+                                            |
+                                            |
+                                            |
+                                            |
+                                            |
+                                                                                                                                                     Up to date
+Enter Open          : Commands          ^N NextRoom         N PrevNew           2 Unread            4 Invites           y Copy
+n NextNew           q Quit              ^P PrevRoom         1 All               3 People            m Members           b Bell
