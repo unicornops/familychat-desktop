@@ -244,6 +244,13 @@ Tests in `crates/familychat-signin` unless named otherwise.
 - The password form of "Sign in with your password" still asks for the
   password first; if #239 makes families OAuth-only, that page may want
   the server step too (a frontend change; the flow already offers the ways).
+- The live tests found a stall in the pinned SDK: its encryption set-up
+  after a restore (turning backups on) run at the same time as the sync's
+  first key upload, or as making the account's identity, could leave both
+  waiting for good (an account in about five). The supervisor now lets
+  that set-up finish (at most 15 seconds, so an account offline still
+  syncs when it can) before it starts the sync and the identity set-up
+  (ADR 0005); the QR code sign-in's client is already past it.
 - Registering a client per sign-in leaves registrations on the server
   (MAS deduplicates identical metadata; a new loopback port is a new
   client).

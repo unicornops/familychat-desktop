@@ -45,6 +45,28 @@ const SETTLE: Duration = Duration::from_secs(90);
 const ACCESS_TOKEN_TTL: Duration = Duration::from_secs(60);
 const MAS_ISSUER: &str = "https://mas.familychat.test/";
 
+/// The session's and the sign-in's logs on standard error, for CI's log
+/// (`--nocapture`): never a token (the session and the sign-in log none).
+fn logs() {
+    static ONCE: std::sync::Once = std::sync::Once::new();
+    ONCE.call_once(|| {
+        use tracing_subscriber::layer::SubscriberExt;
+        let directives = std::env::var("FAMILYCHAT_TEST_LOG").unwrap_or_else(|_| {
+            "warn,familychat_session=info,familychat_signin=info,matrix_sdk::encryption=debug"
+                .to_owned()
+        });
+        let filter: tracing_subscriber::filter::Targets =
+            directives.parse().expect("valid directives");
+        let subscriber = tracing_subscriber::fmt()
+            .with_max_level(tracing::Level::DEBUG)
+            .with_ansi(false)
+            .with_writer(std::io::stderr)
+            .finish()
+            .with(filter);
+        let _ = tracing::subscriber::set_global_default(subscriber);
+    });
+}
+
 // --- A profile and its sign-in --------------------------------------------------
 
 struct Desktop {
@@ -56,6 +78,7 @@ struct Desktop {
 
 impl Desktop {
     fn new(harness: &HomeserverHarness, name: &str) -> Result<Self> {
+        logs();
         let root = std::env::temp_dir().join(format!(
             "familychat-oauth-live-{name}-{}-{}",
             std::process::id(),
@@ -118,9 +141,14 @@ impl Desktop {
     async fn identity_ready(&self, key: &AccountKey) -> Result<()> {
         let account = self.manager.account_by_key(key).context("open")?;
         let mut status = account.encryption();
-        tokio::time::timeout(SETTLE, async {
+        let mut last = None;
+        let waited = tokio::time::timeout(SETTLE, async {
             loop {
                 let now = status.borrow_and_update().clone();
+                if last.as_ref() != Some(&now) {
+                    eprintln!("{key}: {now:?}");
+                    last = Some(now.clone());
+                }
                 if now.identity == IdentitySetup::Ready && now.device == DeviceTrust::Verified {
                     return Ok(());
                 }
@@ -133,8 +161,13 @@ impl Desktop {
                 status.changed().await.context("the account went away")?;
             }
         })
-        .await
-        .context("the identity was never ready")?
+        .await;
+        waited.with_context(|| {
+            format!(
+                "the identity was never ready: {:?}",
+                account.encryption().borrow()
+            )
+        })?
     }
 }
 

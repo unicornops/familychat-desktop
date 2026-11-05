@@ -65,6 +65,10 @@ const SUSPENDED_BACKOFF: (Duration, Duration) = (Duration::from_secs(30), Durati
 /// Other failures: five seconds, doubling to five minutes.
 const ERROR_BACKOFF: (Duration, Duration) = (Duration::from_secs(5), Duration::from_secs(300));
 
+/// How long the supervisor lets the SDK's encryption set-up run on its own
+/// before it starts the sync.
+const E2EE_SETUP_WAIT: Duration = Duration::from_secs(15);
+
 /// What the user sees for a failure the session can't name.
 const SYNC_FAILED: &str = "Family Chat couldn't sync this account. It will try again.";
 
@@ -669,6 +673,24 @@ async fn supervise(
     shared: Arc<Shared>,
     password: Option<Secret<String>>,
 ) {
+    // The SDK's encryption set-up after a restore (backups turned on, as
+    // ADR 0009 has it) runs before the sync and the identity set-up do: run
+    // at the same time as the sync's first key upload, or as making the
+    // identity, it can stall them both inside the pinned SDK (found by the
+    // Phase 14 live tests, an account in five). Not for long without the
+    // server: an account offline still opens and syncs when it can.
+    if tokio::time::timeout(
+        E2EE_SETUP_WAIT,
+        ready
+            .client
+            .encryption()
+            .wait_for_e2ee_initialization_tasks(),
+    )
+    .await
+    .is_err()
+    {
+        info!(account = %id, "the encryption set-up is still running; syncing anyway");
+    }
     let _encryption = AbortOnDrop(tokio::spawn(encryption::follow(
         ready.client.clone(),
         shared.encryption.clone(),
