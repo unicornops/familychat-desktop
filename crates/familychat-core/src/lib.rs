@@ -15,7 +15,11 @@
 //!   with `familychat-signin`, and the [`SigninApi`](signin::SigninApi)
 //!   that starts them;
 //! - [`sync`], [`rooms`], [`timeline`]: the view models (sync state, room
-//!   summaries, timeline items) with their wording;
+//!   summaries and members, timeline items and their rows) with their
+//!   wording;
+//! - [`rich_text`]: the rich-text AST a message's text becomes (ADR 0007);
+//! - [`links`]: which links open in the app and which ask first;
+//! - [`media`]: images and files, as the session hands them over;
 //! - [`diff`]: [`ListDiff`](diff::ListDiff), the changes the room list and
 //!   timelines arrive as;
 //! - what the shell shows about itself.
@@ -24,6 +28,9 @@ pub mod commands;
 pub mod diff;
 pub mod fuzzy;
 pub mod identity;
+pub mod links;
+pub mod media;
+pub mod rich_text;
 pub mod rooms;
 pub mod session;
 pub mod signin;

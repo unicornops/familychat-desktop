@@ -20,14 +20,15 @@
 //! fixture implementation for screenshots and view tests is
 //! `familychat-test-support`'s `FixtureSession`.
 
-use std::fmt;
+use std::{fmt, path::PathBuf, sync::Arc};
 
 use ruma::{OwnedUserId, RoomId};
 use tokio::sync::{mpsc, oneshot, watch};
 
 use crate::{
     diff::ListDiff,
-    rooms::{RoomListCommand, RoomListFilter, RoomListLoading, RoomSummary},
+    media::{DecodedImage, MediaError, MediaInfo},
+    rooms::{RoomListCommand, RoomListFilter, RoomListLoading, RoomMember, RoomSummary},
     sync::AccountStatus,
     timeline::{TimelineCommand, TimelineUpdate},
 };
@@ -88,6 +89,9 @@ impl std::error::Error for SessionError {}
 /// A one-off answer.
 pub type Reply<T> = oneshot::Receiver<Result<T, SessionError>>;
 
+/// A one-off answer about media.
+pub type MediaReply<T> = oneshot::Receiver<Result<T, MediaError>>;
+
 /// How many batches a subscription buffers before the session waits for
 /// the frontend.
 pub const SUBSCRIPTION_BUFFER: usize = 64;
@@ -135,6 +139,45 @@ impl RoomListSubscription {
     pub fn first_page_only(&self) -> bool {
         self.commands.send(RoomListCommand::FirstPageOnly).is_ok()
     }
+
+    /// The updates, the loading state and the controls apart, so a task
+    /// can wait on the updates while the view keeps the controls.
+    pub fn split(
+        self,
+    ) -> (
+        mpsc::Receiver<Vec<ListDiff<RoomSummary>>>,
+        watch::Receiver<RoomListLoading>,
+        RoomListControls,
+    ) {
+        (
+            self.updates,
+            self.loading,
+            RoomListControls {
+                commands: self.commands,
+            },
+        )
+    }
+}
+
+/// An open room list's controls, apart from its updates
+/// ([`RoomListSubscription::split`]). The list stops when both are dropped.
+#[derive(Debug, Clone)]
+pub struct RoomListControls {
+    commands: mpsc::UnboundedSender<RoomListCommand>,
+}
+
+impl RoomListControls {
+    /// Shows another set of rooms. `false` when the list has stopped.
+    pub fn set_filter(&self, filter: RoomListFilter) -> bool {
+        self.commands
+            .send(RoomListCommand::SetFilter(filter))
+            .is_ok()
+    }
+
+    /// Shows one more page of rooms. `false` when the list has stopped.
+    pub fn load_more(&self) -> bool {
+        self.commands.send(RoomListCommand::LoadMore).is_ok()
+    }
 }
 
 /// An open timeline: its updates and its controls. Dropping it closes the
@@ -164,6 +207,34 @@ impl TimelineSubscription {
             .send(TimelineCommand::PaginateBackwards { events })
             .is_ok()
     }
+
+    /// The updates and the controls apart, so a task can wait on the
+    /// updates while the view keeps the controls.
+    pub fn split(self) -> (mpsc::Receiver<TimelineUpdate>, TimelineControls) {
+        (
+            self.updates,
+            TimelineControls {
+                commands: self.commands,
+            },
+        )
+    }
+}
+
+/// An open timeline's controls, apart from its updates
+/// ([`TimelineSubscription::split`]).
+#[derive(Debug, Clone)]
+pub struct TimelineControls {
+    commands: mpsc::UnboundedSender<TimelineCommand>,
+}
+
+impl TimelineControls {
+    /// Loads up to `events` older events. `false` when the timeline has
+    /// closed.
+    pub fn paginate_backwards(&self, events: u16) -> bool {
+        self.commands
+            .send(TimelineCommand::PaginateBackwards { events })
+            .is_ok()
+    }
 }
 
 /// What the frontends ask of the Matrix sessions. Nothing here blocks:
@@ -185,6 +256,22 @@ pub trait SessionApi: Send + Sync {
 
     /// Opens a room's timeline.
     fn timeline(&self, account: &AccountKey, room: &RoomId) -> Reply<TimelineSubscription>;
+
+    /// A room's joined and invited members.
+    fn members(&self, account: &AccountKey, room: &RoomId) -> Reply<Vec<RoomMember>>;
+
+    /// Accepts (`accept`) or declines an invitation to `room`.
+    fn answer_invite(&self, account: &AccountKey, room: &RoomId, accept: bool) -> Reply<()>;
+
+    /// An image to draw: fetched from the account's homeserver through
+    /// authenticated media (a thumbnail where the server or the sender
+    /// offers one), decrypted, and decoded off the UI thread within
+    /// `familychat-security`'s limits. SVG is refused.
+    fn image(&self, account: &AccountKey, media: &MediaInfo) -> MediaReply<Arc<DecodedImage>>;
+
+    /// Downloads a file the same way and writes it to `path`, which the
+    /// person chose (the frontend suggests a safe name). Nothing is opened.
+    fn save_file(&self, account: &AccountKey, media: &MediaInfo, path: PathBuf) -> MediaReply<()>;
 
     /// Asks a stopped or waiting sync to try again now (after "not
     /// supported", a sign-in problem, or to skip a backoff).
