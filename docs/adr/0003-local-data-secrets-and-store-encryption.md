@@ -2,8 +2,8 @@
 
 ## Status
 
-Proposed with Phase 1 (issue #2); accepted when that pull request
-merges. It records PLAN.md, sections 5.4 and 5.5, as built. Zmail's ADR
+Accepted on November 5, 2026, with Phase 1 (issue #2, pull request
+#20). It records PLAN.md, sections 5.4 and 5.5, as built. Zmail's ADR
 0005 (unicornops/zmail, "Encrypting the Local Store at Rest") is the
 pattern for the key handling and the recovery behaviour; the storage
 choice differs, for the reason in section 4.
@@ -46,7 +46,8 @@ when set (`familychat_store::paths`, with Zmail's resolution rules):
 ```text
 familychat.lock                  profile lock (exclusive)
 familychat.sqlite3               app store: accounts registry, preferences, UI state
-accounts/<account-uuid>/sdk/     matrix-sdk state, crypto and event cache stores (Phase 3)
+accounts/<account-uuid>/sdk/     matrix-sdk state and crypto stores (Phase 3, ADR 0005)
+accounts/<account-uuid>/cache/   matrix-sdk event cache and media stores (Phase 3, ADR 0005)
 logs/                            familychat.log, crash.log (redacted)
 unreadable-<time>/               data moved aside by start over
 ```

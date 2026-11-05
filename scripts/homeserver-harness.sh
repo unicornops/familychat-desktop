@@ -31,7 +31,13 @@ set -euo pipefail
 #   synapse.test              Synapse
 #
 # Palpo's own HTTP port is published on 127.0.0.1:${FAMILYCHAT_HARNESS_ADMIN_PORT:-18008}
-# for the admin API only, standing in for the control panel's port-forward.
+# for the admin API only, standing in for the control panel's port-forward,
+# and Synapse's on 127.0.0.1:${FAMILYCHAT_HARNESS_SYNAPSE_ADMIN_PORT:-18009}
+# for its admin API (creating Synapse users) only.
+#
+# Synapse issues refresh tokens to logins that ask for them, with access
+# tokens that last 20 seconds, so the live tests see the SDK rotate them;
+# its login and message rate limits are raised for the tests.
 #
 # `up` writes what a test needs to $FAMILYCHAT_HARNESS_STATE_DIR (default
 # target/homeserver-harness):
@@ -45,6 +51,8 @@ set -euo pipefail
 #   FAMILYCHAT_HARNESS_STATE_DIR      where state is written
 #   FAMILYCHAT_HARNESS_EDGE_PORT      the TLS front end's port (default 18443)
 #   FAMILYCHAT_HARNESS_ADMIN_PORT     Palpo's admin port (default 18008)
+#   FAMILYCHAT_HARNESS_SYNAPSE_ADMIN_PORT
+#                                     Synapse's admin port (default 18009)
 #   FAMILYCHAT_HARNESS_READY_TIMEOUT  seconds to wait for readiness (default 180)
 #   DOCKERHUB_USERNAME/TOKEN          optional Docker Hub login, so image pulls
 #                                     use a personal quota (as in Zmail)
@@ -64,11 +72,14 @@ STATE_DIR="${FAMILYCHAT_HARNESS_STATE_DIR:-${REPO_ROOT}/target/homeserver-harnes
 export FAMILYCHAT_HARNESS_STATE_DIR="${STATE_DIR}"
 EDGE_PORT="${FAMILYCHAT_HARNESS_EDGE_PORT:-18443}"
 ADMIN_PORT="${FAMILYCHAT_HARNESS_ADMIN_PORT:-18008}"
-export FAMILYCHAT_HARNESS_EDGE_PORT="${EDGE_PORT}" FAMILYCHAT_HARNESS_ADMIN_PORT="${ADMIN_PORT}"
+SYNAPSE_ADMIN_PORT="${FAMILYCHAT_HARNESS_SYNAPSE_ADMIN_PORT:-18009}"
+export FAMILYCHAT_HARNESS_EDGE_PORT="${EDGE_PORT}" FAMILYCHAT_HARNESS_ADMIN_PORT="${ADMIN_PORT}" \
+  FAMILYCHAT_HARNESS_SYNAPSE_ADMIN_PORT="${SYNAPSE_ADMIN_PORT}"
 READY_TIMEOUT="${FAMILYCHAT_HARNESS_READY_TIMEOUT:-180}"
 
 EDGE_ADDR="127.0.0.1:${EDGE_PORT}"
 ADMIN_URL="http://127.0.0.1:${ADMIN_PORT}"
+SYNAPSE_ADMIN_URL="http://127.0.0.1:${SYNAPSE_ADMIN_PORT}"
 SERVER_NAME="hs1.familychat.test"
 CUSTOM_DOMAIN="smith.test"
 EVIL_HOST="evil.familychat.example"
@@ -77,6 +88,8 @@ HOSTS=("${SERVER_NAME}" "${CUSTOM_DOMAIN}" "${EVIL_HOST}" "${SYNAPSE_HOST}")
 # family-chat's HOMESERVER_ADMIN_USER.
 ADMIN_LOCALPART="panel-admin"
 ADMIN_MXID="@${ADMIN_LOCALPART}:${SERVER_NAME}"
+# The Synapse admin the tests create Synapse users with.
+SYNAPSE_ADMIN_LOCALPART="harness-admin"
 
 TLS_DIR="${STATE_DIR}/tls"
 CA_PEM="${STATE_DIR}/ca.pem"
@@ -178,6 +191,31 @@ render_palpo_config() {
 generate_synapse_config() {
   retry 3 5 compose run --rm --no-deps synapse generate >/dev/null \
     || die "could not generate Synapse's config"
+  # The harness's additions, appended to the generated homeserver.yaml
+  # (`generate` writes none of these keys).
+  compose run --rm --no-deps -T --entrypoint sh synapse -c 'cat >> /data/homeserver.yaml' <<'YAML' \
+    || die "could not configure Synapse"
+
+# --- familychat homeserver harness (scripts/homeserver-harness.sh) ---
+# Refresh tokens for logins that ask for them, with short-lived access
+# tokens, so the live tests see matrix-sdk rotate them.
+refreshable_access_token_lifetime: 20s
+# Every client request reaches Synapse from the edge, one address; the
+# live tests sign in and send more than the defaults allow.
+rc_login:
+  address:
+    per_second: 10
+    burst_count: 100
+  account:
+    per_second: 10
+    burst_count: 100
+  failed_attempts:
+    per_second: 10
+    burst_count: 100
+rc_message:
+  per_second: 100
+  burst_count: 1000
+YAML
 }
 
 # --- Images ------------------------------------------------------------------
@@ -252,6 +290,11 @@ synapse_ready() {
   edge_curl "${SYNAPSE_HOST}" /_matrix/client/versions --fail
 }
 
+synapse_admin_port_ready() {
+  curl --silent --show-error --max-time 10 --noproxy '*' --fail \
+    "${SYNAPSE_ADMIN_URL}/_matrix/client/versions"
+}
+
 # --- Admin bootstrap -----------------------------------------------------------
 
 # post_json URL BODY [CURL ARGS...] - prints the response body, then a line
@@ -311,12 +354,29 @@ bootstrap_admin() {
   printf '%s' "${token}"
 }
 
+# A Synapse server admin, made with the image's register_new_matrix_user
+# and the shared secret `generate` wrote, then signed in for its token.
+bootstrap_synapse_admin() {
+  local password="$1" body response status payload token
+  compose exec -T synapse register_new_matrix_user --config /data/homeserver.yaml \
+    --user "${SYNAPSE_ADMIN_LOCALPART}" --password "${password}" --admin http://localhost:8008 >/dev/null \
+    || die "could not create the Synapse admin"
+  body="$(jq -nc --arg user "${SYNAPSE_ADMIN_LOCALPART}" --arg password "${password}" \
+    '{type: "m.login.password", identifier: {type: "m.id.user", user: $user}, password: $password, initial_device_display_name: "homeserver harness"}')"
+  response="$(post_json "${SYNAPSE_ADMIN_URL}/_matrix/client/v3/login" "${body}")"
+  status="${response##*$'\n'}"
+  payload="${response%$'\n'*}"
+  token="$(jq -r '.access_token // empty' <<<"${payload}")"
+  [[ "${status}" == 200 && -n "${token}" ]] || die "Synapse admin login failed (${status}): ${payload}"
+  printf '%s' "${token}"
+}
+
 urlencode() {
   jq -rn --arg value "$1" '$value | @uri'
 }
 
 write_env() {
-  local admin_token="$1" registration_token="$2"
+  local admin_token="$1" registration_token="$2" synapse_admin_token="$3"
   (
     umask 077
     cat > "${ENV_FILE}" <<EOF
@@ -331,6 +391,8 @@ export FAMILYCHAT_HARNESS_ADMIN_URL='${ADMIN_URL}'
 export FAMILYCHAT_HARNESS_ADMIN_USER='${ADMIN_MXID}'
 export FAMILYCHAT_HARNESS_ADMIN_TOKEN='${admin_token}'
 export FAMILYCHAT_HARNESS_REGISTRATION_TOKEN='${registration_token}'
+export FAMILYCHAT_HARNESS_SYNAPSE_ADMIN_URL='${SYNAPSE_ADMIN_URL}'
+export FAMILYCHAT_HARNESS_SYNAPSE_ADMIN_TOKEN='${synapse_admin_token}'
 EOF
   )
 }
@@ -344,7 +406,7 @@ up() {
   down
   mkdir -p "${STATE_DIR}"
   generate_tls
-  local registration_token admin_token
+  local registration_token admin_token synapse_admin_token
   registration_token="$(openssl rand -hex 32)"
   render_palpo_config "${registration_token}"
   generate_synapse_config
@@ -353,9 +415,11 @@ up() {
   wait_for "Palpo on ${ADMIN_URL}" palpo_admin_port_ready
   wait_for "https://${SERVER_NAME} through the edge on ${EDGE_ADDR}" edge_ready
   wait_for "https://${SYNAPSE_HOST} through the edge" synapse_ready
+  wait_for "Synapse on ${SYNAPSE_ADMIN_URL}" synapse_admin_port_ready
   admin_token="$(bootstrap_admin "${registration_token}")"
-  write_env "${admin_token}" "${registration_token}"
-  log "up: ${HOSTS[*]} on ${EDGE_ADDR} (CA ${CA_PEM}); admin API ${ADMIN_URL} as ${ADMIN_MXID}; settings in ${ENV_FILE}"
+  synapse_admin_token="$(bootstrap_synapse_admin "$(openssl rand -hex 32)")"
+  write_env "${admin_token}" "${registration_token}" "${synapse_admin_token}"
+  log "up: ${HOSTS[*]} on ${EDGE_ADDR} (CA ${CA_PEM}); admin API ${ADMIN_URL} as ${ADMIN_MXID}; Synapse admin API ${SYNAPSE_ADMIN_URL}; settings in ${ENV_FILE}"
 }
 
 down() {

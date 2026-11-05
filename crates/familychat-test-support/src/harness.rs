@@ -12,7 +12,7 @@
 use std::{
     fmt,
     sync::atomic::{AtomicU64, Ordering},
-    time::{SystemTime, UNIX_EPOCH},
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 use anyhow::{Context, Result, bail};
@@ -54,7 +54,11 @@ impl Reply {
     }
 }
 
-/// A signed-in device. `Debug` never prints the access token.
+/// How long [`HomeserverHarness::login_password`] keeps trying a login
+/// the homeserver rate-limits (Palpo's one bucket for the whole harness).
+const LOGIN_RATE_LIMIT_PATIENCE: Duration = Duration::from_secs(120);
+
+/// A signed-in device. `Debug` never prints the tokens.
 #[derive(Clone, PartialEq, Eq)]
 pub struct Session {
     /// The Matrix ID the server signed in.
@@ -62,6 +66,7 @@ pub struct Session {
     /// The new device's ID.
     pub device_id: String,
     access_token: String,
+    refresh_token: Option<String>,
 }
 
 impl Session {
@@ -77,12 +82,22 @@ impl Session {
             user_id: field("user_id")?,
             device_id: field("device_id")?,
             access_token: field("access_token")?,
+            refresh_token: body
+                .get("refresh_token")
+                .and_then(Value::as_str)
+                .map(str::to_owned),
         })
     }
 
     /// The access token, for an `Authorization: Bearer` header.
     pub fn access_token(&self) -> &str {
         &self.access_token
+    }
+
+    /// The refresh token, when the login asked for one and the server
+    /// issues them (Synapse in the harness).
+    pub fn refresh_token(&self) -> Option<&str> {
+        self.refresh_token.as_deref()
     }
 }
 
@@ -93,6 +108,10 @@ impl fmt::Debug for Session {
             .field("user_id", &self.user_id)
             .field("device_id", &self.device_id)
             .field("access_token", &"<redacted>")
+            .field(
+                "refresh_token",
+                &self.refresh_token.as_ref().map(|_| "<redacted>"),
+            )
             .finish()
     }
 }
@@ -243,6 +262,22 @@ impl HomeserverHarness {
         send(request).await
     }
 
+    async fn synapse_admin_api(
+        &self,
+        method: Method,
+        segments: &[&str],
+        body: &Value,
+    ) -> Result<Reply> {
+        let mut path = vec!["_synapse", "admin"];
+        path.extend_from_slice(segments);
+        let request = self
+            .admin
+            .request(method, Self::url(&self.env.synapse_admin_url, &path)?)
+            .bearer_auth(self.env.synapse_admin_token())
+            .json(body);
+        send(request).await
+    }
+
     async fn admin_api(&self, method: Method, segments: &[&str], body: &Value) -> Result<Reply> {
         let mut path = vec!["_synapse", "admin"];
         path.extend_from_slice(segments);
@@ -347,17 +382,90 @@ impl HomeserverHarness {
     /// Signs in with `m.login.password` through the front end. `user` is a
     /// localpart or a Matrix ID.
     pub async fn login_password(&self, user: &str, password: &str) -> Result<Session> {
-        let body = json!({
+        self.login_password_on(&self.env.hs1_url, user, password, false)
+            .await
+    }
+
+    /// Signs in with `m.login.password` on the homeserver at `base` (hs1 or
+    /// Synapse), asking for a refresh token when `refresh_token` is set.
+    ///
+    /// A login the server rate-limits (`M_LIMIT_EXCEEDED`; Palpo has one
+    /// login bucket for the whole harness, `[rc_login] burst = 20`) is
+    /// tried again after the wait the server asks for, for up to two
+    /// minutes, so a long live-test run does not fail on the bucket.
+    pub async fn login_password_on(
+        &self,
+        base: &str,
+        user: &str,
+        password: &str,
+        refresh_token: bool,
+    ) -> Result<Session> {
+        let mut body = json!({
             "type": "m.login.password",
             "identifier": { "type": "m.id.user", "user": user },
             "password": password,
             "initial_device_display_name": DEVICE_NAME,
         });
+        if refresh_token {
+            body["refresh_token"] = json!(true);
+        }
+        let url = Self::url(base, &["_matrix", "client", "v3", "login"])?;
+        let started = SystemTime::now();
+        loop {
+            let reply = send(self.edge.post(url.clone()).json(&body)).await?;
+            if reply.errcode() == Some("M_LIMIT_EXCEEDED") {
+                let waited = started.elapsed().unwrap_or_default();
+                let wait = reply.body["retry_after_ms"]
+                    .as_u64()
+                    .map_or(Duration::from_secs(5), Duration::from_millis)
+                    .min(Duration::from_secs(30));
+                if waited + wait <= LOGIN_RATE_LIMIT_PATIENCE {
+                    tokio::time::sleep(wait).await;
+                    continue;
+                }
+            }
+            let reply = reply.ok("password login")?;
+            return Session::from_login_body(&reply.body);
+        }
+    }
+
+    /// Creates a Synapse user through Synapse's admin API
+    /// (`PUT /_synapse/admin/v2/users/{mxid}`) and signs them in with a
+    /// refresh token, so the SDK has tokens to rotate.
+    pub async fn new_synapse_user(&self, prefix: &str) -> Result<TestUser> {
+        let localpart = Self::unique_localpart(prefix);
+        let password = format!("{localpart}-password");
+        let user_id = format!("@{localpart}:{}", self.synapse_server_name()?);
         let reply = self
-            .client_api(Method::POST, &["v3", "login"], None, Some(&body))
-            .await?
-            .ok("password login")?;
-        Session::from_login_body(&reply.body)
+            .synapse_admin_api(
+                Method::PUT,
+                &["v2", "users", &user_id],
+                &json!({ "password": password }),
+            )
+            .await?;
+        if !matches!(reply.status, 200 | 201) {
+            bail!(
+                "creating {user_id} answered {}: {}",
+                reply.status,
+                reply.body
+            );
+        }
+        let session = self
+            .login_password_on(&self.env.synapse_url, &user_id, &password, true)
+            .await?;
+        Ok(TestUser {
+            user_id,
+            password,
+            session,
+        })
+    }
+
+    /// Synapse's server name, the host of its URL (`synapse.test`).
+    pub fn synapse_server_name(&self) -> Result<&str> {
+        self.env
+            .synapse_url
+            .strip_prefix("https://")
+            .context("the Synapse URL is not https://")
     }
 
     /// Mints a single-use `m.login.token` for `mxid`, as family-chat's
@@ -513,6 +621,7 @@ mod tests {
             "user_id": "@a:hs1.familychat.test",
             "device_id": "DEV",
             "access_token": "secret-access",
+            "refresh_token": "secret-refresh",
         }))
         .expect("session");
         let token = LoginToken {

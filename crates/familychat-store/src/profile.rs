@@ -107,6 +107,12 @@ impl Profile {
         self.held.dir()
     }
 
+    /// The keychain the profile was opened with, for the account sessions
+    /// (`account-<uuid>-session`) the session crate keeps.
+    pub fn keychain(&self) -> Arc<dyn Keychain> {
+        self.held.keychain.clone()
+    }
+
     /// The accounts registry, in the order the accounts were added.
     pub fn accounts(&self) -> Result<Vec<AccountSummary>, StoreError> {
         self.store.accounts()

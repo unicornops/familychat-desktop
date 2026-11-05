@@ -43,6 +43,19 @@ keyring = { version = "3.6.3", features = ["apple-native", "windows-native", "sy
 # BLAKE3), for the identifying values in the app store (ADR 0003). Pinned
 # exactly, and moved with the other Matrix crates (PLAN.md, section 4).
 matrix-sdk-store-encryption = "=0.19.1"
+# The Matrix client (ADR 0005): pinned exactly and moved together with
+# matrix-sdk-ui, matrix-sdk-store-encryption and ruma (PLAN.md, section 4).
+# Only what Family Chat uses: end-to-end encryption, the SQLite stores
+# (SQLite built from source, as rusqlite's `bundled` does) and rustls with
+# aws-lc-rs. No automatic room key forwarding (key requests to other
+# devices are left to verification and backup, Phase 8), no native TLS.
+matrix-sdk = { version = "=0.19.1", default-features = false, features = ["bundled-sqlite", "e2e-encryption", "rustls-aws-lc-rs", "sqlite"] }
+# SyncService, RoomListService and Timeline, on the same TLS provider.
+matrix-sdk-ui = { version = "=0.19.1", default-features = false, features = ["rustls-aws-lc-rs"] }
+# Matrix identifiers for familychat-core's view models: the ruma matrix-sdk
+# 0.19.1 uses, without its API or events features. Moved with the Matrix
+# crates.
+ruma = { version = "=0.17.2", default-features = false }
 # The terminal UI's drawing, on its crossterm backend; no optional widgets
 # or macros.
 ratatui = { version = "0.30.2", default-features = false, features = ["crossterm_0_29"] }

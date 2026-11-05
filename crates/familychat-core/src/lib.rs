@@ -1,10 +1,28 @@
 //! Domain types and view models that both Family Chat frontends draw.
 //!
-//! This crate has no GPUI, ratatui or network dependency (PLAN.md, section
-//! 5.1). In Phase 0 it holds the app's identifiers and what the shell shows
-//! about itself; the Matrix view models arrive with the session in Phase 3.
+//! This crate has no GPUI, ratatui or network dependency, and no matrix-sdk
+//! type in its API: only ruma's identifiers (PLAN.md, section 5.1;
+//! `scripts/check-dependency-boundaries.sh` checks it). It holds:
+//!
+//! - [`identity`]: the app's names and identifiers;
+//! - [`session`]: the [`SessionApi`](session::SessionApi) both frontends
+//!   consume, and the channels its answers arrive on (ADR 0005);
+//! - [`sync`], [`rooms`], [`timeline`]: the view models (sync state, room
+//!   summaries, timeline items) with their wording;
+//! - [`diff`]: [`ListDiff`](diff::ListDiff), the changes the room list and
+//!   timelines arrive as;
+//! - what the shell shows about itself.
 
+pub mod diff;
 pub mod identity;
+pub mod rooms;
+pub mod session;
+pub mod sync;
+pub mod timeline;
+
+/// ruma's identifier types, as the view models use them, so a frontend
+/// does not need its own ruma dependency.
+pub use ruma::{EventId, OwnedEventId, OwnedRoomId, OwnedUserId, RoomId, UserId};
 
 /// Facts about the dedicated background runtime, shown by the shell.
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -28,7 +28,15 @@ Phase 1, secrets and the local store ([#2](https://github.com/unicornops/familyc
 - `familychat accounts` lists the accounts (none yet: signing in is Phase 4)
 - local, redacted logs and a crash log in the profile's `logs/`; nothing is uploaded
 
-Signing in, rooms, the timeline, encryption, notifications and the rest follow in the later phases.
+Phase 3, the Matrix session core ([#4](https://github.com/unicornops/familychat-desktop/issues/4), [ADR 0005](./docs/adr/0005-matrix-session-runtime-and-bridging.md)):
+
+- matrix-sdk and matrix-sdk-ui 0.19.1, with end-to-end encryption, encrypted SQLite stores and rustls; only `familychat-session` depends on them, and CI checks that the window, the terminal UI and `familychat-core` never do
+- each account restores from the keychain at start without signing in again, and syncs with native sliding sync; a server without it gets a clear "not supported" state
+- sync states both frontends will show with the same wording, including a suspended account (a Family Chat curfew) as its own state that rechecks slowly instead of an error
+- refresh tokens rotate, and each new token is in the keychain before it is used
+- the room list (with all, unread, people and invites filters) and room timelines (with back-pagination) streamed as view models, ready for the GUI (Phase 5 and 6) and the terminal UI (Phase 10) to draw
+
+Signing in, drawing rooms and the timeline, sending, encryption, notifications and the rest follow in the later phases.
 
 ## Building
 

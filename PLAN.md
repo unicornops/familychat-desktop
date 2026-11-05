@@ -123,8 +123,8 @@ Layout under the data directory (macOS `~/Library/Application Support/Family Cha
 ```
 familychat.lock                  profile lock (exclusive)
 familychat.sqlite3               app store: accounts registry, preferences, UI state
-accounts/<account-uuid>/sdk/     matrix-sdk state, crypto and event cache stores
-accounts/<account-uuid>/media/   matrix-sdk media store (cache directory on macOS and Windows)
+accounts/<account-uuid>/sdk/     matrix-sdk state and crypto stores
+accounts/<account-uuid>/cache/   matrix-sdk event cache and media stores (ADR 0005)
 logs/                            redacted logs, crash.log
 ```
 
@@ -133,7 +133,7 @@ logs/                            redacted logs, crash.log
 - **The app store** uses the same `StoreCipher` construction for identifying values (user ids, homeserver URLs, room ids). Only non-identifying preferences (theme, text size) are plaintext.
 - **What remains visible** on disk: table structure, row counts and value sizes. ADR 0003 records this residual leak and why SQLCipher is not used (one `libsqlite3-sys` per build means the SDK's databases and ours would share one SQLite library; keying only ours buys little and complicates the build).
 - **No keychain, or a locked one:** the app shows the reason with Retry, never falls back to plaintext. A missing key (reinstalled OS, copied data directory) leads to a recovery screen that moves the old data aside and signs in again (zmail ADR 0005 behaviour). A passphrase-wrapped key for headless Linux is later work.
-- **Refresh tokens:** `handle_refresh_tokens()` on, and `subscribe_to_session_changes()` writes rotated tokens to the keychain before they are used.
+- **Refresh tokens:** `handle_refresh_tokens()` on; the client's save-session callback writes rotated tokens to the keychain inside the SDK's refresh, before the request that needed them is retried, and `subscribe_to_session_changes()` reports a token the server no longer accepts (ADR 0005).
 - **Logs:** `tracing` to a local file only, rotated; `matrix_sdk` at `warn` by default; no message bodies, tokens, query strings or keys ever (a `Redacted` wrapper and a test that scans captured logs during sign-in and sync).
 - **Sign-out:** server logout, then keychain entries deleted, then the account's directories removed.
 
@@ -280,7 +280,7 @@ The panel shows a token-bearing link only as a QR image (never the raw URL), and
 | `m.login.token` | accepted and advertised (`session.rs`) | code sign-in works |
 | OAuth 2.0 / MAS (MSC3861) | not configured (family-chat #239 plans MAS per family) | no OAuth sign-in for Family Chat yet |
 | QR login rendezvous (MSC4108 / MSC4388) | discovery answers `false` (`unstable.rs`) | QR login only on other servers until #239 |
-| First cross-signing upload without UIA (MSC3967) | unverified on the pin (family-chat #257) | code-only accounts may not get cross-signing |
+| First cross-signing upload without UIA (MSC3967) | yes, verified by the Phase 2 harness (family-chat #257) | code-only accounts get cross-signing; replacing the keys asks for a password |
 | Login rate limit | one bucket per family behind the proxy | never retry logins |
 | Upload size | 11 MiB | check media config first |
 | Suspension | `M_USER_SUSPENDED` | read-only state |

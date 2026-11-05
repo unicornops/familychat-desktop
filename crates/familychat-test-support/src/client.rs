@@ -128,6 +128,7 @@ mod tests {
                     "FAMILYCHAT_HARNESS_SERVER_NAME" => "hs1.familychat.test",
                     "FAMILYCHAT_HARNESS_CUSTOM_DOMAIN" => "smith.test",
                     "FAMILYCHAT_HARNESS_ADMIN_URL" => "http://127.0.0.1:18008",
+                    "FAMILYCHAT_HARNESS_SYNAPSE_ADMIN_URL" => "http://127.0.0.1:18009",
                     "FAMILYCHAT_HARNESS_HS1_URL" => "https://hs1.familychat.test",
                     "FAMILYCHAT_HARNESS_EVIL_URL" => "https://evil.familychat.example",
                     "FAMILYCHAT_HARNESS_SYNAPSE_URL" => "https://synapse.test",
