@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Family Chat: third-party licences</title>
+    <style>
+        body { font-family: sans-serif; max-width: 60em; margin: 2em auto; padding: 0 1em; }
+        pre { white-space: pre-wrap; background: #fafaf9; border: 1px solid #e7e5e4; padding: 1em; }
+        .licence { margin-bottom: 3em; }
+    </style>
+</head>
+<body>
+    <h1>Third-party licences</h1>
+    <p>Family Chat is licensed under the GNU General Public License, version 3 (see LICENSE). It is built with the crates below, under these licences. The bundled Inter font and Lucide icons have their licences in the <code>licenses</code> folder.</p>
+
+    <h2>Overview</h2>
+    <ul>
+        {{#each overview}}
+        <li><a href="#{{id}}">{{name}}</a> ({{count}})</li>
+        {{/each}}
+    </ul>
+
+    <h2>Licences</h2>
+    {{#each licenses}}
+    <div class="licence">
+        <h3 id="{{id}}">{{name}}</h3>
+        <h4>Used by:</h4>
+        <ul>
+            {{#each used_by}}
+            <li><a href="{{#if crate.repository}}{{crate.repository}}{{else}}https://crates.io/crates/{{crate.name}}{{/if}}">{{crate.name}} {{crate.version}}</a></li>
+            {{/each}}
+        </ul>
+        <pre>{{text}}</pre>
+    </div>
+    {{/each}}
+</body>
+</html>

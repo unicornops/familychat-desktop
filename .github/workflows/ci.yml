@@ -1,0 +1,245 @@
+name: CI
+
+# Branch pushes are covered by their pull request's run, so a push runs CI
+# only on main. A newer push to a pull request cancels its older run.
+on:
+    push:
+        branches: [main]
+    pull_request:
+    workflow_dispatch:
+
+concurrency:
+    group: ci-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+    cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+    contents: read
+
+jobs:
+    changes:
+        runs-on: ubuntu-latest
+        outputs:
+            app_code: ${{ steps.detect.outputs.app_code }}
+            workspace_checks: ${{ steps.detect.outputs.workspace_checks }}
+
+        steps:
+            - name: Checkout
+              if: github.event_name == 'pull_request'
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  fetch-depth: 0
+
+            - name: Detect app code changes
+              id: detect
+              shell: bash
+              run: |
+                  if [[ "${{ github.event_name }}" != "pull_request" ]]; then
+                    echo "app_code=true" >> "$GITHUB_OUTPUT"
+                    echo "workspace_checks=true" >> "$GITHUB_OUTPUT"
+                    exit 0
+                  fi
+
+                  app_code=false
+                  workspace_checks=false
+                  while IFS= read -r file; do
+                    [[ -z "$file" ]] && continue
+
+                    case "$file" in
+                      Cargo.toml|Cargo.lock|rust-toolchain.toml|.cargo/*|.github/workflows/ci.yml|scripts/window-smoke.*)
+                        app_code=true
+                        workspace_checks=true
+                        ;;
+                      crates/*|themes/*|assets/*)
+                        if [[ "$file" != *.md ]]; then
+                          app_code=true
+                          workspace_checks=true
+                        fi
+                        ;;
+                      about.toml|about.hbs|deny.toml)
+                        workspace_checks=true
+                        ;;
+                    esac
+                  done < <(git diff --name-only "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}")
+
+                  echo "app_code=$app_code" >> "$GITHUB_OUTPUT"
+                  echo "workspace_checks=$workspace_checks" >> "$GITHUB_OUTPUT"
+
+    quality:
+        needs: changes
+        if: github.event_name != 'pull_request' || needs.changes.outputs.workspace_checks == 'true'
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+            - name: Install Linux build dependencies
+              run: sudo apt-get update && sudo apt-get install -y pkg-config libdbus-1-dev libasound2-dev libxcb1-dev libxkbcommon-dev libxkbcommon-x11-dev libfontconfig1-dev libfreetype6-dev
+
+            # rust-toolchain.toml follows the toolchain Zed pins for the GPUI
+            # tag (docs/upstream/zed.md), so CI reads it instead of
+            # repeating the version here.
+            - name: Read the pinned Rust toolchain
+              id: toolchain
+              shell: bash
+              run: echo "channel=$(sed -n 's/^channel = "\(.*\)"/\1/p' rust-toolchain.toml)" >> "$GITHUB_OUTPUT"
+
+            - name: Install Rust
+              uses: dtolnay/rust-toolchain@89b12181fb390509a0842a86cc55eeb8eb928c1d # stable
+              with:
+                  toolchain: ${{ steps.toolchain.outputs.channel }}
+                  components: rustfmt, clippy
+
+            # The GPUI git dependency clones the whole Zed repository
+            # (~400 MB); keep Cargo's git database between runs.
+            - name: Cache Cargo git dependencies
+              uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+              with:
+                  path: ~/.cargo/git/db
+                  key: cargo-git-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+                  restore-keys: cargo-git-${{ runner.os }}-
+
+            - name: Install cargo-deny
+              run: cargo install cargo-deny --locked
+
+            - name: Install cargo-audit
+              run: cargo install cargo-audit --locked
+
+            - name: Install cargo-about
+              run: cargo install cargo-about --locked --features cli
+
+            - name: Format
+              run: cargo fmt --all -- --check
+
+            - name: Clippy
+              run: cargo clippy --workspace --all-targets --locked -- -D warnings
+
+            - name: Policy
+              run: cargo deny check licenses advisories bans sources
+
+            - name: Advisory audit
+              # If an advisory has no upstream fix reachable in the lock,
+              # silence it inline with --ignore and link the reason here.
+              # The pinned-stack advisories (all "unmaintained" warnings,
+              # which cargo audit does not fail on) are listed in deny.toml,
+              # which cargo deny enforces alongside in Policy.
+              run: cargo audit
+
+            # What every release archive carries as THIRD_PARTY.html: checked
+            # here so a crate with a licence about.toml does not accept fails
+            # the pull request, not the release.
+            - name: Third-party notices
+              run: cargo about generate --locked --fail about.hbs -o THIRD_PARTY.html
+
+            - name: Workspace tests
+              run: cargo test --workspace --locked
+
+    build:
+        name: Build (${{ matrix.os }})
+        needs:
+            - changes
+            - quality
+        if: github.event_name != 'pull_request' || needs.changes.outputs.app_code == 'true'
+        runs-on: ${{ matrix.os }}
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    - os: ubuntu-latest
+                      artifact_name: familychat-linux
+                      binary_path: target/release/familychat
+                    - os: macos-latest
+                      artifact_name: familychat-macos
+                      binary_path: target/release/familychat
+                    - os: windows-latest
+                      artifact_name: familychat-windows
+                      binary_path: target/release/familychat.exe
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+            # The window smoke test runs the app under Xvfb: GPUI renders
+            # through wgpu, which loads the Vulkan loader (libvulkan1) and,
+            # failing that, EGL/GL at runtime; mesa-vulkan-drivers supplies
+            # the lavapipe software Vulkan driver.
+            - name: Install Linux build and smoke test dependencies
+              if: runner.os == 'Linux'
+              run: sudo apt-get update && sudo apt-get install -y pkg-config libdbus-1-dev libasound2-dev libxcb1-dev libxkbcommon-dev libxkbcommon-x11-dev libfontconfig1-dev libfreetype6-dev libvulkan1 libgl1 libegl1 libgl1-mesa-dri mesa-vulkan-drivers xvfb xdotool imagemagick
+
+            - name: Read the pinned Rust toolchain
+              id: toolchain
+              shell: bash
+              run: echo "channel=$(sed -n 's/^channel = "\(.*\)"/\1/p' rust-toolchain.toml)" >> "$GITHUB_OUTPUT"
+
+            - name: Install Rust
+              uses: dtolnay/rust-toolchain@89b12181fb390509a0842a86cc55eeb8eb928c1d # stable
+              with:
+                  toolchain: ${{ steps.toolchain.outputs.channel }}
+                  components: clippy
+
+            - name: Cache Cargo git dependencies
+              uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+              with:
+                  path: ~/.cargo/git/db
+                  key: cargo-git-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+                  restore-keys: cargo-git-${{ runner.os }}-
+
+            # The quality job lints and tests on Linux only. The platform
+            # code (GPUI's backends, the bundled-font and Windows resource
+            # cfgs, the terminal layer) differs per OS and can only be
+            # compiled and run here.
+            - name: Clippy (this platform)
+              if: runner.os != 'Linux'
+              run: cargo clippy --workspace --all-targets --locked -- -D warnings
+
+            - name: Workspace tests (this platform)
+              if: runner.os != 'Linux'
+              run: cargo test --workspace --locked
+
+            - name: Build release binary
+              run: cargo build -p familychat-app --release --locked
+
+            - name: Version
+              shell: bash
+              run: ${{ matrix.binary_path }} --version
+
+            # Tracked from Phase 0 (PLAN.md, section 12): GPUI with wgpu now,
+            # matrix-sdk from Phase 3.
+            - name: Record the binary size
+              shell: bash
+              run: |
+                  bytes=$(wc -c < "${{ matrix.binary_path }}" | tr -d ' ')
+                  echo "Release binary on ${{ runner.os }}: ${bytes} bytes ($((bytes / 1024 / 1024)) MiB)" | tee -a "$GITHUB_STEP_SUMMARY"
+
+            # Opens the real window, checks it appears with its title, and
+            # takes a screenshot (the window-smoke artefact).
+            - name: Window smoke test (Linux)
+              if: runner.os == 'Linux'
+              timeout-minutes: 5
+              run: xvfb-run -a --server-args="-screen 0 1280x800x24" bash scripts/window-smoke.sh "${{ matrix.binary_path }}" artifacts/window-smoke
+
+            - name: Window smoke test (macOS)
+              if: runner.os == 'macOS'
+              timeout-minutes: 5
+              run: bash scripts/window-smoke.sh "${{ matrix.binary_path }}" artifacts/window-smoke
+
+            - name: Window smoke test (Windows)
+              if: runner.os == 'Windows'
+              timeout-minutes: 5
+              shell: pwsh
+              run: ./scripts/window-smoke.ps1 -App "${{ matrix.binary_path }}" -OutputDir artifacts/window-smoke
+
+            - name: Upload the window smoke test
+              if: always()
+              uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+              with:
+                  name: window-smoke-${{ runner.os }}
+                  path: artifacts/window-smoke
+                  if-no-files-found: ignore
+
+            - name: Upload release binary
+              uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+              with:
+                  name: ${{ matrix.artifact_name }}
+                  path: ${{ matrix.binary_path }}
