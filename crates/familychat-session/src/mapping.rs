@@ -248,7 +248,7 @@ fn timeline_event(event: &EventTimelineItem, own_user: &UserId) -> TimelineEvent
         },
         timestamp_ms: u64::from(event.timestamp().get()),
         is_own: event.is_own(),
-        content: content(event.content()),
+        content: content(event.content(), sender_html(event).as_deref()),
         send_state: event.send_state().map(|state| match state {
             EventSendState::NotSentYet { .. } => SendState::Sending,
             EventSendState::SendingFailed { is_recoverable, .. } => SendState::Failed {
@@ -291,10 +291,10 @@ fn reactions(by_key: &ReactionsByKeyBySender, own_user: &UserId) -> Vec<Reaction
         .collect()
 }
 
-fn content(content: &TimelineItemContent) -> TimelineContent {
+fn content(content: &TimelineItemContent, sender_html: Option<&str>) -> TimelineContent {
     match content {
         TimelineItemContent::MsgLike(msg_like) => match &msg_like.kind {
-            MsgLikeKind::Message(message) => message_content(message),
+            MsgLikeKind::Message(message) => message_content(message, sender_html),
             MsgLikeKind::Sticker(sticker) => TimelineContent::Sticker {
                 body: MessageBody::new(sticker.content().body.clone()),
             },
@@ -334,6 +334,49 @@ fn content(content: &TimelineItemContent) -> TimelineContent {
     }
 }
 
+/// The sender's own formatted body (the latest edit's, if any) from the
+/// event as it arrived, when it is HTML.
+///
+/// matrix-sdk-ui's timeline already runs ruma-html over formatted bodies,
+/// and ruma-html drops an element it doesn't allow but keeps its contents:
+/// `<script>alert(1)</script>` reaches us as the text `alert(1)`, after
+/// which our sanitiser can no longer drop the contents with the element
+/// (ADR 0007). So the HTML we sanitise comes from the event itself, and
+/// the SDK's copy is the fallback (a local echo has no JSON yet).
+fn sender_html(event: &EventTimelineItem) -> Option<String> {
+    let (json, edit) = match event.latest_edit_json() {
+        Some(json) => (json, true),
+        None => (event.original_json()?, false),
+    };
+    let content: serde_json::Value = json.get_field("content").ok().flatten()?;
+    let content = if edit {
+        content.get("m.new_content")?
+    } else {
+        &content
+    };
+    formatted_html(content)
+}
+
+/// A raw content object's `formatted_body`, when its format is HTML.
+fn formatted_html(content: &serde_json::Value) -> Option<String> {
+    let format = content.get("format")?.as_str()?;
+    if format != MessageFormat::Html.as_str() {
+        return None;
+    }
+    content
+        .get("formatted_body")?
+        .as_str()
+        .map(ToOwned::to_owned)
+}
+
+/// The HTML to sanitise: the sender's own, else the SDK's formatted body.
+fn drawn<'a>(
+    sender_html: Option<&'a str>,
+    formatted: Option<&'a FormattedBody>,
+) -> Option<&'a str> {
+    sender_html.or_else(|| html(formatted))
+}
+
 /// The formatted body to draw: only HTML (`org.matrix.custom.html`).
 fn html(formatted: Option<&FormattedBody>) -> Option<&str> {
     formatted
@@ -354,17 +397,29 @@ fn uint_u32(value: Option<UInt>) -> Option<u32> {
 /// formatted body, or the plain body), and its media. A media message's
 /// rich text is its caption only (empty without one): the file name is the
 /// media's.
-fn message_content(message: &Message) -> TimelineContent {
+fn message_content(message: &Message, sender_html: Option<&str>) -> TimelineContent {
     let msgtype = message.msgtype();
     let body = message.body();
     let (rich, media) = match msgtype {
-        MessageType::Text(text) => (message_text(body, html(text.formatted.as_ref())), None),
-        MessageType::Notice(notice) => (message_text(body, html(notice.formatted.as_ref())), None),
-        MessageType::Emote(emote) => (message_text(body, html(emote.formatted.as_ref())), None),
+        MessageType::Text(text) => (
+            message_text(body, drawn(sender_html, text.formatted.as_ref())),
+            None,
+        ),
+        MessageType::Notice(notice) => (
+            message_text(body, drawn(sender_html, notice.formatted.as_ref())),
+            None,
+        ),
+        MessageType::Emote(emote) => (
+            message_text(body, drawn(sender_html, emote.formatted.as_ref())),
+            None,
+        ),
         MessageType::Image(image) => {
             let info = image.info.as_deref();
             (
-                caption(image.caption(), image.formatted_caption()),
+                caption(
+                    image.caption(),
+                    drawn(sender_html, image.formatted_caption()),
+                ),
                 Some(MediaInfo {
                     source: handle(&image.source),
                     thumbnail: info
@@ -381,7 +436,10 @@ fn message_content(message: &Message) -> TimelineContent {
         MessageType::Video(video) => {
             let info = video.info.as_deref();
             (
-                caption(video.caption(), video.formatted_caption()),
+                caption(
+                    video.caption(),
+                    drawn(sender_html, video.formatted_caption()),
+                ),
                 Some(MediaInfo {
                     source: handle(&video.source),
                     thumbnail: info
@@ -398,7 +456,10 @@ fn message_content(message: &Message) -> TimelineContent {
         MessageType::Audio(audio) => {
             let info = audio.info.as_deref();
             (
-                caption(audio.caption(), audio.formatted_caption()),
+                caption(
+                    audio.caption(),
+                    drawn(sender_html, audio.formatted_caption()),
+                ),
                 Some(MediaInfo {
                     source: handle(&audio.source),
                     thumbnail: None,
@@ -413,7 +474,7 @@ fn message_content(message: &Message) -> TimelineContent {
         MessageType::File(file) => {
             let info = file.info.as_deref();
             (
-                caption(file.caption(), file.formatted_caption()),
+                caption(file.caption(), drawn(sender_html, file.formatted_caption())),
                 Some(MediaInfo {
                     source: handle(&file.source),
                     thumbnail: info
@@ -439,9 +500,9 @@ fn message_content(message: &Message) -> TimelineContent {
 }
 
 /// A media message's caption as rich text (empty without one).
-fn caption(plain: Option<&str>, formatted: Option<&FormattedBody>) -> RichText {
+fn caption(plain: Option<&str>, formatted_html: Option<&str>) -> RichText {
     match plain {
-        Some(plain) => message_text(plain, html(formatted)),
+        Some(plain) => message_text(plain, formatted_html),
         None => RichText::default(),
     }
 }
@@ -540,6 +601,28 @@ mod tests {
         };
         assert_eq!(html(Some(&other)), None);
         assert_eq!(html(None), None);
+    }
+
+    #[test]
+    fn the_senders_html_is_read_from_the_raw_content() {
+        let content = serde_json::json!({
+            "msgtype": "m.text",
+            "body": "hi",
+            "format": "org.matrix.custom.html",
+            "formatted_body": "<b>hi</b><script>alert(1)</script>",
+        });
+        assert_eq!(
+            formatted_html(&content).as_deref(),
+            Some("<b>hi</b><script>alert(1)</script>")
+        );
+        let markdown =
+            serde_json::json!({"format": "org.example.markdown", "formatted_body": "**hi**"});
+        assert_eq!(formatted_html(&markdown), None);
+        assert_eq!(formatted_html(&serde_json::json!({"body": "hi"})), None);
+        // What reaches the window has the script and its text gone.
+        let rich = message_text("hi", formatted_html(&content).as_deref());
+        assert!(!rich.plain_text().contains("alert"));
+        assert!(rich.plain_text().contains("hi"));
     }
 
     #[test]

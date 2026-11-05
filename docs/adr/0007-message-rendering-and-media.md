@@ -51,6 +51,15 @@ Zmail's mail sanitiser):
    caps (512 blocks, 64 KiB of text, 256 links, quotes and lists drawn at
    most 8 deep).
 
+The HTML sanitised is the sender's own, read from the event's JSON (the
+latest edit's `m.new_content` when the message was edited), not the
+formatted body matrix-sdk-ui's timeline hands over. The timeline has
+already run ruma-html over that copy, and ruma-html removes an element it
+does not allow but keeps its contents, so `<script>alert(1)</script>`
+would arrive as the text `alert(1)` and its contents could no longer go
+with it. The SDK's copy is the fallback only where there is no JSON yet (a
+local echo of our own message).
+
 The tree is flat: a list of blocks (paragraph, heading, list item with its
 depth and marker, code, rule), each one run of text with ordered,
 non-overlapping styled ranges (bold, italic, underline, strikethrough,
