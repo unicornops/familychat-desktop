@@ -2327,10 +2327,12 @@ dependencies = [
  "base64 0.22.1",
  "chrono",
  "crossterm",
+ "familychat-actions",
  "familychat-core",
  "familychat-security",
  "familychat-test-support",
  "ratatui",
+ "ratatui-textarea",
  "tokio",
  "tracing",
  "unicode-width",
@@ -6388,6 +6390,19 @@ dependencies = [
  "crossterm",
  "instability",
  "ratatui-core",
+]
+
+[[package]]
+name = "ratatui-textarea"
+version = "0.9.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6cf7263fbb7f37caa4bcfd00fc604ff1409f70456a833fbdff99282e88fdfe92"
+dependencies = [
+ "ratatui-core",
+ "ratatui-crossterm",
+ "ratatui-widgets",
+ "unicode-segmentation",
+ "unicode-width",
 ]
 
 [[package]]

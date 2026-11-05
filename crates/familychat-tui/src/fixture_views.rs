@@ -14,7 +14,10 @@ use std::time::Duration;
 
 use familychat_core::{rooms::RoomListFilter, sync::SyncState};
 
-use crate::app::{InitialView, RoomsLaunch};
+use crate::{
+    app::{InitialView, RoomsLaunch},
+    commands::Cmd,
+};
 
 /// A pasted sign-in link with a code, as a parent's QR code carries it
 /// (`familychat-test-support`'s `FIXTURE_LINK`).
@@ -71,6 +74,31 @@ pub enum ViewRooms {
     Hostile,
 }
 
+/// The account's encryption, when it isn't settled (confirmed, with
+/// recovery).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ViewEncryption {
+    /// This device isn't confirmed; recovery is set up.
+    Unconfirmed,
+    /// The server wants the password before the identity can be made.
+    NeedsPassword,
+    /// The identity couldn't be made.
+    SetupFailed,
+    /// Confirmed, with no recovery yet.
+    NoRecovery,
+}
+
+/// Where a verification starts.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ViewVerification {
+    /// Another device asks (a request that arrives on its own).
+    Incoming,
+    /// Ours, at the emoji.
+    Emoji,
+    /// Ours, done.
+    Done,
+}
+
 /// A fixture view.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FixtureView {
@@ -84,6 +112,17 @@ pub struct FixtureView {
     pub rooms: ViewRooms,
     /// Where the UI starts.
     pub initial: InitialView,
+    /// The account's encryption, when not settled.
+    pub encryption: Option<ViewEncryption>,
+    /// A verification.
+    pub verification: Option<ViewVerification>,
+    /// The family room shows identity warnings.
+    pub identity_warnings: bool,
+    /// The account's newest message in the family room was stopped by the
+    /// encryption (an unconfirmed device).
+    pub send_problem: bool,
+    /// The server's upload limit, when not Family Chat's.
+    pub upload_limit: Option<u64>,
 }
 
 /// Every fixture view, in order.
@@ -136,6 +175,36 @@ pub const VIEWS: &[&str] = &[
     "room-large",
     "hostile",
     "hostile-room",
+    "composer-typed",
+    "composer-mentions",
+    "composer-reply",
+    "composer-edit",
+    "composer-file",
+    "composer-file-too-large",
+    "composer-paused",
+    "attach-prompt",
+    "message-selected",
+    "react-picker",
+    "delete-prompt",
+    "leave-prompt",
+    "send-problem",
+    "identity-warnings",
+    "confirm-identity",
+    "confirm-recovery-key",
+    "confirm-recovery-key-wrong",
+    "confirm-skip-warning",
+    "confirm-skipped",
+    "confirm-password",
+    "verify-waiting",
+    "verify-incoming",
+    "verify-ready",
+    "verify-emoji",
+    "verify-done",
+    "verify-mismatch",
+    "recovery-offer",
+    "recovery-setup",
+    "recovery-key-shown",
+    "encryption-setup-failed",
 ];
 
 /// The family's rooms, by id (`familychat-test-support`'s `rooms`).
@@ -160,6 +229,11 @@ impl FixtureView {
             account: None,
             rooms: ViewRooms::Family,
             initial,
+            encryption: None,
+            verification: None,
+            identity_warnings: false,
+            send_problem: false,
+            upload_limit: None,
         }
     }
 
@@ -205,6 +279,45 @@ impl FixtureView {
 
     fn with_rooms(mut self, rooms: ViewRooms) -> Self {
         self.rooms = rooms;
+        self
+    }
+
+    /// The family room, then `commands`, then `typed`.
+    fn writing(commands: &[Cmd], typed: Option<&str>) -> Self {
+        Self::rooms(RoomsLaunch {
+            room: Some(ids::FAMILY.to_owned()),
+            commands: commands.to_vec(),
+            typed: typed.map(str::to_owned),
+            ..RoomsLaunch::default()
+        })
+    }
+
+    /// The family room with the account's newest message selected, then
+    /// `commands`.
+    fn selected(commands: &[Cmd]) -> Self {
+        Self::rooms(RoomsLaunch {
+            room: Some(ids::FAMILY.to_owned()),
+            select_own: true,
+            commands: commands.to_vec(),
+            ..RoomsLaunch::default()
+        })
+    }
+
+    /// The rooms with the account's encryption in `state`, then
+    /// `commands`, then `typed`.
+    fn encryption(state: Option<ViewEncryption>, commands: &[Cmd], typed: Option<&str>) -> Self {
+        Self {
+            encryption: state,
+            ..Self::rooms(RoomsLaunch {
+                commands: commands.to_vec(),
+                typed: typed.map(str::to_owned),
+                ..RoomsLaunch::default()
+            })
+        }
+    }
+
+    fn verifying(mut self, verification: ViewVerification) -> Self {
+        self.verification = Some(verification);
         self
     }
 }
@@ -301,6 +414,105 @@ pub fn fixture_view(name: &str) -> Option<FixtureView> {
             ..RoomsLaunch::default()
         })
         .with_rooms(ViewRooms::Hostile),
+        "composer-typed" => {
+            FixtureView::writing(&[], Some("See you at **six**\nBring the `snacks`, please"))
+        }
+        "composer-mentions" => FixtureView::writing(&[], Some("Thanks @gr")),
+        "composer-reply" => {
+            FixtureView::writing(&[Cmd::ToTimeline, Cmd::ReplyToMessage], Some("On my way"))
+        }
+        "composer-edit" => FixtureView::writing(&[Cmd::ToTimeline, Cmd::EditMessage], None),
+        "composer-file" => FixtureView::rooms(RoomsLaunch {
+            room: Some(ids::FAMILY.to_owned()),
+            file: Some(("Holiday plans.pdf".to_owned(), 48_213)),
+            typed: Some("The plans".to_owned()),
+            ..RoomsLaunch::default()
+        }),
+        "composer-file-too-large" => FixtureView {
+            upload_limit: Some(16_384),
+            ..FixtureView::rooms(RoomsLaunch {
+                room: Some(ids::FAMILY.to_owned()),
+                file: Some(("Holiday video.mp4".to_owned(), 48_213)),
+                ..RoomsLaunch::default()
+            })
+        },
+        "composer-paused" => FixtureView {
+            account: Some(SyncState::Suspended {
+                recheck_in: Duration::from_secs(120),
+            }),
+            ..FixtureView::room(ids::FAMILY)
+        },
+        "attach-prompt" => FixtureView::writing(&[Cmd::ToTimeline, Cmd::AttachFile], None),
+        "message-selected" => FixtureView::selected(&[]),
+        "react-picker" => FixtureView::selected(&[Cmd::ReactToMessage]),
+        "delete-prompt" => FixtureView::selected(&[Cmd::DeleteMessage]),
+        "leave-prompt" => FixtureView::writing(&[Cmd::ToTimeline, Cmd::LeaveRoom], None),
+        "send-problem" => FixtureView {
+            send_problem: true,
+            ..FixtureView::selected(&[])
+        },
+        "identity-warnings" => FixtureView {
+            identity_warnings: true,
+            ..FixtureView::writing(&[Cmd::ToTimeline], None)
+        },
+        "confirm-identity" => FixtureView::encryption(Some(ViewEncryption::Unconfirmed), &[], None),
+        "confirm-recovery-key" => FixtureView::encryption(
+            Some(ViewEncryption::Unconfirmed),
+            &[Cmd::UseRecoveryKey],
+            Some("EsTj 3yST y93F"),
+        ),
+        "confirm-recovery-key-wrong" => FixtureView::encryption(
+            Some(ViewEncryption::Unconfirmed),
+            &[Cmd::UseRecoveryKey],
+            Some("EsTj 3yST y93X\r"),
+        ),
+        "confirm-skip-warning" => {
+            FixtureView::encryption(Some(ViewEncryption::Unconfirmed), &[Cmd::Skip], None)
+        }
+        "confirm-skipped" => FixtureView::encryption(
+            Some(ViewEncryption::Unconfirmed),
+            &[Cmd::Skip, Cmd::Answer('y')],
+            None,
+        ),
+        "confirm-password" => {
+            FixtureView::encryption(Some(ViewEncryption::NeedsPassword), &[], Some("secret"))
+        }
+        "verify-waiting" => {
+            FixtureView::encryption(Some(ViewEncryption::Unconfirmed), &[Cmd::UseDevice], None)
+        }
+        "verify-incoming" => {
+            FixtureView::encryption(None, &[], None).verifying(ViewVerification::Incoming)
+        }
+        "verify-ready" => FixtureView::encryption(None, &[Cmd::Answer('y')], None)
+            .verifying(ViewVerification::Incoming),
+        "verify-emoji" => {
+            FixtureView::encryption(Some(ViewEncryption::Unconfirmed), &[Cmd::UseDevice], None)
+                .verifying(ViewVerification::Emoji)
+        }
+        "verify-done" => {
+            FixtureView::encryption(Some(ViewEncryption::Unconfirmed), &[Cmd::UseDevice], None)
+                .verifying(ViewVerification::Done)
+        }
+        "verify-mismatch" => FixtureView::encryption(
+            Some(ViewEncryption::Unconfirmed),
+            &[Cmd::UseDevice, Cmd::Answer('n')],
+            None,
+        )
+        .verifying(ViewVerification::Emoji),
+        "recovery-offer" => FixtureView::encryption(Some(ViewEncryption::NoRecovery), &[], None),
+        "recovery-setup" => FixtureView::encryption(
+            Some(ViewEncryption::NoRecovery),
+            &[Cmd::SetUpRecovery],
+            None,
+        ),
+        "recovery-key-shown" => FixtureView::encryption(
+            Some(ViewEncryption::NoRecovery),
+            &[Cmd::SetUpRecovery, Cmd::Answer('y')],
+            None,
+        ),
+        "encryption-setup-failed" => {
+            FixtureView::encryption(Some(ViewEncryption::SetupFailed), &[], None)
+        }
         _ => return None,
     })
 }

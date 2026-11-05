@@ -35,6 +35,16 @@ impl Drop for TerminalGuard {
     }
 }
 
+/// Takes the terminal back after [`restore`] (the external editor had
+/// it): raw mode, the alternate screen, bracketed paste and the mouse as
+/// before. From Zmail's `terminal.rs`.
+pub fn resume(mouse: bool) -> io::Result<()> {
+    terminal::enable_raw_mode()?;
+    execute!(io::stdout(), EnterAlternateScreen, cursor::Hide)?;
+    let _ = execute!(io::stdout(), event::EnableBracketedPaste);
+    set_mouse_capture(mouse)
+}
+
 /// Turns mouse capture on or off.
 pub fn set_mouse_capture(on: bool) -> io::Result<()> {
     if on {

@@ -1,8 +1,6 @@
   FAMILY CHAT 0.0.0-test               @ana:smith.safechat.family  Room 5 of 11
 Holiday photos  Encrypted  5 members
 ────────────────────────────────────────────────────────────────────────────────
-──────────────────────────────────── Today ─────────────────────────────────────
-Dad  06:00
   [file] Cottage booking.pdf [1]  184 KB
 Mum  06:10
   [audio] voice-message.ogg [2]  96 KB
@@ -19,6 +17,8 @@ Dad  07:00
   [image] sunset.jpg [7]  1600×1067, 2.4 MB
   Beach at sunset
   😍  3
+────────────────────────────────────────────────────────────────────────────────
+›  Message Holiday photos
 Save sunset.jpg to: /home/ana/Downloads/sunset.jpg
 Enter OK
 Esc Cancel
@@ -26,8 +26,6 @@ Esc Cancel
 RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
 BBBBBBBBBBBBBBkkkkkkkkkkkkkkkkkkkkkk
 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
-kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
-BBB  kkkkk
 kkkkkkkkkccccccccccccccccccccccckkkkkkkk
 BBB  kkkkk
 kkkkkkkkkkccccccccccccccccccccckkkkkkk
@@ -44,6 +42,8 @@ BBB  kkkkk
 kkkkkkkkkkcccccccccccccckkkkkkkkkkkkkkkkkkk
 kk
   R RR
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+BBkkkkkkkkkkkkkkkkkkkkkkk
 BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 RRRRR
 RRR
@@ -51,8 +51,6 @@ RRR
 RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
 BBBBBBBBBBBBBB
 
-
-BBB
          UUUUUUUUUUUUUUUUUUUUUUU
 BBB
           UUUUUUUUUUUUUUUUUUUUU
@@ -69,6 +67,8 @@ BBB
           RRRRRRRRRRRRRR
 
   R RR
+
+BBR
 BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 RRRRR
 RRR
@@ -76,8 +76,6 @@ RRR
   FAMILY CHAT 0.0.0-test               @ana:smith.safechat.family  Room 5 of 11
 Holiday photos  Encrypted  5 members
 --------------------------------------------------------------------------------
------------------------------------- Today -------------------------------------
-Dad  06:00
   [file] Cottage booking.pdf [1]  184 KB
 Mum  06:10
   [audio] voice-message.ogg [2]  96 KB
@@ -94,6 +92,8 @@ Dad  07:00
   [image] sunset.jpg [7]  1600x1067, 2.4 MB
   Beach at sunset
   😍  3
+--------------------------------------------------------------------------------
+>  Message Holiday photos
 Save sunset.jpg to: /home/ana/Downloads/sunset.jpg
 Enter OK
 Esc Cancel

@@ -17,11 +17,11 @@ Ana (you)
 
 
 
-
-
+────────────────────────────────────────────────────────────────────────────────
+›  Message Smith family
                                                                      Up to date
-< Rooms      PgDn Newer   l Link#      u FirstNew   m Members    : Commands
-PgUp Older   Tab NextLink s Save       G Latest     n NextNew    O OTHER
+Enter Send   Esc Messages PgDn Newer   ^P PrevRoom  ^C Quit
+^J NewLine   PgUp Older   ^N NextRoom  ^R Recovery
 --- styles ---
 RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
 BBBBBBBBBBBBkkkkkkkkkkkkkkkkkkkkkk
@@ -42,11 +42,11 @@ BBBBBBBBB
 
 
 
-
-
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+BBkkkkkkkkkkkkkkkkkkkkk
                                                                      kkkkkkkkkkk
-R            RRRR         R            R            R            R
-RRRR         RRR          R            R            R            R
+RRRRR        RRR          RRRR         RR           RR
+RR           RRRR         RR           RR
 --- NO_COLOR styles ---
 RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
 BBBBBBBBBBBB
@@ -68,10 +68,10 @@ BBBBBBBBB
 
 
 
+BBR
 
-
-R            RRRR         R            R            R            R
-RRRR         RRR          R            R            R            R
+RRRRR        RRR          RRRR         RR           RR
+RR           RRRR         RR           RR
 --- ASCII ---
   FAMILY CHAT 0.0.0-test                @ana:smith.safechat.family  Room 1 of 3
 Smith family  Encrypted  3 members
@@ -92,8 +92,8 @@ Ana (you)
 
 
 
-
-
+--------------------------------------------------------------------------------
+>  Message Smith family
                                                                      Up to date
-< Rooms      PgDn Newer   l Link#      u FirstNew   m Members    : Commands
-PgUp Older   Tab NextLink s Save       G Latest     n NextNew    O OTHER
+Enter Send   Esc Messages PgDn Newer   ^P PrevRoom  ^C Quit
+^J NewLine   PgUp Older   ^N NextRoom  ^R Recovery

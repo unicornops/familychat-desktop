@@ -63,6 +63,10 @@ ruma = { version = "=0.17.2", default-features = false }
 # The terminal UI's drawing, on its crossterm backend; no optional widgets
 # or macros.
 ratatui = { version = "0.30.2", default-features = false, features = ["crossterm_0_29"] }
+# The terminal UI's composer (ADR 0008, "Writing"): Zmail's compose
+# editor, the ratatui organisation's maintained successor to tui-textarea,
+# on the same crossterm backend; no search (regex) or serde.
+ratatui-textarea = { version = "0.9.4", default-features = false, features = ["crossterm"] }
 # HTTP for the live homeserver harness's test client
 # (familychat-test-support); the line matrix-sdk 0.19 uses, on rustls with
 # its default aws-lc-rs provider. No system proxy, cookies or native TLS.

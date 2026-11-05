@@ -5,7 +5,7 @@
 › Cousins                     invited 11:40 │
     Invitation from Aunt Clare              │   Aunt Clare invited you to Cousins.
   Smith family                   @1 3 11:58 │
-    Mum: Dinner at 7, don't be late! @Ana   │   Join or decline it in the Family Chat window. Answering invitations in the terminal arrives in a later release.
+    Mum: Dinner at 7, don't be late! @Ana   │   Press a to join it, or x to decline. Until you join, you can't read or write in it.
   Mum                                 11:25 │
     You: Love you too ❤️                     │
   Grandad                           2 09:00 │
@@ -44,8 +44,8 @@
                                             │
                                             │
                                                                                                                                                         Offline
-Enter Open          n NextNew           q Quit              ^P PrevRoom         1 All               3 People            m Members           b Bell
-t TryAgain          : Commands          ^N NextRoom         N PrevNew           2 Unread            4 Invites           y Copy
+Enter Open          n NextNew           q Quit              ^P PrevRoom         1 All               3 People            m Members           ^R Recovery
+t TryAgain          : Commands          ^N NextRoom         N PrevNew           2 Unread            4 Invites           V Confirm           O OTHER
 --- styles ---
 RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
  yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
@@ -54,7 +54,7 @@ kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
 RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRcccccccRkkkkk k
 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk   BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
   BBBBBBBBBBBBBBBBBBBBBBBBBBBBBB rr B kkkkk k
-kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk   kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk   kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
                                       kkkkk k
 kkkkkkkkkkkkkkkkkkkkkkk kkkkkkkkkkkkkkkkkkkkk
   BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB B kkkkk k
@@ -93,8 +93,8 @@ kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
                                             k
                                             k
                                                                                                                                                         yyyyyyyy
-RRRRR               R                   R                   RR                  R                   R                   R                   R
-R                   R                   RR                  R                   R                   R                   R
+RRRRR               R                   R                   RR                  R                   R                   R                   RR
+R                   R                   RR                  R                   R                   R                   R                   R
 --- NO_COLOR styles ---
 RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
  BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
@@ -142,8 +142,8 @@ RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR    BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 
 
                                                                                                                                                         BBBBBBBB
-RRRRR               R                   R                   RR                  R                   R                   R                   R
-R                   R                   RR                  R                   R                   R                   R
+RRRRR               R                   R                   RR                  R                   R                   R                   RR
+R                   R                   RR                  R                   R                   R                   R                   R
 --- ASCII ---
   FAMILY CHAT 0.0.0-test                                                     ROOMS                                     @ana:smith.safechat.family  Room 1 of 11
  Offline: Family Chat can't reach your server. It will keep trying. Press t to try again.
@@ -152,7 +152,7 @@ R                   R                   RR                  R                   
 > Cousins                     invited 11:40 |
     Invitation from Aunt Clare              |   Aunt Clare invited you to Cousins.
   Smith family                   @1 3 11:58 |
-    Mum: Dinner at 7, don't be late! @Ana   |   Join or decline it in the Family Chat window. Answering invitations in the terminal arrives in a later release.
+    Mum: Dinner at 7, don't be late! @Ana   |   Press a to join it, or x to decline. Until you join, you can't read or write in it.
   Mum                                 11:25 |
     You: Love you too ❤️                     |
   Grandad                           2 09:00 |
@@ -191,5 +191,5 @@ R                   R                   RR                  R                   
                                             |
                                             |
                                                                                                                                                         Offline
-Enter Open          n NextNew           q Quit              ^P PrevRoom         1 All               3 People            m Members           b Bell
-t TryAgain          : Commands          ^N NextRoom         N PrevNew           2 Unread            4 Invites           y Copy
+Enter Open          n NextNew           q Quit              ^P PrevRoom         1 All               3 People            m Members           ^R Recovery
+t TryAgain          : Commands          ^N NextRoom         N PrevNew           2 Unread            4 Invites           V Confirm           O OTHER

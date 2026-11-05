@@ -1,0 +1,195 @@
+  FAMILY CHAT 0.0.0-test                                                CONFIRM IT'S YOU                               @ana:smith.safechat.family  Room 1 of 11
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                            Confirm it's you
+                                            Confirm this device so it can read your encrypted messages and your
+                                            family knows it's really you.
+
+                                            D Use another device
+                                              Compare emoji with a phone or computer that's already signed in.
+
+                                            R Enter your recovery key
+                                              Use the recovery key you saved when you set up recovery.
+
+                                            S Skip for now
+                                              You can confirm later: V, or the command palette.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                                                                                     Up to date
+d Device            s Skip              q Quit
+r RecovKey          : Commands
+--- styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+
+
+
+                                            RBBBBBBBBBBBBBBBBBBB
+                                              kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+
+                                            RBBBBBBBBBBBBBBBBBBBBBBBB
+                                              kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+
+                                            RBBBBBBBBBBBBB
+                                              kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                                                                                     kkkkkkkkkkk
+R                   R                   R
+R                   R
+--- NO_COLOR styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+
+
+
+                                            RBBBBBBBBBBBBBBBBBBB
+
+
+                                            RBBBBBBBBBBBBBBBBBBBBBBBB
+
+
+                                            RBBBBBBBBBBBBB
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+R                   R                   R
+R                   R
+--- ASCII ---
+  FAMILY CHAT 0.0.0-test                                                CONFIRM IT'S YOU                               @ana:smith.safechat.family  Room 1 of 11
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                            Confirm it's you
+                                            Confirm this device so it can read your encrypted messages and your
+                                            family knows it's really you.
+
+                                            D Use another device
+                                              Compare emoji with a phone or computer that's already signed in.
+
+                                            R Enter your recovery key
+                                              Use the recovery key you saved when you set up recovery.
+
+                                            S Skip for now
+                                              You can confirm later: V, or the command palette.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                                                                                     Up to date
+d Device            s Skip              q Quit
+r RecovKey          : Commands

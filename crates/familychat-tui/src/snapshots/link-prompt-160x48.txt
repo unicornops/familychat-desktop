@@ -13,9 +13,9 @@
     Dad: Sent an image                      │
 › Summer holiday 2027                 03:00 │
     Dad: Packing list is in the pinned mess…│
-  Homework help                   Yesterday │
-    Ben: What's 7 × 8 again?                │
-  Ben                           • Yesterday │ ───────────────────────────────────────────────────── Today ──────────────────────────────────────────────────────
+  Homework help                   Yesterday │ ───────────────────────────────────────────────────── Today ──────────────────────────────────────────────────────
+    Ben: What's 7 × 8 again?                │ Dad  02:00
+  Ben                           • Yesterday │   Packing list
     Ben: can I borrow your charger          │ ┌──────────────────────────────────────────────────────────────────┐
   Under-14s football                Tuesday │ │ Open this link?                                                  │
     Coach Rivera: Training moves to Thursda…│ │                                                                  │
@@ -25,8 +25,6 @@
     No messages yet                         │ │                                                                  │
                                             │ │ Y Open Link   C Copy the address   N Cancel                      │
                                             │ └──────────────────────────────────────────────────────────────────┘
-                                            │   2. Stop at Exeter for breakfast
-                                            │   3. Beach by lunchtime
                                             │ Grandad  02:30
                                             │   │ Beach by lunchtime
                                             │   Optimistic! Traffic on the A30 is bad terrible in August.
@@ -43,6 +41,8 @@
                                             │   Ben, don't click links like that. Ask in #family[4] first.
                                             │ Ana  05:00
                                             │   Spoiler for Ben: ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒ 🚤
+                                            │ ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                            │ ›  Message Summer holiday 2027
 Open this link? (y open, c copy, n cancel)
 Y Open              N Cancel
 C Copy
@@ -62,9 +62,9 @@ kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
 BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBkkkkk k
 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
-                                  kkkkkkkkk k
-kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
-  BBBBBBBBBBBBBBBBBBBBBBBBBBBBB B kkkkkkkkk k kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+                                  kkkkkkkkk k kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk BBB  kkkkk
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBB B kkkkkkkkk k kkBBBBBBBBBBBB
 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
                                     kkkkkkk k B BBBBBBBBBBBBBBB                                                  B
 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk B                                                                  B
@@ -74,8 +74,6 @@ kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk B                                 
 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk B                                                                  B
                                             k B R             R                    R                             B
                                             k BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
-                                            k kk
-                                            k kk
                                             k BBBBBBB  kkkkk
                                             k kkkk
                                             k kk                                  XXX UUUUUUUU
@@ -92,6 +90,8 @@ kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk B                                 
                                             k kkBBB                                      cccccccccc
                                             k ccc  kkkkk
                                             k kk                 kkkkkkkkkkkkkkkkkkkkkkkkkkk
+                                            k kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+                                            k BBkkkkkkkkkkkkkkkkkkkkkkkkkkkk
 BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 R                   R
 R
@@ -112,8 +112,8 @@ RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
 BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 
-
-  BBBBBBBBBBBBBBBBBBBBBBBBBBBBB B
+                                              BBB
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBB B               BBBBBBBBBBBB
                                               BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
                                               B BBBBBBBBBBBBBBB                                                  B
                                               B                                                                  B
@@ -123,8 +123,6 @@ BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
                                               B                                                                  B
                                               B R             R                    R                             B
                                               BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
-
-
                                               BBBBBBB
 
                                                                                   XXX UUUUUUUU
@@ -141,6 +139,8 @@ BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
                                                 BBB                                      UUUUUUUUUU
                                               BBB
 
+
+                                              BBR
 BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 R                   R
 R
@@ -160,9 +160,9 @@ R
     Dad: Sent an image                      |
 > Summer holiday 2027                 03:00 |
     Dad: Packing list is in the pinned me...|
-  Homework help                   Yesterday |
-    Ben: What's 7 × 8 again?                |
-  Ben                           * Yesterday | ----------------------------------------------------- Today ------------------------------------------------------
+  Homework help                   Yesterday | ----------------------------------------------------- Today ------------------------------------------------------
+    Ben: What's 7 × 8 again?                | Dad  02:00
+  Ben                           * Yesterday |   Packing list
     Ben: can I borrow your charger          | +------------------------------------------------------------------+
   Under-14s football                Tuesday | | Open this link?                                                  |
     Coach Rivera: Training moves to Thurs...| |                                                                  |
@@ -172,8 +172,6 @@ R
     No messages yet                         | |                                                                  |
                                             | | Y Open Link   C Copy the address   N Cancel                      |
                                             | +------------------------------------------------------------------+
-                                            |   2. Stop at Exeter for breakfast
-                                            |   3. Beach by lunchtime
                                             | Grandad  02:30
                                             |   | Beach by lunchtime
                                             |   Optimistic! Traffic on the A30 is bad terrible in August.
@@ -190,6 +188,8 @@ R
                                             |   Ben, don't click links like that. Ask in #family[4] first.
                                             | Ana  05:00
                                             |   Spoiler for Ben: ########################### 🚤
+                                            | ------------------------------------------------------------------------------------------------------------------
+                                            | >  Message Summer holiday 2027
 Open this link? (y open, c copy, n cancel)
 Y Open              N Cancel
 C Copy

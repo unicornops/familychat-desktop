@@ -1,0 +1,195 @@
+  FAMILY CHAT 0.0.0-test                                                CONFIRM IT'S YOU                               @ana:smith.safechat.family  Room 1 of 11
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                            Confirm it's you
+                                            Confirm this device so it can read your encrypted messages and your
+                                            fa┌──────────────────────────────────────────────────────────────────┐
+                                              │ Skip confirming?                                                 │
+                                            D │                                                                  │
+                                              │ Until you confirm this device, it can't read messages sent       │
+                                              │ before it signed in, and other people may see a warning next to  │
+                                            R │ your messages. You can confirm later from the command palette.   │
+                                              │                                                                  │
+                                              │ Y Skip for now   N Go back                                       │
+                                            S └──────────────────────────────────────────────────────────────────┘
+                                              You can confirm later: V, or the command palette.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                                                                                     Up to date
+Y Skip
+N Back
+--- styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+
+                                              BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+                                              B BBBBBBBBBBBBBBBB                                                 B
+                                            RBB                                                                  B
+                                              B                                                                  B
+                                              B                                                                  B
+                                            RBB                                                                  B
+                                              B                                                                  B
+                                              B R                R                                               B
+                                            RBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+                                              kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                                                                                     kkkkkkkkkkk
+R
+R
+--- NO_COLOR styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+
+                                              BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+                                              B BBBBBBBBBBBBBBBB                                                 B
+                                            RBB                                                                  B
+                                              B                                                                  B
+                                              B                                                                  B
+                                            RBB                                                                  B
+                                              B                                                                  B
+                                              B R                R                                               B
+                                            RBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+R
+R
+--- ASCII ---
+  FAMILY CHAT 0.0.0-test                                                CONFIRM IT'S YOU                               @ana:smith.safechat.family  Room 1 of 11
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                            Confirm it's you
+                                            Confirm this device so it can read your encrypted messages and your
+                                            fa+------------------------------------------------------------------+
+                                              | Skip confirming?                                                 |
+                                            D |                                                                  |
+                                              | Until you confirm this device, it can't read messages sent       |
+                                              | before it signed in, and other people may see a warning next to  |
+                                            R | your messages. You can confirm later from the command palette.   |
+                                              |                                                                  |
+                                              | Y Skip for now   N Go back                                       |
+                                            S +------------------------------------------------------------------+
+                                              You can confirm later: V, or the command palette.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                                                                                     Up to date
+Y Skip
+N Back

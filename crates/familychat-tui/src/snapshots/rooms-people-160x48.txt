@@ -4,7 +4,7 @@
 › Mum                                 11:25 │
     You: Love you too ❤️                     │   Aunt Clare invited you to Cousins.
   Grandad                           2 09:00 │
-    Grandad: Sent an image                  │   Join or decline it in the Family Chat window. Answering invitations in the terminal arrives in a later release.
+    Grandad: Sent an image                  │   Press a to join it, or x to decline. Until you join, you can't read or write in it.
   Ben                           • Yesterday │
     Ben: can I borrow your charger          │
                                             │
@@ -44,8 +44,8 @@
                                             │
                                             │
                                                                                                                                                      Up to date
-Enter Open          : Commands          ^N NextRoom         N PrevNew           2 Unread            4 Invites           y Copy
-n NextNew           q Quit              ^P PrevRoom         1 All               3 People            m Members           b Bell
+Enter Open          : Commands          ^N NextRoom         N PrevNew           2 Unread            4 Invites           V Confirm           y Copy
+n NextNew           q Quit              ^P PrevRoom         1 All               3 People            m Members           ^R Recovery         b Bell
 --- styles ---
 RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
  kk     kk        kkRRRRRR  kk              k BBBBBBBkkkkkkkkkkkkkkkkkkkkkk
@@ -53,7 +53,7 @@ kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
 RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRkkkkk k
 kkkkkkkkkkkkkkkkkkkkkkk kkkkkkkkkkkkkkkkkkkkk   BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
   BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB B kkkkk k
-kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk   kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk   kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
   BBBBBBBBBBBBBBBBBBBBBBBBBBBBB B kkkkkkkkk k
 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
                                             k
@@ -93,8 +93,8 @@ kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
                                             k
                                             k
                                                                                                                                                      kkkkkkkkkkk
-RRRRR               R                   RR                  R                   R                   R                   R
-R                   R                   RR                  R                   R                   R                   R
+RRRRR               R                   RR                  R                   R                   R                   R                   R
+R                   R                   RR                  R                   R                   R                   RR                  R
 --- NO_COLOR styles ---
 RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
                     RRRRRR                    BBBBBBB
@@ -142,8 +142,8 @@ RRRRRRRRRRRRRRRRRRRRRRR RRRRRRRRRRRRRRRRRRRR    BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 
 
 
-RRRRR               R                   RR                  R                   R                   R                   R
-R                   R                   RR                  R                   R                   R                   R
+RRRRR               R                   RR                  R                   R                   R                   R                   R
+R                   R                   RR                  R                   R                   R                   RR                  R
 --- ASCII ---
   FAMILY CHAT 0.0.0-test                                                     ROOMS                                      @ana:smith.safechat.family  Room 1 of 3
  1 All  2 Unread  3 People  4 Invites       | Cousins  Encrypted  4 members
@@ -151,7 +151,7 @@ R                   R                   RR                  R                   
 > Mum                                 11:25 |
     You: Love you too ❤️                     |   Aunt Clare invited you to Cousins.
   Grandad                           2 09:00 |
-    Grandad: Sent an image                  |   Join or decline it in the Family Chat window. Answering invitations in the terminal arrives in a later release.
+    Grandad: Sent an image                  |   Press a to join it, or x to decline. Until you join, you can't read or write in it.
   Ben                           * Yesterday |
     Ben: can I borrow your charger          |
                                             |
@@ -191,5 +191,5 @@ R                   R                   RR                  R                   
                                             |
                                             |
                                                                                                                                                      Up to date
-Enter Open          : Commands          ^N NextRoom         N PrevNew           2 Unread            4 Invites           y Copy
-n NextNew           q Quit              ^P PrevRoom         1 All               3 People            m Members           b Bell
+Enter Open          : Commands          ^N NextRoom         N PrevNew           2 Unread            4 Invites           V Confirm           y Copy
+n NextNew           q Quit              ^P PrevRoom         1 All               3 People            m Members           ^R Recovery         b Bell

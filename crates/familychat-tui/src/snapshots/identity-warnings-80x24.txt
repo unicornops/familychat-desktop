@@ -1,0 +1,99 @@
+  FAMILY CHAT 0.0.0-test               @ana:smith.safechat.family  Room 2 of 11
+Smith family  Encrypted  5 members
+Plans, photos and who's picking up whom
+Identity changed: Grandad's identity was reset. If you didn't expect this, check
+with them in person before you share anything private. Press w: OK.
+Identity changed: Mum's verified identity was reset, so nothing is sent to them.
+Check with them in person, then withdraw the old verification to send again.
+────────────────────────────────────────────────────────────────────────────────
+  On it. They're by the door.
+── New messages ────────────────────────────────────────────────────────────────
+Grandad  11:20
+  Good luck today, Ana! Score one for me.
+Ben  11:50
+  can someone bring my water bottle
+Mum  11:58
+  Dinner at 7, don't be late! Ana[2]
+  ❤️  1
+Ana  11:59
+  See you then (sending…)
+────────────────────────────────────────────────────────────────────────────────
+›  Message Smith family
+                                                                     Up to date
+< Rooms      [ PrevMsg    R Reply      E Edit       PgUp Older   Tab NextLink
+i Write      ] NextMsg    + React      w Identity   PgDn Newer   O OTHER
+--- styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+BBBBBBBBBBBBkkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
+yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
+rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr
+rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+kk
+rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr
+BBBBBBB  kkkkk
+kk
+BBB  kkkkk
+kk
+BBB  kkkkk
+kk             IIIIIIIIIIIII  cccccc
+  k kk
+ccc  kkkkk
+kk            kkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkk
+                                                                     kkkkkkkkkkk
+R            R            R            R            RRRR         RRR
+R            R            R            R            RRRR         R
+--- NO_COLOR styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+BBBBBBBBBBBB
+
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+
+
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+BBBBBBB
+
+BBB
+
+BBB
+               IIIIIIIIIIIII  UUUUUU
+
+BBB
+
+
+
+
+R            R            R            R            RRRR         RRR
+R            R            R            R            RRRR         R
+--- ASCII ---
+  FAMILY CHAT 0.0.0-test               @ana:smith.safechat.family  Room 2 of 11
+Smith family  Encrypted  5 members
+Plans, photos and who's picking up whom
+Identity changed: Grandad's identity was reset. If you didn't expect this, check
+with them in person before you share anything private. Press w: OK.
+Identity changed: Mum's verified identity was reset, so nothing is sent to them.
+Check with them in person, then withdraw the old verification to send again.
+--------------------------------------------------------------------------------
+  On it. They're by the door.
+-- New messages ----------------------------------------------------------------
+Grandad  11:20
+  Good luck today, Ana! Score one for me.
+Ben  11:50
+  can someone bring my water bottle
+Mum  11:58
+  Dinner at 7, don't be late! Ana[2]
+  ❤️  1
+Ana  11:59
+  See you then (sending...)
+--------------------------------------------------------------------------------
+>  Message Smith family
+                                                                     Up to date
+< Rooms      [ PrevMsg    R Reply      E Edit       PgUp Older   Tab NextLink
+i Write      ] NextMsg    + React      w Identity   PgDn Newer   O OTHER

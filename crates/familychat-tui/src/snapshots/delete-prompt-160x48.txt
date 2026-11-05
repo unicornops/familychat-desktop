@@ -1,0 +1,195 @@
+  FAMILY CHAT 0.0.0-test                                                     ROOMS                                     @ana:smith.safechat.family  Room 2 of 11
+ 1 All  2 Unread  3 People  4 Invites       │ Smith family  Encrypted  5 members
+────────────────────────────────────────────│ Plans, photos and who's picking up whom
+  Cousins                     invited 11:40 │ ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    Invitation from Aunt Clare              │
+› Smith family                   @1 3 11:58 │
+    Mum: Dinner at 7, don't be late! @Ana   │
+  Mum                                 11:25 │
+    You: Love you too ❤️                     │
+  Grandad                           2 09:00 │
+    Grandad: Sent an image                  │
+  Holiday photos                      07:00 │ ─────────────────────────────────────────────────── Yesterday ────────────────────────────────────────────────────
+    Dad: Sent an image                      │ Dad  09:00
+  Summer holiday 2027                 03:00 │   Who's in for pancakes tomorrow morning?
+    Dad: Packing list is in the pinned mess…│ Ben  09:01
+  Homework help                   Yesterday │   ME
+    Ben: What's 7 × 8 again?                │   with chocolate chips pls
+  Ben                           • Yesterday │ Dad  10:00
+    Ben: can I borrow your charger          │ ┌──────────────────────────────────────────────────────────────────┐
+  Under-14s football                Tuesday │ │ Delete this message?                                             │
+    Coach Rivera: Training moves to Thursda…│ │                                                                  │
+  Birthday surprise                  Monday │ │ It goes for everyone in the room, and it can't be brought back.  │
+    Dad: Message deleted                    │ │                                                                  │
+  Book club                          Sunday │ │ See you then                                                     │
+    No messages yet                         │ │                                                                  │──────────────────────────────────────────────
+                                            │ │ Y Delete   N Cancel                                              │
+                                            │ └──────────────────────────────────────────────────────────────────┘
+                                            │ Dad  10:00
+                                            │   Ana[1]: leaving for football at 10. Bring your boots.
+                                            │   👍  1  ⚽  3
+                                            │ Ana  10:03
+                                            │   ┃ Dad: Ana: leaving for football at 10. Bring your boots.
+                                            │   On it. They're by the door.
+                                            │ ── New messages ──────────────────────────────────────────────────────────────────────────────────────────────────
+                                            │ Grandad  11:20
+                                            │   Good luck today, Ana! Score one for me.
+                                            │ Ben  11:50
+                                            │   can someone bring my water bottle
+                                            │ Mum  11:58
+                                            │   Dinner at 7, don't be late! Ana[2]
+                                            │   ❤️  1
+                                            │ › Ana  11:59
+                                            │   See you then (sending…)
+                                            │ ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                            │ ›  Message Smith family
+                                                                                                                                                     Up to date
+Y Delete
+N Cancel
+--- styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+ kkRRR  kk        kk        kk              k BBBBBBBBBBBBkkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+  BBBBBBBBBBBBBBBBBBBBBBBBBBB ccccccc kkkkk k kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBrrBBBkkkkk k
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+                                      kkkkk k
+kkkkkkkkkkkkkkkkkkkkkkk kkkkkkkkkkkkkkkkkkkkk
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB B kkkkk k
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+                                      kkkkk k kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk BBB  kkkkk
+                                      kkkkk k kk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk BBB  kkkkk
+                                  kkkkkkkkk k kk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk kk
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBB B kkkkkkkkk k BBB  kkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+                                    kkkkkkk k B BBBBBBBBBBBBBBBBBBBB                                             B
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk B                                                                  B
+                                     kkkkkk k B                                                                  B
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk B                                                                  B
+                                     kkkkkk k B kkkkkkkkkkkk                                                     B
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk B                                                                  Bkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+                                            k B R          R                                                     B
+                                            k BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+                                            k BBB  kkkkk
+                                            k kkcccccc                          BB
+                                            k   R RR  k kk
+                                            k ccc  kkkkk
+                                            k kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+                                            k kk
+                                            k rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr
+                                            k BBBBBBB  kkkkk
+                                            k kk
+                                            k BBB  kkkkk
+                                            k kk
+                                            k BBB  kkkkk
+                                            k kk             IIIIIIIIIIIII  cccccc
+                                            k   k kk
+                                            k cccccRRkkkkk
+                                            k kk            kkkkkkkkkkk
+                                            k kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+                                            k kkkkkkkkkkkkkkkkkkkkkkk
+                                                                                                                                                     kkkkkkkkkkk
+R
+R
+--- NO_COLOR styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+   RRR                                        BBBBBBBBBBBB
+
+  BBBBBBBBBBBBBBBBBBBBBBBBBBB
+
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+
+
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB B
+
+
+                                              BBB
+
+                                              BBB
+
+
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBB B             BBB
+                                              BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+                                              B BBBBBBBBBBBBBBBBBBBB                                             B
+                                              B                                                                  B
+                                              B                                                                  B
+                                              B                                                                  B
+                                              B                                                                  B
+                                              B                                                                  B
+                                              B R          R                                                     B
+                                              BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+                                              BBB
+                                                UUUUUU                          BB
+                                                R RR
+                                              BBB
+
+
+                                              BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+                                              BBBBBBB
+
+                                              BBB
+
+                                              BBB
+                                                             IIIIIIIIIIIII  UUUUUU
+
+                                              RRRRRRRRRRRR
+
+
+
+
+R
+R
+--- ASCII ---
+  FAMILY CHAT 0.0.0-test                                                     ROOMS                                     @ana:smith.safechat.family  Room 2 of 11
+ 1 All  2 Unread  3 People  4 Invites       | Smith family  Encrypted  5 members
+--------------------------------------------| Plans, photos and who's picking up whom
+  Cousins                     invited 11:40 | ------------------------------------------------------------------------------------------------------------------
+    Invitation from Aunt Clare              |
+> Smith family                   @1 3 11:58 |
+    Mum: Dinner at 7, don't be late! @Ana   |
+  Mum                                 11:25 |
+    You: Love you too ❤️                     |
+  Grandad                           2 09:00 |
+    Grandad: Sent an image                  |
+  Holiday photos                      07:00 | --------------------------------------------------- Yesterday ----------------------------------------------------
+    Dad: Sent an image                      | Dad  09:00
+  Summer holiday 2027                 03:00 |   Who's in for pancakes tomorrow morning?
+    Dad: Packing list is in the pinned me...| Ben  09:01
+  Homework help                   Yesterday |   ME
+    Ben: What's 7 × 8 again?                |   with chocolate chips pls
+  Ben                           * Yesterday | Dad  10:00
+    Ben: can I borrow your charger          | +------------------------------------------------------------------+
+  Under-14s football                Tuesday | | Delete this message?                                             |
+    Coach Rivera: Training moves to Thurs...| |                                                                  |
+  Birthday surprise                  Monday | | It goes for everyone in the room, and it can't be brought back.  |
+    Dad: Message deleted                    | |                                                                  |
+  Book club                          Sunday | | See you then                                                     |
+    No messages yet                         | |                                                                  |----------------------------------------------
+                                            | | Y Delete   N Cancel                                              |
+                                            | +------------------------------------------------------------------+
+                                            | Dad  10:00
+                                            |   Ana[1]: leaving for football at 10. Bring your boots.
+                                            |   👍  1  ⚽  3
+                                            | Ana  10:03
+                                            |   | Dad: Ana: leaving for football at 10. Bring your boots.
+                                            |   On it. They're by the door.
+                                            | -- New messages --------------------------------------------------------------------------------------------------
+                                            | Grandad  11:20
+                                            |   Good luck today, Ana! Score one for me.
+                                            | Ben  11:50
+                                            |   can someone bring my water bottle
+                                            | Mum  11:58
+                                            |   Dinner at 7, don't be late! Ana[2]
+                                            |   ❤️  1
+                                            | > Ana  11:59
+                                            |   See you then (sending...)
+                                            | ------------------------------------------------------------------------------------------------------------------
+                                            | >  Message Smith family
+                                                                                                                                                     Up to date
+Y Delete
+N Cancel

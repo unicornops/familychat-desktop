@@ -50,6 +50,8 @@ pub(crate) fn layout(open: &OpenRoom, width: u16, theme: Theme, clock: Clock) ->
         theme,
         selected: open.selected_ref,
         spoilers: open.spoilers,
+        selected_item: open.selected_item.clone(),
+        selected_line: None,
     };
     match &open.pagination {
         PaginationState::Loading => builder.note("Loading older messages…", theme.faint()),
@@ -98,6 +100,7 @@ pub(crate) fn layout(open: &OpenRoom, width: u16, theme: Theme, clock: Clock) ->
         ref_lines: builder.ref_lines,
         read_marker: builder.read_marker,
         last_item: open.items.last().map(|item| item.id.0.clone()),
+        selected_line: builder.selected_line,
     }
 }
 
@@ -116,6 +119,9 @@ struct Builder {
     theme: Theme,
     selected: Option<usize>,
     spoilers: bool,
+    /// The message the room's commands are about, drawn reversed.
+    selected_item: Option<familychat_core::timeline::TimelineItemId>,
+    selected_line: Option<usize>,
 }
 
 /// A run of display text with its style, and the reference it opens.
@@ -179,13 +185,17 @@ impl Builder {
                     let text = change_text(event).unwrap_or_default();
                     self.change(&text);
                 } else {
-                    self.message(event, continues, clock);
+                    let selected = self.selected_item.as_ref() == Some(&item.id);
+                    if selected {
+                        self.selected_line = Some(self.lines.len());
+                    }
+                    self.message(event, continues && !selected, selected, clock);
                 }
             }
         }
     }
 
-    fn message(&mut self, event: &TimelineEvent, continues: bool, clock: Clock) {
+    fn message(&mut self, event: &TimelineEvent, continues: bool, selected: bool, clock: Clock) {
         let theme = self.theme;
         let sender = sanitize_line(&event.sender_label());
         if !continues {
@@ -195,16 +205,36 @@ impl Builder {
             } else {
                 theme.bold()
             };
-            let room = self.width.saturating_sub(text::width(&time) + 2);
-            self.lines.push(PaneLine {
-                spans: vec![
-                    Span::styled(
-                        text::truncate(&sender, room, theme.ellipsis()),
-                        sender_style,
+            let pointer = if selected {
+                format!("{} ", theme.pointer())
+            } else {
+                String::new()
+            };
+            let room = self
+                .width
+                .saturating_sub(text::width(&time) + 2 + text::width(&pointer));
+            let mut spans = vec![
+                Span::styled(
+                    format!(
+                        "{pointer}{}",
+                        text::truncate(&sender, room, theme.ellipsis())
                     ),
-                    Span::raw("  "),
-                    Span::styled(time, theme.faint()),
-                ],
+                    sender_style,
+                ),
+                Span::raw("  "),
+                Span::styled(time, theme.faint()),
+            ];
+            if selected {
+                spans = spans
+                    .into_iter()
+                    .map(|span| {
+                        let style = span.style.patch(theme.reversed());
+                        Span::styled(span.content, style)
+                    })
+                    .collect();
+            }
+            self.lines.push(PaneLine {
+                spans,
                 ..PaneLine::default()
             });
         }
@@ -279,6 +309,21 @@ impl Builder {
         marks.extend(meta);
         if !marks.is_empty() {
             self.meta(&format!("({})", marks.join(", ")));
+        }
+        if let Some(SendState::Failed {
+            problem: Some(problem),
+            ..
+        }) = event.send_state
+        {
+            let what = if problem.can_send_anyway() {
+                format!(
+                    "{} Select it with [ and press S to send it anyway.",
+                    problem.message()
+                )
+            } else {
+                format!("{} Press V to confirm it's you.", problem.message())
+            };
+            self.note(&what, theme.warning());
         }
         if !event.reactions.is_empty() {
             self.reactions(&event.reactions);

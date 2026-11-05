@@ -10,12 +10,20 @@
 use std::time::Duration;
 
 use anyhow::{Result, bail};
-use familychat_core::signin::{SigninStep, Working};
+use familychat_core::{
+    encryption::{DeviceTrust, EncryptionStatus, IdentitySetup, RecoveryState, VerificationStep},
+    messaging::MediaLimits,
+    session::SessionApi,
+    signin::{SigninStep, Working},
+    timeline::SendProblem,
+};
 use familychat_test_support::fixtures::{
-    FixtureProfile, FixtureRooms, FixtureSetup, rooms::now_ms, steps,
+    FixtureProfile, FixtureRooms, FixtureSetup, FixtureStartup, encryption, rooms, rooms::now_ms,
+    steps,
 };
 use familychat_tui::fixture_views::{
-    FixtureView, VIEWS, ViewProfile, ViewRooms, ViewStep, fixture_view,
+    FixtureView, VIEWS, ViewEncryption, ViewProfile, ViewRooms, ViewStep, ViewVerification,
+    fixture_view,
 };
 
 /// Checks that `view` is a terminal fixture view.
@@ -61,6 +69,71 @@ pub(crate) fn setup(view: &FixtureView, now: u64) -> FixtureSetup {
     }
 }
 
+/// What `view` sets on the session beyond its setup: the encryption, a
+/// verification, identity warnings, a stopped message, the upload limit
+/// (as `familychat-tui`'s snapshot tests do).
+pub(crate) fn apply(view: &FixtureView, startup: &FixtureStartup) {
+    let session = startup.session();
+    if let Some(limit) = view.upload_limit {
+        session.set_media_limits(Some(MediaLimits {
+            max_upload_bytes: Some(limit),
+        }));
+    }
+    if view.identity_warnings {
+        session.set_identity_warnings(rooms::FAMILY_ROOM, encryption::family_warnings());
+    }
+    if view.send_problem {
+        session.stop_own_message(rooms::FAMILY_ROOM, SendProblem::UnconfirmedDevices);
+    }
+    let Some(account) = session
+        .accounts()
+        .borrow()
+        .first()
+        .map(|account| account.key.clone())
+    else {
+        return;
+    };
+    if let Some(state) = view.encryption {
+        let settled = encryption::settled();
+        session.set_encryption(
+            &account,
+            match state {
+                ViewEncryption::Unconfirmed => EncryptionStatus {
+                    device: DeviceTrust::Unverified,
+                    ..settled
+                },
+                ViewEncryption::NeedsPassword => EncryptionStatus {
+                    device: DeviceTrust::Unverified,
+                    identity: IdentitySetup::NeedsPassword,
+                    recovery: RecoveryState::Disabled,
+                    other_devices: false,
+                },
+                ViewEncryption::SetupFailed => EncryptionStatus {
+                    device: DeviceTrust::Unverified,
+                    identity: IdentitySetup::Failed(
+                        familychat_core::encryption::wording::SETUP_FAILED.to_owned(),
+                    ),
+                    recovery: RecoveryState::Disabled,
+                    other_devices: false,
+                },
+                ViewEncryption::NoRecovery => EncryptionStatus {
+                    recovery: RecoveryState::Disabled,
+                    ..settled
+                },
+            },
+        );
+    }
+    match view.verification {
+        Some(ViewVerification::Incoming) => {
+            session.request_verification(&account);
+        }
+        Some(ViewVerification::Emoji) => session
+            .start_verification_at(VerificationStep::CompareEmoji(encryption::fixture_emoji())),
+        Some(ViewVerification::Done) => session.start_verification_at(VerificationStep::Done),
+        None => {}
+    }
+}
+
 /// Runs the terminal UI on `view`. Every few seconds a message arrives in
 /// Mum's room, so the status line's notice and the bell can be seen.
 pub(crate) fn launch(view: &str, version: &str) -> Result<()> {
@@ -68,6 +141,7 @@ pub(crate) fn launch(view: &str, version: &str) -> Result<()> {
         bail!("unknown terminal fixture view `{view}`");
     };
     let startup = setup(&fixture, now_ms()).startup();
+    apply(&fixture, &startup);
     let session = startup.session().clone();
     std::thread::Builder::new()
         .name("familychat-tui-fixture-news".to_owned())
@@ -101,7 +175,8 @@ mod tests {
         for view in VIEWS {
             check_view(view).unwrap_or_else(|error| panic!("{view}: {error}"));
             let fixture = fixture_view(view).expect("a view");
-            drop(setup(&fixture, now_ms()).startup());
+            let startup = setup(&fixture, now_ms()).startup();
+            apply(&fixture, &startup);
         }
         assert!(check_view("inbox").is_err());
     }

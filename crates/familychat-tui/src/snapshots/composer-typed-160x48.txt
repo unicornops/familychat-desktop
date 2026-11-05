@@ -1,0 +1,195 @@
+  FAMILY CHAT 0.0.0-test                                                     ROOMS                                     @ana:smith.safechat.family  Room 2 of 11
+ 1 All  2 Unread  3 People  4 Invites       │ Smith family  Encrypted  5 members
+────────────────────────────────────────────│ Plans, photos and who's picking up whom
+  Cousins                     invited 11:40 │ ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    Invitation from Aunt Clare              │
+› Smith family                   @1 3 11:58 │
+    Mum: Dinner at 7, don't be late! @Ana   │
+  Mum                                 11:25 │
+    You: Love you too ❤️                     │
+  Grandad                           2 09:00 │
+    Grandad: Sent an image                  │ ─────────────────────────────────────────────────── Yesterday ────────────────────────────────────────────────────
+  Holiday photos                      07:00 │ Dad  09:00
+    Dad: Sent an image                      │   Who's in for pancakes tomorrow morning?
+  Summer holiday 2027                 03:00 │ Ben  09:01
+    Dad: Packing list is in the pinned mess…│   ME
+  Homework help                   Yesterday │   with chocolate chips pls
+    Ben: What's 7 × 8 again?                │ Dad  10:00
+  Ben                           • Yesterday │   * Dad is buying chocolate chips
+    Ben: can I borrow your charger          │ Ana  10:05
+  Under-14s football                Tuesday │   Yes please! Can we have them before football?
+    Coach Rivera: Training moves to Thursda…│   👍  2
+  Birthday surprise                  Monday │ Family Chat  11:00
+    Dad: Message deleted                    │   Quiet time starts at 21:00. Chat is paused until 07:00.
+  Book club                          Sunday │ ───────────────────────────────────────────────────── Today ──────────────────────────────────────────────────────
+    No messages yet                         │ Mum  09:00
+                                            │   Morning all. Pancakes are ready!
+                                            │ Dad  10:00
+                                            │   Ana[1]: leaving for football at 10. Bring your boots.
+                                            │   👍  1  ⚽  3
+                                            │ Ana  10:03
+                                            │   ┃ Dad: Ana: leaving for football at 10. Bring your boots.
+                                            │   On it. They're by the door.
+                                            │ ── New messages ──────────────────────────────────────────────────────────────────────────────────────────────────
+                                            │ Grandad  11:20
+                                            │   Good luck today, Ana! Score one for me.
+                                            │ Ben  11:50
+                                            │   can someone bring my water bottle
+                                            │ Mum  11:58
+                                            │   Dinner at 7, don't be late! Ana[2]
+                                            │   ❤️  1
+                                            │ Ana  11:59
+                                            │   See you then (sending…)
+                                            │ ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                            │ › See you at **six**
+                                            │   Bring the `snacks`, please
+                                                                                                                                                     Up to date
+Enter Send          Esc Messages        PgDn Newer          ^P PrevRoom         ^C Quit
+^J NewLine          PgUp Older          ^N NextRoom         ^R Recovery
+--- styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+ kkRRR  kk        kk        kk              k BBBBBBBBBBBBkkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+  BBBBBBBBBBBBBBBBBBBBBBBBBBB ccccccc kkkkk k kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBrrBBBkkkkk k
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+                                      kkkkk k
+kkkkkkkkkkkkkkkkkkkkkkk kkkkkkkkkkkkkkkkkkkkk
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB B kkkkk k
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+                                      kkkkk k BBB  kkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk kk
+                                      kkkkk k BBB  kkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk kk
+                                  kkkkkkkkk k kk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk BBB  kkkkk
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBB B kkkkkkkkk k kkBBBBBB
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk ccc  kkkkk
+                                    kkkkkkk k kk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk   k kk
+                                     kkkkkk k BBBBBBBBBBB  kkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+                                     kkkkkk k kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk BBB  kkkkk
+                                            k kk
+                                            k BBB  kkkkk
+                                            k kkcccccc                          BB
+                                            k   R RR  k kk
+                                            k ccc  kkkkk
+                                            k kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+                                            k kk
+                                            k rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr
+                                            k BBBBBBB  kkkkk
+                                            k kk
+                                            k BBB  kkkkk
+                                            k kk
+                                            k BBB  kkkkk
+                                            k kk             IIIIIIIIIIIII  cccccc
+                                            k   k kk
+                                            k ccc  kkkkk
+                                            k kk            kkkkkkkkkkk
+                                            k kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+                                            k BB
+                                            k                             R
+                                                                                                                                                     kkkkkkkkkkk
+RRRRR               RRR                 RRRR                RR                  RR
+RR                  RRRR                RR                  RR
+--- NO_COLOR styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+   RRR                                        BBBBBBBBBBBB
+
+  BBBBBBBBBBBBBBBBBBBBBBBBBBB
+
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+
+
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB B
+
+                                              BBB
+
+                                              BBB
+
+
+                                              BBB
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBB B               BBBBBB
+                                              BBB
+
+
+                                              BBBBBBBBBBB
+
+
+                                              BBB
+
+                                              BBB
+                                                UUUUUU                          BB
+                                                R RR
+                                              BBB
+
+
+                                              BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+                                              BBBBBBB
+
+                                              BBB
+
+                                              BBB
+                                                             IIIIIIIIIIIII  UUUUUU
+
+                                              BBB
+
+
+                                              BB
+                                                                          R
+
+RRRRR               RRR                 RRRR                RR                  RR
+RR                  RRRR                RR                  RR
+--- ASCII ---
+  FAMILY CHAT 0.0.0-test                                                     ROOMS                                     @ana:smith.safechat.family  Room 2 of 11
+ 1 All  2 Unread  3 People  4 Invites       | Smith family  Encrypted  5 members
+--------------------------------------------| Plans, photos and who's picking up whom
+  Cousins                     invited 11:40 | ------------------------------------------------------------------------------------------------------------------
+    Invitation from Aunt Clare              |
+> Smith family                   @1 3 11:58 |
+    Mum: Dinner at 7, don't be late! @Ana   |
+  Mum                                 11:25 |
+    You: Love you too ❤️                     |
+  Grandad                           2 09:00 |
+    Grandad: Sent an image                  | --------------------------------------------------- Yesterday ----------------------------------------------------
+  Holiday photos                      07:00 | Dad  09:00
+    Dad: Sent an image                      |   Who's in for pancakes tomorrow morning?
+  Summer holiday 2027                 03:00 | Ben  09:01
+    Dad: Packing list is in the pinned me...|   ME
+  Homework help                   Yesterday |   with chocolate chips pls
+    Ben: What's 7 × 8 again?                | Dad  10:00
+  Ben                           * Yesterday |   * Dad is buying chocolate chips
+    Ben: can I borrow your charger          | Ana  10:05
+  Under-14s football                Tuesday |   Yes please! Can we have them before football?
+    Coach Rivera: Training moves to Thurs...|   👍  2
+  Birthday surprise                  Monday | Family Chat  11:00
+    Dad: Message deleted                    |   Quiet time starts at 21:00. Chat is paused until 07:00.
+  Book club                          Sunday | ----------------------------------------------------- Today ------------------------------------------------------
+    No messages yet                         | Mum  09:00
+                                            |   Morning all. Pancakes are ready!
+                                            | Dad  10:00
+                                            |   Ana[1]: leaving for football at 10. Bring your boots.
+                                            |   👍  1  ⚽  3
+                                            | Ana  10:03
+                                            |   | Dad: Ana: leaving for football at 10. Bring your boots.
+                                            |   On it. They're by the door.
+                                            | -- New messages --------------------------------------------------------------------------------------------------
+                                            | Grandad  11:20
+                                            |   Good luck today, Ana! Score one for me.
+                                            | Ben  11:50
+                                            |   can someone bring my water bottle
+                                            | Mum  11:58
+                                            |   Dinner at 7, don't be late! Ana[2]
+                                            |   ❤️  1
+                                            | Ana  11:59
+                                            |   See you then (sending...)
+                                            | ------------------------------------------------------------------------------------------------------------------
+                                            | > See you at **six**
+                                            |   Bring the `snacks`, please
+                                                                                                                                                     Up to date
+Enter Send          Esc Messages        PgDn Newer          ^P PrevRoom         ^C Quit
+^J NewLine          PgUp Older          ^N NextRoom         ^R Recovery

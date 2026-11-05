@@ -8,8 +8,6 @@ Mum  Encrypted  2 members
 
 
 
-
-
 ──────────────────────────────────── Today ─────────────────────────────────────
 Mum  11:10
   Have you got your keys?
@@ -19,9 +17,11 @@ Mum  11:20
   Love you
 Ana  11:25
   Love you too ❤️
+────────────────────────────────────────────────────────────────────────────────
+›  Message Mum
                                                                      Up to date
-< Rooms      PgDn Newer   l Link#      u FirstNew   m Members    : Commands
-PgUp Older   Tab NextLink s Save       G Latest     n NextNew    O OTHER
+Enter Send   Esc Messages PgDn Newer   ^P PrevRoom  ^C Quit
+^J NewLine   PgUp Older   ^N NextRoom  ^R Recovery
 --- styles ---
 RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
 BBBkkkkkkkkkkkkkkkkkkkkkk
@@ -33,8 +33,6 @@ kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
 
 
 
-
-
 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
 BBB  kkkkk
 kk
@@ -44,9 +42,11 @@ BBB  kkkkk
 kk
 ccc  kkkkk
 kk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+BBkkkkkkkkkkkk
                                                                      kkkkkkkkkkk
-R            RRRR         R            R            R            R
-RRRR         RRR          R            R            R            R
+RRRRR        RRR          RRRR         RR           RR
+RR           RRRR         RR           RR
 --- NO_COLOR styles ---
 RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
 BBB
@@ -59,8 +59,6 @@ BBB
 
 
 
-
-
 BBB
 
 BBB
@@ -70,14 +68,14 @@ BBB
 BBB
 
 
-R            RRRR         R            R            R            R
-RRRR         RRR          R            R            R            R
+BBR
+
+RRRRR        RRR          RRRR         RR           RR
+RR           RRRR         RR           RR
 --- ASCII ---
   FAMILY CHAT 0.0.0-test               @ana:smith.safechat.family  Room 3 of 11
 Mum  Encrypted  2 members
 --------------------------------------------------------------------------------
-
-
 
 
 
@@ -94,6 +92,8 @@ Mum  11:20
   Love you
 Ana  11:25
   Love you too ❤️
+--------------------------------------------------------------------------------
+>  Message Mum
                                                                      Up to date
-< Rooms      PgDn Newer   l Link#      u FirstNew   m Members    : Commands
-PgUp Older   Tab NextLink s Save       G Latest     n NextNew    O OTHER
+Enter Send   Esc Messages PgDn Newer   ^P PrevRoom  ^C Quit
+^J NewLine   PgUp Older   ^N NextRoom  ^R Recovery

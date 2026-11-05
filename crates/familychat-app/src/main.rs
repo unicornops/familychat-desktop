@@ -204,7 +204,10 @@ impl Command {
                         "--bell" => options.bell = true,
                         "--ascii" => options.ascii = true,
                         "--no-mouse" => options.no_mouse = true,
-                        other => bail!("`tui` takes --bell, --ascii and --no-mouse, not `{other}`"),
+                        "--editor" => options.editor = true,
+                        other => bail!(
+                            "`tui` takes --bell, --ascii, --no-mouse and --editor, not `{other}`"
+                        ),
                     }
                 }
                 Self::Tui(options)
@@ -251,7 +254,7 @@ fn print_help() {
     println!("  {BINARY_NAME}               Open the {APP_NAME} window");
     #[cfg(feature = "tui")]
     println!(
-        "  {BINARY_NAME} tui           Use {APP_NAME} in the terminal (--bell, --ascii, --no-mouse)"
+        "  {BINARY_NAME} tui           Use {APP_NAME} in the terminal (--bell, --ascii, --no-mouse, --editor)"
     );
     println!(
         "  {BINARY_NAME} open-link     Sign in with a link read from standard input (paste it, then Enter)"
@@ -538,6 +541,9 @@ struct TuiOptions {
     ascii: bool,
     /// `--no-mouse`: leave the mouse to the terminal.
     no_mouse: bool,
+    /// `--editor`: the composer's `^_` opens `$VISUAL` or `$EDITOR` (the
+    /// message sits unencrypted in a private temporary file meanwhile).
+    editor: bool,
 }
 
 /// The program copies are piped to, instead of OSC 52 (`wl-copy`, `xclip
@@ -568,6 +574,7 @@ fn launch_tui(lock: ProfileLock, options: TuiOptions) -> Result<()> {
                 .filter(|command| !command.trim().is_empty()),
             ..familychat_tui::CopySettings::default()
         },
+        external_editor: options.editor,
     };
     let result = familychat_tui::run(familychat_tui::Launch {
         startup: startup.clone(),
@@ -628,11 +635,12 @@ mod tests {
                 Command::Tui(TuiOptions::default())
             );
             assert_eq!(
-                parse(&["tui", "--bell", "--ascii", "--no-mouse"]).expect("tui"),
+                parse(&["tui", "--bell", "--ascii", "--no-mouse", "--editor"]).expect("tui"),
                 Command::Tui(TuiOptions {
                     bell: true,
                     ascii: true,
                     no_mouse: true,
+                    editor: true,
                 })
             );
             assert!(parse(&["tui", "--colour"]).is_err());

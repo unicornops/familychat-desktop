@@ -108,6 +108,16 @@ ignore-dev-dependencies = true
 #   crates/familychat-tui/src/lib.rs (src/lib.rs), the OS opener in
 #   crates/familychat-tui/src/links.rs (src/links.rs) and the snapshot
 #   harness in crates/familychat-tui/src/tests.rs (src/tests.rs).
+# - The terminal UI's writing (Phase 11, ADR 0008), same copyright and
+#   licence; keep each file's header notice. Copied from Zmail's zmail-tui:
+#   crates/familychat-tui/src/editor.rs (src/editor.rs: the opt-in
+#   external editor, its 0700 folder and the overwrite-and-remove) and
+#   terminal::resume in crates/familychat-tui/src/terminal.rs
+#   (src/terminal.rs). Adapted from Zmail's zmail-tui: the composer's
+#   editor settings and plain-key input in
+#   crates/familychat-tui/src/composer.rs (src/compose.rs's body_editor and
+#   editor_input), and the editor effect in crates/familychat-tui/src/lib.rs
+#   (src/lib.rs).
 # - Notifications (Phase 9, ADR 0013), same copyright and licence; keep
 #   each file's header notice. Adapted from Zmail's zmail-notify
 #   (src/lib.rs: the flood cap, its rolling window and its tests) in
