@@ -72,7 +72,7 @@ jobs:
                       about.toml|about.hbs|deny.toml|scripts/homeserver-harness.sh|scripts/check-release-features.sh|scripts/check-dependency-boundaries.sh|scripts/capture-ui-screenshots.sh|scripts/check-egress.sh|scripts/egress-proxy.py)
                         workspace_checks=true
                         ;;
-                      docker/homeserver-harness/*)
+                      docker/homeserver-harness/*|fuzz/*)
                         if [[ "$file" != *.md ]]; then
                           workspace_checks=true
                         fi
@@ -517,4 +517,85 @@ jobs:
               with:
                   name: ui-screenshot-logs
                   path: ${{ runner.temp }}/ui-screenshot-logs
+                  if-no-files-found: ignore
+
+    # Fuzz smoke (PLAN.md, sections 7 and 9): a minute of coverage-guided
+    # fuzzing each for the sign-in link and server-name parsers and the
+    # Matrix HTML sanitiser, the two parsers that read text an attacker
+    # writes, seeded from their tests' corpora (fuzz/corpus). cargo-fuzz
+    # drives libFuzzer, whose coverage instrumentation and AddressSanitizer
+    # need `-Zsanitizer`, so this job builds `fuzz/` (outside the
+    # workspace, with its own lock file) on a pinned nightly; the
+    # workspace itself stays on rust-toolchain.toml's stable. The link
+    # parser's crate reaches matrix-sdk through familychat-session, so the
+    # first build is the slow part; the fuzz target directory is cached.
+    fuzz:
+        name: Fuzz smoke
+        needs: changes
+        if: github.event_name != 'pull_request' || needs.changes.outputs.workspace_checks == 'true'
+        runs-on: ubuntu-latest
+        env:
+            # Moved by hand, like the other pins: the nightly the targets
+            # were last built and checked with.
+            FUZZ_TOOLCHAIN: nightly-2026-09-19
+            CARGO_FUZZ_VERSION: 0.13.2
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+            # familychat-security's keychain crate links D-Bus's client
+            # library on Linux.
+            - name: Install Linux build dependencies
+              run: sudo apt-get update && sudo apt-get install -y pkg-config libdbus-1-dev
+
+            - name: Install Rust nightly
+              uses: dtolnay/rust-toolchain@89b12181fb390509a0842a86cc55eeb8eb928c1d # stable
+              with:
+                  toolchain: ${{ env.FUZZ_TOOLCHAIN }}
+                  components: rustfmt
+
+            - name: Cache cargo-fuzz
+              id: cargo-fuzz-cache
+              uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+              with:
+                  path: ~/.cargo/bin/cargo-fuzz
+                  key: cargo-fuzz-${{ runner.os }}-${{ env.CARGO_FUZZ_VERSION }}
+
+            - name: Install cargo-fuzz
+              if: steps.cargo-fuzz-cache.outputs.cache-hit != 'true'
+              run: cargo +"$FUZZ_TOOLCHAIN" install cargo-fuzz --locked --version "$CARGO_FUZZ_VERSION"
+
+            - name: Cache the fuzz build
+              uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+              with:
+                  path: fuzz/target
+                  key: fuzz-target-${{ runner.os }}-${{ env.FUZZ_TOOLCHAIN }}-${{ hashFiles('fuzz/Cargo.lock') }}
+                  restore-keys: fuzz-target-${{ runner.os }}-${{ env.FUZZ_TOOLCHAIN }}-
+
+            - name: Format of the fuzz targets
+              working-directory: fuzz
+              run: cargo +"$FUZZ_TOOLCHAIN" fmt --check
+
+            - name: Build the fuzz targets
+              working-directory: fuzz
+              run: cargo +"$FUZZ_TOOLCHAIN" fuzz build -O
+
+            # Each target starts from its seeds and runs for 60 seconds;
+            # a crash, a failed invariant or a leak fails the job and
+            # leaves the input in fuzz/artifacts.
+            - name: Fuzz the sign-in link parser
+              working-directory: fuzz
+              run: cargo +"$FUZZ_TOOLCHAIN" fuzz run -O signin_link corpus/signin_link -- -max_total_time=60 -max_len=4096 -timeout=10
+
+            - name: Fuzz the Matrix HTML sanitiser
+              working-directory: fuzz
+              run: cargo +"$FUZZ_TOOLCHAIN" fuzz run -O matrix_html corpus/matrix_html -- -max_total_time=60 -max_len=131072 -timeout=10
+
+            - name: Upload crashing inputs
+              if: failure()
+              uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+              with:
+                  name: fuzz-artifacts
+                  path: fuzz/artifacts
                   if-no-files-found: ignore

@@ -1,0 +1,3 @@
+<mx-reply><blockquote><a href="https://matrix.to/#/!room:example.org/$event">In reply to</a> <a href="https://matrix.to/#/@mallory:example.org">@mallory:example.org</a><br>LEAKED old message with <script>LEAKED</script></blockquote></mx-reply>The actual reply
+<MX-REPLY>LEAKED upper case</MX-REPLY> and <mx-reply/>LEAKED? no: after a self-closed mx-reply the rest is its content</mx-reply>
+<p>Done</p>
