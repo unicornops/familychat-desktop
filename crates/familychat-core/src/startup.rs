@@ -6,13 +6,13 @@
 //! building the sessions happen off the UI thread, in the app's wiring.
 //! A frontend never sees the store, the keychain or a Matrix type: only
 //! the sentences to show and, once the profile is open, the
-//! [`SessionApi`] and [`SigninApi`] to draw from.
+//! [`SessionApi`], [`SigninApi`] and [`SettingsApi`] to draw from.
 
 use std::{fmt, sync::Arc};
 
 use tokio::sync::oneshot;
 
-use crate::{session::SessionApi, signin::SigninApi};
+use crate::{session::SessionApi, settings::SettingsApi, signin::SigninApi};
 
 /// The services a frontend draws from once the profile is open.
 #[derive(Clone)]
@@ -21,6 +21,8 @@ pub struct Opened {
     pub session: Arc<dyn SessionApi>,
     /// New sign-ins.
     pub signin: Arc<dyn SigninApi>,
+    /// The profile's settings.
+    pub settings: Arc<dyn SettingsApi>,
     /// Something to say once, such as where Start over moved the old data.
     pub notice: Option<String>,
 }

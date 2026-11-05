@@ -421,3 +421,48 @@ fn every_rooms_screen_names_every_control(cx: &mut TestAppContext) {
         }
     }
 }
+
+/// The window signed in to the fixture family, on `initial_view`.
+fn open_signed_in(
+    cx: &mut TestAppContext,
+    initial_view: InitialView,
+) -> (gpui::Entity<crate::ShellView>, &mut VisualTestContext) {
+    let session = FixtureSession::new();
+    session.add_account(&fixture_user(), SyncState::Running);
+    session.with_family();
+    let signin = FixtureSignin::new(session.clone());
+    let startup = FixtureStartup::with(session, signin, &[FixtureProfile::Ready]);
+    open(cx, startup, initial_view)
+}
+
+#[gpui::test]
+fn the_notification_settings_are_a_named_dialog_with_a_checkbox(cx: &mut TestAppContext) {
+    let (_view, cx) = open_signed_in(cx, InitialView::NotificationSettings);
+    let entries = redraw(cx);
+    assert_all_named(&entries);
+    assert!(has(&entries, Role::Dialog, "Notifications"), "{entries:?}");
+    assert!(has(
+        &entries,
+        Role::CheckBox,
+        "Show message text in notifications"
+    ));
+    assert!(has(&entries, Role::Button, "Done"));
+}
+
+#[gpui::test]
+fn a_forwarded_link_asks_in_a_named_dialog_over_the_rooms(cx: &mut TestAppContext) {
+    let (view, cx) = open_signed_in(cx, InitialView::ForwardedLink(FIXTURE_LINK.to_owned()));
+    wait_for_step(&view, cx, "the confirmation", |step| {
+        matches!(step, SigninStep::Confirm(_))
+    });
+    let entries = redraw(cx);
+    assert_all_named(&entries);
+    assert!(has(
+        &entries,
+        Role::Dialog,
+        "Sign in as @ana:smith.safechat.family?"
+    ));
+    for button in ["Use my password instead", "Cancel", "Continue"] {
+        assert!(has(&entries, Role::Button, button), "{button}");
+    }
+}

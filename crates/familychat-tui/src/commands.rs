@@ -121,7 +121,11 @@ pub const SHARED: &[(&str, Cmd)] = &[
 /// Table commands the terminal does not offer yet, with the phase that
 /// brings them (PLAN.md, section 13.11: writing in the terminal).
 #[cfg_attr(not(test), allow(dead_code))]
-pub const LATER: &[(&str, &str)] = &[];
+pub const LATER: &[(&str, &str)] = &[
+    // The window's notification settings dialog (ADR 0013); the terminal
+    // gets its settings with Phase 13.
+    ("NotificationSettings", "Phase 13"),
+];
 
 /// The terminal's own commands: the key the bar shows, the bar's label
 /// and what the palette says it does.

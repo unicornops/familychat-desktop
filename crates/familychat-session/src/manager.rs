@@ -21,6 +21,7 @@ use tracing::{info, warn};
 use crate::{
     SessionConfig,
     account::{Account, OpenError, OpenParams},
+    notifications::NotificationFeed,
 };
 
 /// How many times [`AccountManager::forget`] tries to delete the files.
@@ -79,6 +80,7 @@ pub struct AccountManager {
     config: SessionConfig,
     accounts: RwLock<BTreeMap<AccountId, Arc<Account>>>,
     views: watch::Sender<Vec<AccountView>>,
+    notifications: NotificationFeed,
 }
 
 impl std::fmt::Debug for AccountManager {
@@ -101,6 +103,7 @@ impl AccountManager {
             config,
             accounts: RwLock::new(BTreeMap::new()),
             views: watch::channel(Vec::new()).0,
+            notifications: NotificationFeed::default(),
         }
     }
 
@@ -144,6 +147,7 @@ impl AccountManager {
                 dir: self.dir.clone(),
                 config: self.config.clone(),
                 keychain: self.keychain.clone(),
+                notifications: self.notifications.clone(),
             },
             None,
         )
@@ -176,6 +180,7 @@ impl AccountManager {
                     dir: self.dir.clone(),
                     config: self.config.clone(),
                     keychain: self.keychain.clone(),
+                    notifications: self.notifications.clone(),
                 },
                 Some(check),
             )
@@ -265,6 +270,11 @@ impl AccountManager {
         for account in accounts {
             account.shutdown().await;
         }
+    }
+
+    /// Where every account's notifications go.
+    pub(crate) fn notification_feed(&self) -> &NotificationFeed {
+        &self.notifications
     }
 
     /// Runs `with` on the profile (the registry, preferences, UI state).

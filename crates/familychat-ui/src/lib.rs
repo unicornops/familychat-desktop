@@ -19,6 +19,7 @@
 //! | `profile_screens` | opening the profile, the keychain and lost-key screens |
 //! | `signin` | `SigninView`: welcome, the code page (link, pasted or dropped QR image), the confirmation, the password forms, the rate-limit countdown |
 //! | `signed_in` | `SignedInView`: the sync banner over the rooms, and the sync-state indicator |
+//! | `notifications` | posting `familychat-notify`'s notifications as system notifications, a click opening the room; the notification settings dialog |
 //! | `rooms` | `RoomsView`: the room list, the room header, the member list, the timeline (`TimelineView`), rich text, the image cache and the link dialog (ADR 0007) |
 //! | `qr` | reading a sign-in QR code from an image, locally, with `rqrr` |
 //! | `command_palette` | `CommandPalette`: Secondary+K's search over the commands table |
@@ -32,11 +33,16 @@
 //! | `styles` | design tokens, `PlatformStyle`, `UiColors`, contrast and high-contrast helpers |
 //! | `widgets` | `icon`, `empty_state`, `input_card`, … |
 
-use std::sync::Arc;
+use std::{
+    fmt,
+    sync::{Arc, Mutex, PoisonError},
+};
 
 use familychat_core::{
     AppBootstrap, ThemeAppearance,
     identity::{APP_ID, APP_NAME},
+    requests::{AppRequest, RequestReceiver, RequestSender, looks_like_signin_link},
+    signin::SecretText,
     startup::StartupApi,
 };
 use gpui::{
@@ -52,6 +58,7 @@ mod fonts;
 mod keymap;
 mod menus;
 mod motion;
+mod notifications;
 mod profile_screens;
 mod qr;
 mod rooms;
@@ -101,6 +108,49 @@ pub enum InitialView {
     CommandPalette,
     /// The signed-in account's rooms, opened as described.
     Rooms(RoomsLaunch),
+    /// The signed-in account's rooms with the notification settings open.
+    NotificationSettings,
+    /// The signed-in account's rooms, then this link forwarded by a second
+    /// launch (the sign-in's confirmation over the rooms).
+    ForwardedLink(String),
+}
+
+/// Where requests from outside the window arrive (ADR 0013): a second
+/// launch's link through the app's single-instance listener, and on macOS
+/// the links the OS hands the running app (`on_open_urls`).
+#[derive(Clone)]
+pub struct RequestInbox {
+    sender: RequestSender,
+    receiver: Arc<Mutex<Option<RequestReceiver>>>,
+}
+
+impl RequestInbox {
+    /// The inbox over a channel from `familychat_core::requests`.
+    pub fn new(sender: RequestSender, receiver: RequestReceiver) -> Self {
+        Self {
+            sender,
+            receiver: Arc::new(Mutex::new(Some(receiver))),
+        }
+    }
+
+    /// Where requests are sent.
+    pub(crate) fn sender(&self) -> &RequestSender {
+        &self.sender
+    }
+
+    /// The receiver; the window takes it once.
+    pub(crate) fn take_receiver(&self) -> Option<RequestReceiver> {
+        self.receiver
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .take()
+    }
+}
+
+impl fmt::Debug for RequestInbox {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("RequestInbox")
+    }
 }
 
 /// How [`run`] opens the window.
@@ -111,6 +161,8 @@ pub struct LaunchOptions {
     /// Draw in this theme instead of following the OS appearance (the
     /// screenshot fixture).
     pub appearance: Option<ThemeAppearance>,
+    /// Requests from outside the window, if anything sends them.
+    pub requests: Option<RequestInbox>,
 }
 
 /// Starts GPUI and opens the main window over `startup`; returns when the
@@ -124,17 +176,34 @@ pub fn run(
     // `gpui_platform::application()` picks the OS backend (macOS, Windows,
     // or Linux Wayland/X11) and leaves AccessKit enabled; never switch to
     // `Application::new_inaccessible`, which turns screen readers off.
-    gpui_platform::application()
-        .with_assets(asset_source)
-        .run(move |cx: &mut App| {
-            init_app(cx);
-            if let Err(error) =
-                open_main_window(bootstrap.clone(), startup.clone(), options.clone(), cx)
-            {
-                eprintln!("{APP_NAME}: failed to open the window: {error:#}");
-                cx.quit();
+    let application = gpui_platform::application().with_assets(asset_source);
+    // macOS hands a running app the links it opens as Apple Events
+    // (`familychat://…` once Phase 12 registers the scheme), and passes a
+    // link that starts the app the same way. They join the second
+    // launches' requests; the window starts a sign-in with each, which
+    // always asks first.
+    if let Some(sender) = options
+        .requests
+        .as_ref()
+        .map(|inbox| inbox.sender().clone())
+    {
+        application.on_open_urls(move |urls| {
+            for url in urls {
+                if looks_like_signin_link(&url) {
+                    let _ = sender.try_send(AppRequest::OpenLink(SecretText::new(url)));
+                }
             }
         });
+    }
+    application.run(move |cx: &mut App| {
+        init_app(cx);
+        if let Err(error) =
+            open_main_window(bootstrap.clone(), startup.clone(), options.clone(), cx)
+        {
+            eprintln!("{APP_NAME}: failed to open the window: {error:#}");
+            cx.quit();
+        }
+    });
 }
 
 /// App-wide setup, before the first window opens: the font, the actions

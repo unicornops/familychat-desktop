@@ -108,6 +108,13 @@ ignore-dev-dependencies = true
 #   crates/familychat-tui/src/lib.rs (src/lib.rs), the OS opener in
 #   crates/familychat-tui/src/links.rs (src/links.rs) and the snapshot
 #   harness in crates/familychat-tui/src/tests.rs (src/tests.rs).
+# - Notifications (Phase 9, ADR 0013), same copyright and licence; keep
+#   each file's header notice. Adapted from Zmail's zmail-notify
+#   (src/lib.rs: the flood cap, its rolling window and its tests) in
+#   crates/familychat-notify/src/lib.rs and src/tests.rs, and from
+#   zmail-ui's src/notifications.rs (posting through GPUI's system
+#   notifications with opaque tags, the click handler) in
+#   crates/familychat-ui/src/notifications.rs.
 # - crates/familychat-ui/src/testdata/signin-qr-screenshot.png is made for
 #   this project's tests (python-qrcode and Pillow), under its licence.
 #

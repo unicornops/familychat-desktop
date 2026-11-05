@@ -95,6 +95,7 @@ impl LiveTerminal {
         let startup = Arc::new(Ready(Opened {
             session: Arc::new(session),
             signin: Arc::new(signin),
+            settings: Arc::new(familychat_core::settings::MemorySettings::default()),
             notice: None,
         }));
         let app = App::new(AppOptions {

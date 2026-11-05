@@ -3,6 +3,8 @@ members = [
     "crates/familychat-app",
     "crates/familychat-assets",
     "crates/familychat-core",
+    "crates/familychat-instance",
+    "crates/familychat-notify",
     "crates/familychat-security",
     "crates/familychat-session",
     "crates/familychat-signin",

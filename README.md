@@ -61,6 +61,13 @@ Phase 6, rooms and the timeline in the window ([#7](https://github.com/unicornop
 - `matrix:` and `matrix.to` links open in the app; every other link shows its whole address and asks before your browser opens it, and warns when its text shows a different site
 - keyboard commands to move between rooms and unread rooms, jump to the oldest unread or the latest message, show the members and switch filters
 
+Phase 9, notifications, single instance and sign-in links ([#10](https://github.com/unicornops/familychat-desktop/issues/10), [ADR 0013](./docs/adr/0013-notifications-single-instance-and-sign-in-links.md)):
+
+- your computer's own notifications for new messages while Family Chat is open, for the rooms you aren't looking at: who wrote, where and what (or just "New message" if you turn the text off in Notification settings, Ctrl+Alt+N or Cmd+Option+N), one per room however many arrive, and never more than six a minute; clicking one opens the room
+- the number of unread messages in the window's title
+- one Family Chat per profile, now with a hand-off: opening a sign-in link while Family Chat is open (`familychat open-link`, which reads the link so it never sits in your shell history, or `familychat LINK`) brings the open window forward with "Sign in as …?", over your rooms if you're signed in, and nothing is used until you say Continue
+- the link travels only over a socket or pipe your user alone can open, and never reaches a log
+
 Phase 10, the terminal UI: sign-in and reading ([#11](https://github.com/unicornops/familychat-desktop/issues/11), [ADR 0008](./docs/adr/0008-terminal-ui.md)):
 
 - `familychat tui` in Zmail's terminal style: a title bar, the screen, a status line and a command bar that always shows the keys that work, built from the same commands table as the window; `:` opens a palette of them
@@ -71,7 +78,7 @@ Phase 10, the terminal UI: sign-in and reading ([#11](https://github.com/unicorn
 - the mouse (click, scroll, drag to select and copy, as in Zellij), new messages in the status line with an optional bell (`--bell`), `NO_COLOR` and ASCII drawing (`--ascii`)
 - every name, message and file name from a server is filtered for escape sequences before it reaches your terminal
 
-Sending, encryption, notifications in the window and the rest follow in the later phases.
+Sending, encryption and the rest follow in the later phases; opening `familychat://` links straight from your browser needs the installers of Phase 12.
 
 ## Building
 
@@ -90,6 +97,7 @@ cargo build -p familychat-app --release --locked
 target/release/familychat             # the window
 target/release/familychat tui         # the terminal UI (--bell, --ascii, --no-mouse); q quits
 target/release/familychat accounts    # the accounts registry
+target/release/familychat open-link   # paste a sign-in link; it goes to the open window, or opens one
 target/release/familychat --version
 ```
 

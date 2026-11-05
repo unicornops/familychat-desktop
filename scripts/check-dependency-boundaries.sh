@@ -10,7 +10,10 @@ set -euo pipefail
 #     window, gpui and gpui_platform for the terminal UI);
 #   - familychat-core depends on no matrix-sdk crate at all, so its public
 #     API cannot expose an SDK type (ruma identifiers are allowed: they are
-#     ruma's, not the SDK's).
+#     ruma's, not the SDK's);
+#   - familychat-notify and familychat-instance (ADR 0013) depend on no
+#     matrix-sdk crate and on neither frontend's toolkit, so both frontends
+#     can use them.
 #
 # familychat-signin (ADR 0006) is a Matrix crate (it hands sign-ins to
 # familychat-session), so the first rule keeps it out of both frontends:
@@ -80,6 +83,14 @@ grep -qx familychat-core <<<"${core}" || fail "cargo tree printed no familychat-
 found="$(matching "${SDK}" <<<"${core}")"
 [[ -z "${found}" ]] || fail "familychat-core depends on the Matrix SDK, so its API could expose SDK types: $(tr '\n' ' ' <<<"${found}")"
 
+for shared in familychat-notify familychat-instance; do
+  graph="$(tree "${shared}")"
+  grep -qx "${shared}" <<<"${graph}" \
+    || { fail "cargo tree printed no ${shared}; the check cannot run"; continue; }
+  found="$(matching "${SDK}|gpui|gpui_platform|ratatui|crossterm" <<<"${graph}")"
+  [[ -z "${found}" ]] || fail "${shared} depends on the Matrix SDK or a frontend's toolkit: $(tr '\n' ' ' <<<"${found}")"
+done
+
 # Self-tests.
 tree familychat-session | grep -qx matrix-sdk \
   || fail "self-test failed: the check does not see matrix-sdk in familychat-session's graph"
@@ -91,4 +102,4 @@ tree familychat-ui | grep -qx gpui \
 if ((failed)); then
   exit 1
 fi
-echo "check-dependency-boundaries: the frontends and familychat-core are free of the Matrix SDK, and each frontend of the other's toolkit"
+echo "check-dependency-boundaries: the frontends, familychat-core, familychat-notify and familychat-instance are free of the Matrix SDK, and each frontend of the other's toolkit"

@@ -27,6 +27,7 @@ use familychat_core::{
     OwnedRoomId, OwnedUserId, UserId,
     diff::ListDiff,
     media::{DecodedImage, MediaError, MediaInfo},
+    notifications::IncomingNotification,
     rooms::{
         Membership, RoomListCommand, RoomListFilter, RoomListLoading, RoomMember, RoomSummary,
     },
@@ -34,6 +35,7 @@ use familychat_core::{
         AccountKey, AccountView, MediaReply, Reply, RoomListSubscription, SUBSCRIPTION_BUFFER,
         SessionApi, SessionError, TimelineSubscription,
     },
+    settings::{MemorySettings, NotificationSettings},
     signin::{
         ConfirmCode, Finished, PasswordForm, PasswordKind, SigninAnswer, SigninApi, SigninFlow,
         SigninProblem, SigninStart, SigninStep, Working,
@@ -103,6 +105,8 @@ pub struct FixtureSession {
     images: Mutex<BTreeMap<String, FixtureImage>>,
     hold_pagination: Arc<Mutex<bool>>,
     record: Arc<Mutex<SessionRecord>>,
+    notifications: Mutex<Option<mpsc::Sender<IncomingNotification>>>,
+    unread: Mutex<BTreeMap<AccountKey, watch::Sender<u64>>>,
 }
 
 /// What the window asked of the fixture session.
@@ -182,6 +186,22 @@ impl FixtureSession {
         if let Some(status) = lock(&self.statuses).get(account) {
             status.send_modify(|status| status.sync = sync);
         }
+    }
+
+    /// Reports `incoming` as an account's sync would; `false` when no
+    /// frontend is listening.
+    pub fn notify(&self, incoming: IncomingNotification) -> bool {
+        lock(&self.notifications)
+            .as_ref()
+            .is_some_and(|sender| sender.try_send(incoming).is_ok())
+    }
+
+    /// Sets an account's unread total.
+    pub fn set_unread(&self, account: &AccountKey, unread: u64) {
+        lock(&self.unread)
+            .entry(account.clone())
+            .or_insert_with(|| watch::channel(0).0)
+            .send_replace(unread);
     }
 
     /// The accounts `retry_sync` was asked for, in order.
@@ -536,6 +556,24 @@ impl SessionApi for FixtureSession {
 
     fn retry_sync(&self, account: &AccountKey) {
         lock(&self.retried).push(account.clone());
+    }
+
+    fn notifications(&self) -> mpsc::Receiver<IncomingNotification> {
+        let (sender, receiver) = mpsc::channel(SUBSCRIPTION_BUFFER);
+        *lock(&self.notifications) = Some(sender);
+        receiver
+    }
+
+    fn unread_total(&self, account: &AccountKey) -> Option<watch::Receiver<u64>> {
+        if !lock(&self.statuses).contains_key(account) {
+            return None;
+        }
+        Some(
+            lock(&self.unread)
+                .entry(account.clone())
+                .or_insert_with(|| watch::channel(0).0)
+                .subscribe(),
+        )
     }
 }
 
@@ -953,6 +991,7 @@ pub enum FixtureProfile {
 pub struct FixtureStartup {
     session: Arc<FixtureSession>,
     signin: Arc<FixtureSignin>,
+    settings: Arc<MemorySettings>,
     sequence: Mutex<Vec<FixtureProfile>>,
     opens: Mutex<usize>,
     started_over: Mutex<bool>,
@@ -987,6 +1026,7 @@ impl FixtureStartup {
         Arc::new(Self {
             session,
             signin,
+            settings: Arc::new(MemorySettings::default()),
             sequence: Mutex::new(sequence.to_vec()),
             opens: Mutex::new(0),
             started_over: Mutex::new(false),
@@ -1001,6 +1041,17 @@ impl FixtureStartup {
     /// The fixture sign-in.
     pub fn signin(&self) -> &Arc<FixtureSignin> {
         &self.signin
+    }
+
+    /// The fixture settings (in memory).
+    pub fn settings(&self) -> &Arc<MemorySettings> {
+        &self.settings
+    }
+
+    /// Starts with the notifications' content hidden or shown.
+    pub fn set_notification_settings(&self, settings: NotificationSettings) {
+        use familychat_core::settings::SettingsApi as _;
+        drop(self.settings.set_notification_settings(settings));
     }
 
     /// How many times the window asked to open (Try again included).
@@ -1018,6 +1069,7 @@ impl FixtureStartup {
             FixtureProfile::Ready => OpenState::Ready(Opened {
                 session: self.session.clone(),
                 signin: self.signin.clone(),
+                settings: self.settings.clone(),
                 notice,
             }),
             FixtureProfile::KeychainLocked => {

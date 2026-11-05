@@ -200,6 +200,15 @@ pub const COMMANDS: &[Command] = &[
         icon: "mail-plus",
     },
     Command {
+        id: "NotificationSettings",
+        name: "Notification settings",
+        description: "Choose whether notifications show what was written.",
+        gui_keys: &["secondary-alt-n"],
+        tui_key: "ctrl-o",
+        scope: CommandScope::Global,
+        icon: "settings",
+    },
+    Command {
         id: "Quit",
         name: "Quit Family Chat",
         description: "Close every window and quit.",

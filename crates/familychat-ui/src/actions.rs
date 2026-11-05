@@ -61,6 +61,8 @@ actions!(
         ShowPeople,
         /// List the invitations.
         ShowInvites,
+        /// Open the notification settings.
+        NotificationSettings,
         /// Quit Family Chat.
         Quit,
         /// Hide Family Chat (macOS).

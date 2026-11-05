@@ -20,6 +20,12 @@
 //! - [`rich_text`]: the rich-text AST a message's text becomes (ADR 0007);
 //! - [`links`]: which links open in the app and which ask first;
 //! - [`media`]: images and files, as the session hands them over;
+//! - [`notifications`]: the notifications the session reports, for
+//!   `familychat-notify` to compose;
+//! - [`settings`]: the preferences a frontend reads and changes
+//!   ([`SettingsApi`](settings::SettingsApi));
+//! - [`requests`]: what reaches the running window from outside it (a
+//!   sign-in link from a second launch or the OS);
 //! - [`diff`]: [`ListDiff`](diff::ListDiff), the changes the room list and
 //!   timelines arrive as;
 //! - what the shell shows about itself.
@@ -30,9 +36,12 @@ pub mod fuzzy;
 pub mod identity;
 pub mod links;
 pub mod media;
+pub mod notifications;
+pub mod requests;
 pub mod rich_text;
 pub mod rooms;
 pub mod session;
+pub mod settings;
 pub mod signin;
 pub mod startup;
 pub mod sync;

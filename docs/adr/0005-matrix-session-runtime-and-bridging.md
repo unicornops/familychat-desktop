@@ -178,7 +178,8 @@ The profile lock (ADR 0003) is held for the life of the process, and the
 `AccountManager` owns the open profile, so one process writes an
 account's crypto store. The SDK's cross-process lock stays at its
 default; the window and the terminal UI never open one profile at once.
-Forwarding a second launch's link to the running instance is Phase 9.
+Forwarding a second launch's link to the running instance is ADR 0013
+(Phase 9).
 
 ### Logs
 

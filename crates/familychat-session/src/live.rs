@@ -6,6 +6,7 @@ use std::{path::PathBuf, sync::Arc};
 
 use familychat_core::{
     media::{DecodedImage, MediaError, MediaInfo},
+    notifications::IncomingNotification,
     rooms::{MemberRole, Membership, RoomListFilter, RoomMember, sort_members},
     session::{
         AccountKey, AccountView, MediaReply, Reply, RoomListSubscription, SessionApi, SessionError,
@@ -22,7 +23,7 @@ use matrix_sdk::{
 };
 use tokio::{
     runtime::Handle,
-    sync::{oneshot, watch},
+    sync::{mpsc, oneshot, watch},
 };
 
 use tracing::info;
@@ -219,6 +220,16 @@ impl SessionApi for LiveSession {
         self.media_reply(account, move |client| async move {
             media::save_file(&client, &media, path).await
         })
+    }
+
+    fn notifications(&self) -> mpsc::Receiver<IncomingNotification> {
+        self.manager.notification_feed().subscribe()
+    }
+
+    fn unread_total(&self, account: &AccountKey) -> Option<watch::Receiver<u64>> {
+        self.manager
+            .account_by_key(account)
+            .map(|account| account.unread())
     }
 
     fn retry_sync(&self, account: &AccountKey) {

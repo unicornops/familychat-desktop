@@ -16,6 +16,7 @@ use anyhow::{Result, bail};
 use familychat_core::{
     ThemeAppearance,
     rooms::RoomListFilter,
+    settings::NotificationSettings,
     signin::{SigninStep, Working},
     sync::SyncState,
 };
@@ -73,6 +74,9 @@ pub(crate) const VIEWS: &[&str] = &[
     "link-prompt",
     "link-prompt-mismatched",
     "room-large",
+    "notification-settings",
+    "notification-settings-hidden",
+    "forwarded-link",
 ];
 
 /// The rooms a signed-in fixture has.
@@ -101,6 +105,8 @@ struct Fixture {
     account: Option<SyncState>,
     /// Its rooms.
     rooms: Rooms,
+    /// Notifications hide the message's text.
+    hide_content: bool,
 }
 
 impl Fixture {
@@ -111,6 +117,7 @@ impl Fixture {
             step: None,
             account: None,
             rooms: Rooms::Family,
+            hide_content: false,
         }
     }
 
@@ -247,6 +254,21 @@ fn fixture(view: &str) -> Result<Fixture> {
             ..RoomsLaunch::default()
         }),
         "room-large" => Fixture::room(rooms::FAMILY_ROOM).with_rooms(Rooms::Large),
+        "notification-settings" => Fixture {
+            initial_view: InitialView::NotificationSettings,
+            ..Fixture::signed_in(SyncState::Running)
+        },
+        "notification-settings-hidden" => Fixture {
+            initial_view: InitialView::NotificationSettings,
+            hide_content: true,
+            ..Fixture::signed_in(SyncState::Running)
+        },
+        // A second launch forwarded a sign-in link while the rooms show:
+        // the confirmation, over the sign-in that returns to them.
+        "forwarded-link" => Fixture {
+            initial_view: InitialView::ForwardedLink(FIXTURE_LINK.to_owned()),
+            ..Fixture::signed_in(SyncState::Running)
+        },
         other => bail!(
             "unknown fixture view `{other}`; the views are: {}",
             VIEWS.join(", ")
@@ -300,11 +322,17 @@ pub(crate) fn startup(
         signin.start_at(step);
     }
     let startup = FixtureStartup::with(session, signin, &[fixture.profile]);
+    if fixture.hide_content {
+        startup.set_notification_settings(NotificationSettings {
+            show_content: false,
+        });
+    }
     Ok((
         startup,
         LaunchOptions {
             initial_view: fixture.initial_view,
             appearance,
+            requests: None,
         },
     ))
 }

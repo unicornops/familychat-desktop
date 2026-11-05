@@ -18,7 +18,7 @@ use familychat_core::{
     startup::{OpenState, Opened, StartupApi},
 };
 use familychat_security::Keychain;
-use familychat_session::{AccountManager, LiveSession, SessionConfig};
+use familychat_session::{AccountManager, LiveSession, LiveSettings, SessionConfig};
 use familychat_signin::{LiveSignin, ReqwestTransport};
 use familychat_store::{
     DataDir, KeychainUnavailable, Profile, ProfileLock, ProfileState, Unreadable,
@@ -218,11 +218,13 @@ async fn open_sessions(
     let transport = ReqwestTransport::new().context("failed to build the sign-in's HTTP client")?;
     let signin = LiveSignin::new(manager.clone(), Arc::new(transport), handle.clone());
     let session = LiveSession::new(manager.clone(), handle.clone());
+    let settings = LiveSettings::load(manager.clone(), handle.clone());
     Ok((
         manager,
         Opened {
             session: Arc::new(session),
             signin: Arc::new(signin),
+            settings: Arc::new(settings),
             notice,
         },
     ))

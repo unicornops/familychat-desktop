@@ -42,8 +42,11 @@ use tokio::{
 use tracing::{info, warn};
 
 use crate::{
-    PostLoginCheck, SessionConfig, backoff::Backoff, failure::Failure,
+    PostLoginCheck, SessionConfig,
+    backoff::Backoff,
+    failure::Failure,
     media::AuthenticatedMediaFetcher,
+    notifications::{self, NotificationFeed},
 };
 
 /// Offline and server errors: one second, doubling to a minute.
@@ -103,6 +106,8 @@ pub struct Account {
 struct Shared {
     ready: OnceLock<Ready>,
     status: watch::Sender<AccountStatus>,
+    /// The unread total (`notifications::unread_total`).
+    unread: watch::Sender<u64>,
     retry: Notify,
 }
 
@@ -111,6 +116,14 @@ impl Shared {
         self.status.send_if_modified(|status| {
             let changed = status.sync != sync;
             status.sync = sync;
+            changed
+        });
+    }
+
+    fn set_unread(&self, unread: u64) {
+        self.unread.send_if_modified(|current| {
+            let changed = *current != unread;
+            *current = unread;
             changed
         });
     }
@@ -137,6 +150,7 @@ pub(crate) struct OpenParams {
     pub(crate) dir: DataDir,
     pub(crate) config: SessionConfig,
     pub(crate) keychain: Arc<dyn Keychain>,
+    pub(crate) notifications: NotificationFeed,
 }
 
 impl Account {
@@ -167,6 +181,7 @@ impl Account {
         let shared = Arc::new(Shared {
             ready: OnceLock::new(),
             status,
+            unread: watch::channel(0).0,
             retry: Notify::new(),
         });
         let supervisor = match open_client(&params, &shared, check).await {
@@ -207,6 +222,11 @@ impl Account {
     /// Its status, as it changes.
     pub fn status(&self) -> watch::Receiver<AccountStatus> {
         self.shared.status.subscribe()
+    }
+
+    /// Its unread total, as it changes.
+    pub fn unread(&self) -> watch::Receiver<u64> {
+        self.shared.unread.subscribe()
     }
 
     /// The account's Matrix client.
@@ -331,6 +351,14 @@ async fn open_client(
             return Err(OpenError::Refused(refusal));
         }
     }
+
+    // Before the first sync, so nothing it reports is missed.
+    notifications::register(
+        &client,
+        account_key(params.id),
+        params.notifications.clone(),
+    )
+    .await;
 
     let sync = SyncService::builder(client.clone())
         .build()
@@ -508,6 +536,8 @@ async fn supervise(id: AccountId, ready: Ready, shared: Arc<Shared>) {
     let mut sync_state = ready.sync.state();
     let mut list_state = ready.sync.room_list_service().state();
     let mut session_changes = ready.client.subscribe_to_session_changes();
+    let mut room_updates = ready.client.subscribe_to_all_room_updates();
+    shared.set_unread(notifications::unread_total(&ready.client));
 
     loop {
         // A start after a failure begins a new attempt, so the account is
@@ -540,6 +570,12 @@ async fn supervise(id: AccountId, ready: Ready, shared: Arc<Shared>) {
                     }
                     Some(_) => {}
                     None => return,
+                },
+                update = room_updates.recv() => match update {
+                    Ok(_) | Err(broadcast::error::RecvError::Lagged(_)) => {
+                        shared.set_unread(notifications::unread_total(&ready.client));
+                    }
+                    Err(broadcast::error::RecvError::Closed) => return,
                 },
                 change = session_changes.recv() => match change {
                     Ok(SessionChange::UnknownToken(data)) => {
