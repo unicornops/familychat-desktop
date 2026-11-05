@@ -399,9 +399,7 @@ fn every_rooms_screen_names_every_control(cx: &mut TestAppContext) {
             "members" => {
                 assert!(has(&entries, Role::Complementary, "Members"));
                 assert!(
-                    audit::labels(&entries, Role::ListItem)
-                        .iter()
-                        .any(|label| *label == "Mum, Admin"),
+                    audit::labels(&entries, Role::ListItem).contains(&"Mum, Admin"),
                     "{entries:?}"
                 );
             }

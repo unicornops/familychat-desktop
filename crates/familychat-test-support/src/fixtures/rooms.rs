@@ -1077,6 +1077,9 @@ pub fn large_timeline(events: usize, now: u64) -> Vec<TimelineItem> {
 // Pictures
 // ---------------------------------------------------------------------------
 
+/// A picture's sky top, sky bottom and ground colours.
+type Palette = ([u8; 3], [u8; 3], [u8; 3]);
+
 /// A procedural picture for a fixture image: a sky, the sun and hills, in
 /// the colours of the handle's name, `width` by `height` (scaled to fit
 /// 960 pixels). No file is read.
@@ -1084,7 +1087,7 @@ pub fn picture(handle: &str, width: u32, height: u32) -> DecodedImage {
     let scale = (960.0 / width.max(height) as f32).min(1.0);
     let width = ((width as f32 * scale) as u32).max(1);
     let height = ((height as f32 * scale) as u32).max(1);
-    let palettes: BTreeMap<&str, ([u8; 3], [u8; 3], [u8; 3])> = [
+    let palettes: BTreeMap<&str, Palette> = [
         (
             "fixture-media:sunset",
             ([250, 140, 90], [120, 60, 140], [40, 50, 70]),

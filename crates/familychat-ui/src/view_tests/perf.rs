@@ -271,8 +271,9 @@ fn performance_budgets() {
     for step in 0..60 {
         let row = (step * 7_919) % rows;
         jumps.time(|| {
-            timeline_entity.update(cx, |timeline, _| {
+            timeline_entity.update(cx, |timeline, cx| {
                 timeline.list_state().scroll_to_reveal_item(row);
+                cx.notify();
             });
             cx.run_until_parked();
         });
@@ -348,7 +349,7 @@ fn performance_budgets() {
             cx.run_until_parked();
         });
     }
-    let _ = rooms;
+    drop(rooms);
 
     let mut markdown = format!(
         "## Rooms and timeline, {LARGE_ROOMS} rooms and {LARGE_EVENTS} events\n\nWindow opened \

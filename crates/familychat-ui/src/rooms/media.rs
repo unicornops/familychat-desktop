@@ -150,7 +150,7 @@ pub(crate) fn render_image(decoded: &DecodedImage) -> Option<RenderImage> {
         .iter()
         .map(|frame| {
             let mut bgra = frame.rgba.clone();
-            for pixel in bgra.chunks_exact_mut(4) {
+            for pixel in bgra.as_chunks_mut::<4>().0 {
                 pixel.swap(0, 2);
             }
             let buffer = RgbaImage::from_raw(decoded.width, decoded.height, bgra)?;

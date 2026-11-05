@@ -709,7 +709,7 @@ impl RoomsView {
         colors: &UiColors,
         cx: &mut Context<Self>,
     ) -> Vec<gpui::Stateful<gpui::Div>> {
-        let now = familychat_test_free_now();
+        let now = now_ms();
         range
             .filter_map(|index| {
                 let room = self.rooms.get(index)?.clone();
@@ -1531,7 +1531,7 @@ fn activity_label(at: u64, now: u64) -> String {
 }
 
 /// The current time, in milliseconds since the Unix epoch.
-fn familychat_test_free_now() -> u64 {
+fn now_ms() -> u64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map_or(0, |since| {
