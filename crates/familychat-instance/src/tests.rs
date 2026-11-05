@@ -306,6 +306,18 @@ fn a_loose_directory_is_narrowed_and_a_second_launch_refuses_one() {
     drop(listener);
 }
 
+/// The name SDDL text gives `sid`: the alias of a well-known local account
+/// (the built-in Administrator and Guest), otherwise the SID itself.
+#[cfg(windows)]
+fn sddl_name(sid: &str) -> String {
+    let local = sid.starts_with("S-1-5-21-");
+    match sid.rsplit('-').next() {
+        Some("500") if local => "LA".to_owned(),
+        Some("501") if local => "LG".to_owned(),
+        _ => sid.to_owned(),
+    }
+}
+
 #[cfg(windows)]
 #[test]
 fn the_pipe_grants_only_the_current_user() {
@@ -319,14 +331,17 @@ fn the_pipe_grants_only_the_current_user() {
     let _entered = runtime.enter();
     let (incoming, cleanup) = platform::listen(&profile.endpoint().inner).expect("listening");
     let sddl = windows_security::security_of(incoming.server()).expect("its security");
+    // How the SDDL names the user: by SID, or by an alias for a well-known
+    // account (CI runs as the built-in Administrator, RID 500, shown "LA").
+    let user = sddl_name(&sid);
     // Owner: the user. DACL: protected, one entry, allowing the user.
-    assert!(sddl.starts_with(&format!("O:{sid}D:P")), "{sddl}");
+    assert!(sddl.starts_with(&format!("O:{user}D:P")), "{sddl}");
     let dacl = sddl
         .split_once("D:")
         .map(|(_, dacl)| dacl)
         .unwrap_or_default();
     assert_eq!(dacl.matches('(').count(), 1, "one entry: {sddl}");
-    assert!(dacl.contains(&format!(";;;{sid})")), "{sddl}");
+    assert!(dacl.contains(&format!(";;;{user})")), "{sddl}");
     assert!(dacl.contains("(A;"), "an allow entry: {sddl}");
     for others in ["WD", "AU", "BU", "BA", "SY", "AN", "IU"] {
         assert!(
