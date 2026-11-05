@@ -56,15 +56,39 @@ fn files(root: &Path) -> Vec<PathBuf> {
     found
 }
 
+/// The bytes of `path`, or `None` for the two files Windows will not let
+/// another handle read while the profile is open: the held lock file
+/// (`LockFileEx`), which must be empty, and SQLite's wal-index (`-shm`,
+/// byte-range locked), which holds page numbers and hashes, no row data.
+/// Every other file must be readable.
+fn read(path: &Path) -> Option<Vec<u8>> {
+    match fs::read(path) {
+        Ok(bytes) => Some(bytes),
+        Err(error) if cfg!(windows) => {
+            let name = path
+                .file_name()
+                .and_then(|name| name.to_str())
+                .unwrap_or_default();
+            if name == "familychat.lock" {
+                assert_eq!(fs::metadata(path).expect("metadata").len(), 0);
+                None
+            } else if name.ends_with("-shm") {
+                None
+            } else {
+                panic!("{} is unreadable: {error}", path.display())
+            }
+        }
+        Err(error) => panic!("{} is unreadable: {error}", path.display()),
+    }
+}
+
 /// The files under `root` whose bytes contain `needle`.
 fn files_containing(root: &Path, needle: &[u8]) -> Vec<PathBuf> {
     files(root)
         .into_iter()
         .filter(|path| {
-            fs::read(path)
-                .expect("readable")
-                .windows(needle.len())
-                .any(|window| window == needle)
+            read(path)
+                .is_some_and(|bytes| bytes.windows(needle.len()).any(|window| window == needle))
         })
         .collect()
 }

@@ -277,14 +277,18 @@ jobs:
               env:
                   FAMILYCHAT_DATA_DIR: ${{ runner.temp }}/familychat-profile
               run: |
-                  run() {
-                    if [[ "$RUNNER_OS" == Linux ]]; then scripts/keychain-session.sh "$@"; else "$@"; fi
-                  }
-                  for attempt in first second; do
-                    output="$(run "${{ matrix.binary_path }}" accounts)"
+                  # Both runs share one keychain (on Linux, one throwaway
+                  # Secret Service session).
+                  check='for attempt in first second; do
+                    output="$("$0" accounts)" || exit 1
                     echo "$attempt run: $output"
-                    [[ "$output" == "No accounts yet." ]]
-                  done
+                    [[ "$output" == "No accounts yet." ]] || exit 1
+                  done'
+                  if [[ "$RUNNER_OS" == Linux ]]; then
+                    scripts/keychain-session.sh bash -c "$check" "${{ matrix.binary_path }}"
+                  else
+                    bash -c "$check" "${{ matrix.binary_path }}"
+                  fi
                   ls -la "$FAMILYCHAT_DATA_DIR" "$FAMILYCHAT_DATA_DIR/logs"
                   [[ -f "$FAMILYCHAT_DATA_DIR/familychat.sqlite3" ]]
 
