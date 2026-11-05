@@ -1,0 +1,66 @@
+[graph]
+all-features = true
+
+[advisories]
+version = 2
+# All "unmaintained" advisories in crates the pinned GPUI pulls in, the same
+# ones Zmail carries; none has a repo-local replacement. Each is re-checked
+# when the Zed pin moves (docs/upstream/zed.md).
+ignore = [
+    { id = "RUSTSEC-2024-0436", reason = "paste is pulled transitively by the pinned GPUI image stack (image, exr, pulp) and has no safe repo-local replacement yet" },
+    { id = "RUSTSEC-2026-0192", reason = "ttf-parser is pulled transitively by the pinned GPUI font stack (cosmic-text, fontdb) and has no safe repo-local replacement yet" },
+    { id = "RUSTSEC-2026-0206", reason = "rustybuzz is pulled transitively by the pinned GPUI SVG stack (usvg) and has no safe repo-local replacement yet" },
+    { id = "RUSTSEC-2026-0370", reason = "zvariant is pulled transitively by the pinned GPUI Linux accessibility stack (accesskit_unix, atspi) and folds into zbus 6, which that stack does not use yet" },
+    { id = "RUSTSEC-2026-0371", reason = "zbus_names is pulled transitively by the pinned GPUI Linux accessibility stack (accesskit_unix, atspi) and folds into zbus 6, which that stack does not use yet" },
+    { id = "RUSTSEC-2026-0372", reason = "zvariant_derive is pulled transitively by the pinned GPUI Linux accessibility stack (accesskit_unix, atspi) and folds into zbus 6, which that stack does not use yet" },
+]
+
+[licenses]
+version = 2
+confidence-threshold = 0.8
+allow = [
+    "GPL-3.0-only",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "MIT",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "MPL-2.0",
+    "NCSA",
+    "Unicode-3.0",
+    "Unicode-DFS-2016",
+    "Zlib",
+    "CC0-1.0",
+    "bzip2-1.0.6",
+    "CDLA-Permissive-2.0",
+]
+private = { ignore = true }
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+allow-wildcard-paths = true
+
+[sources]
+unknown-git = "deny"
+unknown-registry = "deny"
+# Exactly the git repositories the pinned GPUI needs (docs/upstream/zed.md).
+# Each revision is fixed by Cargo.lock; keep these in step with Zed.
+allow-git = [
+    # GPUI and its platform crates, pinned to a Zed stable release tag.
+    "https://github.com/zed-industries/zed",
+    # Zed forks GPUI depends on directly: macOS fonts (gpui_apple), X11
+    # input methods and the Secret Service client (gpui_linux). The scap
+    # fork in Cargo.lock belongs to gpui_linux's screen capture, which this
+    # build does not enable, so it is not allowed here.
+    "https://github.com/zed-industries/font-kit",
+    "https://github.com/zed-industries/xim-rs.git",
+    "https://github.com/zed-industries/oo7",
+    # The wgpu revision gpui_wgpu pins (Linux and Windows rendering).
+    "https://github.com/gfx-rs/wgpu",
+    # Mirrors of the [patch.crates-io] entries in Zed's root Cargo.toml.
+    "https://github.com/zed-industries/async-task.git",
+    "https://github.com/zed-industries/calloop",
+    "https://github.com/zed-industries/khronos-egl",
+]

@@ -1,0 +1,16 @@
+[package]
+name = "familychat-session"
+version = "0.0.1"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+description = "Family Chat's background runtime and, from Phase 3, its Matrix sessions"
+
+[dependencies]
+anyhow.workspace = true
+familychat-core = { path = "../familychat-core" }
+tokio.workspace = true
+
+[lints]
+workspace = true

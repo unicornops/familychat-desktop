@@ -1,0 +1,48 @@
+  FAMILY CHAT 0.0.0-test                                                     WELCOME
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                           Family Chat for the terminal is on its way.
+
+                                                  Signing in and reading your chats arrive in a later release.
+                                                                     This is alpha software.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Q Quit
+

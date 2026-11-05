@@ -1,0 +1,62 @@
+name: Release Asset Backfill
+
+# Rebuilds and uploads the Windows release assets (zip and checksums) for
+# an existing tagged release. Used when a release job failed after the
+# other assets were already published.
+on:
+    workflow_dispatch:
+        inputs:
+            release_tag:
+                description: "The existing tag to rebuild Windows assets for (e.g. v0.1.0)"
+                required: true
+                type: string
+
+permissions:
+    contents: write
+
+jobs:
+    backfill-windows-assets:
+        runs-on: windows-latest
+        steps:
+            - name: Checkout release commit
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  ref: ${{ inputs.release_tag }}
+
+            # The tag's own rust-toolchain.toml names the toolchain it was
+            # released with.
+            - name: Read the pinned Rust toolchain
+              id: toolchain
+              shell: bash
+              run: echo "channel=$(sed -n 's/^channel = "\(.*\)"/\1/p' rust-toolchain.toml)" >> "$GITHUB_OUTPUT"
+
+            - name: Install Rust
+              uses: dtolnay/rust-toolchain@89b12181fb390509a0842a86cc55eeb8eb928c1d # stable
+              with:
+                  toolchain: ${{ steps.toolchain.outputs.channel }}
+
+            - name: Build release binary
+              run: cargo build -p familychat-app --release --locked
+
+            - name: Install cargo-about
+              run: cargo install cargo-about --locked --features cli
+
+            - name: Generate THIRD_PARTY.html
+              run: cargo about generate --locked --fail about.hbs -o THIRD_PARTY.html
+
+            - name: Create Windows archive
+              shell: pwsh
+              run: |
+                  New-Item -ItemType Directory -Force archive/licenses | Out-Null
+                  Copy-Item "target/release/familychat.exe", LICENSE, THIRD_PARTY.html archive/
+                  Copy-Item assets/fonts/inter/LICENSE.txt archive/licenses/Inter-OFL.txt
+                  Copy-Item assets/icons/LICENSE.txt archive/licenses/Lucide-LICENSE.txt
+                  Compress-Archive -Path archive/* -DestinationPath "familychat-windows-x86_64.zip"
+
+            - name: Upload release assets
+              env:
+                  GH_TOKEN: ${{ github.token }}
+              shell: bash
+              run: |
+                  sha256sum familychat-windows-x86_64.zip > SHA256SUMS-Windows
+                  gh release upload "${{ inputs.release_tag }}" familychat-windows-x86_64.zip SHA256SUMS-Windows --clobber

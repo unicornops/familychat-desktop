@@ -1,0 +1,34 @@
+{
+  "$schema": "https://zed.dev/schema/themes/v0.2.0.json",
+  "name": "Family Chat",
+  "author": "UnicornOps",
+  "themes": [
+    {
+      "name": "Family Chat Light",
+      "appearance": "light",
+      "style": {
+        "accents": [
+          "#0D9488",
+          "#F97316"
+        ],
+        "background": "#FFFFFF",
+        "surface.background": "#FAFAF9",
+        "border": "#E7E5E4",
+        "border.variant": "#F5F5F4",
+        "editor.foreground": "#1C1917",
+        "element.background": "#F0FDFA",
+        "element.selected": "#CCFBF1",
+        "element.hover": "#F5F5F4",
+        "text": "#1C1917",
+        "text.muted": "#57534E",
+        "error": "#DC2626",
+        "error.background": "#FEF2F2",
+        "warning": "#C2410C",
+        "warning.background": "#FFF7ED",
+        "success": "#059669",
+        "success.background": "#ECFDF5",
+        "info": "#0F766E"
+      }
+    }
+  ]
+}

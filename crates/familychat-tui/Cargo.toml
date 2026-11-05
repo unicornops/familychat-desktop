@@ -1,0 +1,17 @@
+[package]
+name = "familychat-tui"
+version = "0.0.1"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+description = "Family Chat's terminal UI"
+
+[dependencies]
+anyhow.workspace = true
+crossterm.workspace = true
+familychat-core = { path = "../familychat-core" }
+ratatui.workspace = true
+
+[lints]
+workspace = true
