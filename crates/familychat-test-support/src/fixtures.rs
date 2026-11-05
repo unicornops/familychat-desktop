@@ -44,7 +44,10 @@ use familychat_core::{
 };
 use familychat_security::KeychainError;
 use familychat_signin::wording;
-use familychat_store::{UnreadableReason, keychain_unavailable_message, unreadable_message};
+use familychat_store::{
+    UnreadableReason, keychain_unavailable_message, linux_keychain_unavailable_message,
+    unreadable_message,
+};
 use tokio::sync::{mpsc, oneshot, watch};
 
 pub mod rooms;
@@ -188,7 +191,13 @@ impl FixtureSession {
 
     /// Loads the Smith family's rooms, timelines, members and pictures.
     pub fn with_family(&self) {
-        let now = rooms::now_ms();
+        self.with_family_at(rooms::now_ms());
+    }
+
+    /// [`FixtureSession::with_family`], its times counted back from `now`
+    /// (milliseconds since the Unix epoch), so a snapshot test draws the
+    /// same times on every run.
+    pub fn with_family_at(&self, now: u64) {
         let family = rooms::family_rooms(now);
         for room in &family {
             let id = room.room_id.as_str();
@@ -207,7 +216,11 @@ impl FixtureSession {
     /// Loads `rooms` rooms, the first with `events` events (the 1,000-room,
     /// 10,000-event fixture of PLAN.md section 13.6).
     pub fn with_large(&self, rooms: usize, events: usize) {
-        let now = rooms::now_ms();
+        self.with_large_at(rooms, events, rooms::now_ms());
+    }
+
+    /// [`FixtureSession::with_large`], its times counted back from `now`.
+    pub fn with_large_at(&self, rooms: usize, events: usize, now: u64) {
         let list = rooms::large_rooms(rooms, now);
         if let Some(first) = list.first() {
             self.set_timeline(first.room_id.as_str(), rooms::large_timeline(events, now));
@@ -223,6 +236,20 @@ impl FixtureSession {
             self.set_timeline(room.room_id.as_str(), short.clone());
         }
         self.set_rooms(list);
+    }
+
+    /// Loads rooms whose names, topics, members, messages, links, file
+    /// names and reactions are full of terminal escape sequences, bidi
+    /// overrides and other controls (`rooms::hostile_rooms`), for the
+    /// terminal UI's hostile-text test.
+    pub fn with_hostile_at(&self, now: u64) {
+        let hostile = rooms::hostile_rooms(now);
+        for room in &hostile {
+            let id = room.room_id.as_str();
+            self.set_timeline(id, rooms::hostile_timeline(id, now));
+            lock(&self.members).insert(room.room_id.clone(), rooms::hostile_members());
+        }
+        self.set_rooms(hostile);
     }
 
     /// Replaces the rooms; open lists follow.
@@ -999,7 +1026,7 @@ impl FixtureStartup {
                 ))
             }
             FixtureProfile::KeychainUnreachable => OpenState::KeychainUnavailable(
-                keychain_unavailable_message(&KeychainError::Unavailable(
+                linux_keychain_unavailable_message(&KeychainError::Unavailable(
                     "no Secret Service is running in this session".to_owned(),
                 )),
             ),
@@ -1039,6 +1066,92 @@ impl StartupApi for FixtureStartup {
         );
         let _ = answer.send(self.state(FixtureProfile::Ready, Some(notice)));
         receiver
+    }
+}
+
+// ---------------------------------------------------------------------------
+// FixtureSetup
+// ---------------------------------------------------------------------------
+
+/// The rooms a fixture account has.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FixtureRooms {
+    /// The Smith family's.
+    Family,
+    /// The family's, without the invitation.
+    FamilyNoInvites,
+    /// None at all.
+    None,
+    /// Still loading.
+    Loading,
+    /// The 1,000-room, 10,000-event fixture.
+    Large,
+    /// Rooms full of terminal escape sequences
+    /// ([`FixtureSession::with_hostile_at`]).
+    Hostile,
+}
+
+/// A whole fixture state: how the profile opens, the first step the next
+/// sign-in shows, a signed-in account and its rooms. The terminal UI's
+/// snapshot tests and `familychat launch-tui-fixture` build their views
+/// from it.
+#[derive(Debug, Clone)]
+pub struct FixtureSetup {
+    /// How the profile opens.
+    pub profile: FixtureProfile,
+    /// The first step the next sign-in shows, whatever it starts with.
+    pub step: Option<SigninStep>,
+    /// A signed-in account ([`FIXTURE_USER`]) in this sync state.
+    pub account: Option<SyncState>,
+    /// Its rooms.
+    pub rooms: FixtureRooms,
+    /// The moment the rooms' times count back from, in milliseconds since
+    /// the Unix epoch.
+    pub now: u64,
+}
+
+impl FixtureSetup {
+    /// A ready profile with nobody signed in.
+    pub fn new(now: u64) -> Self {
+        Self {
+            profile: FixtureProfile::Ready,
+            step: None,
+            account: None,
+            rooms: FixtureRooms::Family,
+            now,
+        }
+    }
+
+    /// The startup over a new fixture session and sign-in in this state.
+    pub fn startup(&self) -> Arc<FixtureStartup> {
+        let session = FixtureSession::new();
+        if let Some(sync) = &self.account {
+            session.add_account(&fixture_user(), sync.clone());
+            match self.rooms {
+                FixtureRooms::Family => session.with_family_at(self.now),
+                FixtureRooms::FamilyNoInvites => {
+                    session.with_family_at(self.now);
+                    session.set_rooms(
+                        session
+                            .rooms()
+                            .into_iter()
+                            .filter(|room| !room.is_invite())
+                            .collect(),
+                    );
+                }
+                FixtureRooms::None => {}
+                FixtureRooms::Loading => session.set_rooms_loading(true),
+                FixtureRooms::Large => {
+                    session.with_large_at(rooms::LARGE_ROOMS, rooms::LARGE_EVENTS, self.now)
+                }
+                FixtureRooms::Hostile => session.with_hostile_at(self.now),
+            }
+        }
+        let signin = FixtureSignin::new(session.clone());
+        if let Some(step) = &self.step {
+            signin.start_at(step.clone());
+        }
+        FixtureStartup::with(session, signin, &[self.profile])
     }
 }
 

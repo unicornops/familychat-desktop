@@ -1,0 +1,195 @@
+  FAMILY CHAT 0.0.0-test                                                     ROOMS                                   @ana:smith.safechat.family  Room 1 of 1000
+ 1 All  2 Unread  3 People  4 Invites       │ Room 0 garden  Not encrypted  26 members
+────────────────────────────────────────────│ Messages here are not end-to-end encrypted: the server can read them.
+› Room 0 garden                 @1 22 12:00 │ ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    Dad: later piano maybe                  │ Dad  11:03
+  Room 1 later                        11:53 │   football piano garden bus music
+    Dad: picture maybe rain dinner tonight …│ Mum  11:06
+  Room 2 piano                        11:46 │   birthday pancakes
+    Dad: pancakes tonight music             │ Ana  11:09
+  Room 3 bus                  invited 11:39 │   later train bus birthday maybe birthday garden birthday dinner ok
+    You're invited                          │ Mum  11:12
+  Room 4 homework                  21 11:32 │   tonight tomorrow chocolate picture dinner birthday pancakes rain
+    Ben: rain garden Grandad weekend Cornwa…│   👍  2
+  Room 5 tomorrow                     11:25 │ Dad  11:15
+    Dad: school chocolate birthday tomorrow…│   weekend rain Cornwall maybe maybe train bus definitely Cornwall homework definitely later library
+  Room 6 library                      11:18 │ Ben  11:18
+    Grandad: library football school school…│   pancakes library piano music music definitely dinner birthday birthday picture swimming tonight later
+  Room 7 garden                       11:11 │ Dad  11:21
+    Ben: train Grandad cinema tonight schoo…│   picture definitely homework garden dinner homework library
+  Room 8 later                      1 11:04 │ Ben  11:24
+    Mum: definitely later definitely        │   tonight tonight tonight school football later football maybe library
+  Room 9 later                        10:57 │ Mum  11:27
+    Ben: cinema tomorrow tonight football b…│   picture garden bus football garden bus rain picture music school
+  Room 10 birthday                    10:50 │ Grandad  11:30
+    Dad: garden Cornwall tonight football t…│   tonight swimming dinner train maybe weekend dinner Grandad train birthday cinema football football piano bus
+  Room 11 picture                     10:43 │   cinema swimming garden definitely Grandad Grandad tonight cinema library cinema
+    Dad: bus bus weekend later pancakes     │   👍  2
+  Room 12 football                 26 10:36 │ Mum  11:33
+    Ben: picture rain homework school libra…│   definitely Grandad tonight definitely piano cinema
+  Room 13 train                       10:29 │ Ben  11:36
+    Ben: chocolate weekend Cornwall weekend…│   weekend picture
+  Room 14 maybe                       10:22 │ Ana  11:39
+    Ben: tomorrow tomorrow rain school      │   pancakes weekend weekend garden definitely piano later piano rain dinner homework ok
+  Room 15 school                      10:15 │   pancakes library chocolate maybe swimming
+    Mum: garden rain Grandad piano football │ Ben  11:45
+  Room 16 Cornwall                 18 10:08 │   Grandad homework tonight homework chocolate music later definitely
+    Dad: Grandad piano music later football…│ Mum  11:48
+  Room 17 Grandad                     10:01 │   school football pancakes maybe piano garden music rain swimming rain Cornwall homework
+    Ben: dinner definitely school train pic…│   👍  2
+  Room 18 bus                         09:54 │ Ana  11:51
+    Mum: Grandad swimming Cornwall piano tr…│   definitely chocolate garden pancakes tomorrow birthday weekend weekend tomorrow rain train maybe
+  Room 19 dinner                      09:47 │ Dad  11:54
+    Dad: swimming train garden definitely   │   weekend weekend
+  Room 20 rain                     15 09:40 │ Grandad  11:57
+    Dad: rain definitely music tomorrow     │   school garden rain dinner homework later library maybe pancakes Grandad
+                                                                                                                                                     Up to date
+< Rooms             PgDn Newer          l Link#             u FirstNew          m Members           : Commands          ^N NextRoom         N PrevNew
+PgUp Older          Tab NextLink        s Save              G Latest            n NextNew           q Quit              ^P PrevRoom         O OTHER
+--- styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+ kkRRR  kk        kk        kk              k BBBBBBBBBBBBByyyyyyyyyyyyyyykkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBrrBBBBkkkkk k kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk BBB  kkkkk
+                                      kkkkk k kk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk BBB  kkkkk
+                                      kkkkk k kk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk ccc  kkkkk
+  BBBBBBBBBBBBBBBBBBBBBBBBBBB ccccccc kkkkk k kkBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB II
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk BBB  kkkkk
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB BB kkkkk k kk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk   R RR
+                                      kkkkk k BBB  kkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk kk
+                                      kkkkk k BBB  kkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk kk
+                                      kkkkk k BBB  kkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk kk
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB B kkkkk k BBB  kkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk kk
+                                      kkkkk k BBB  kkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk kk
+                                      kkkkk k BBBBBBB  kkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk kk
+                                      kkkkk k kk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk   k kk
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB BB kkkkk k BBB  kkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk kk
+                                      kkkkk k BBB  kkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk kk
+                                      kkkkk k ccc  kkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk kkBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB II
+                                      kkkkk k kk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk BBB  kkkkk
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB BB kkkkk k kk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk BBB  kkkkk
+                                      kkkkk k kk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk   R RR
+                                      kkkkk k ccc  kkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk kk
+                                      kkkkk k BBB  kkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk kk
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB BB kkkkk k BBBBBBB  kkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk kk
+                                                                                                                                                     kkkkkkkkkkk
+R                   RRRR                R                   R                   R                   R                   RR                  R
+RRRR                RRR                 R                   R                   R                   R                   RR                  R
+--- NO_COLOR styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+   RRR                                        BBBBBBBBBBBBBBBBBBBBBBBBBBBB
+                                              BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB  BBB
+
+                                              BBB
+
+                                              BBB
+  BBBBBBBBBBBBBBBBBBBBBBBBBBB                   BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB II
+                                              BBB
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB BB
+                                                R RR
+                                              BBB
+
+                                              BBB
+
+                                              BBB
+
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB B         BBB
+
+                                              BBB
+
+                                              BBBBBBB
+
+
+
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB BB         BBB
+
+                                              BBB
+
+                                              BBB
+                                                BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB II
+
+                                              BBB
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB BB
+                                              BBB
+
+                                                R RR
+                                              BBB
+
+                                              BBB
+
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB BB         BBBBBBB
+
+
+R                   RRRR                R                   R                   R                   R                   RR                  R
+RRRR                RRR                 R                   R                   R                   R                   RR                  R
+--- ASCII ---
+  FAMILY CHAT 0.0.0-test                                                     ROOMS                                   @ana:smith.safechat.family  Room 1 of 1000
+ 1 All  2 Unread  3 People  4 Invites       | Room 0 garden  Not encrypted  26 members
+--------------------------------------------| Messages here are not end-to-end encrypted: the server can read them.
+> Room 0 garden                 @1 22 12:00 | ------------------------------------------------------------------------------------------------------------------
+    Dad: later piano maybe                  | Dad  11:03
+  Room 1 later                        11:53 |   football piano garden bus music
+    Dad: picture maybe rain dinner tonigh...| Mum  11:06
+  Room 2 piano                        11:46 |   birthday pancakes
+    Dad: pancakes tonight music             | Ana  11:09
+  Room 3 bus                  invited 11:39 |   later train bus birthday maybe birthday garden birthday dinner ok
+    You're invited                          | Mum  11:12
+  Room 4 homework                  21 11:32 |   tonight tomorrow chocolate picture dinner birthday pancakes rain
+    Ben: rain garden Grandad weekend Corn...|   👍  2
+  Room 5 tomorrow                     11:25 | Dad  11:15
+    Dad: school chocolate birthday tomorr...|   weekend rain Cornwall maybe maybe train bus definitely Cornwall homework definitely later library
+  Room 6 library                      11:18 | Ben  11:18
+    Grandad: library football school scho...|   pancakes library piano music music definitely dinner birthday birthday picture swimming tonight later
+  Room 7 garden                       11:11 | Dad  11:21
+    Ben: train Grandad cinema tonight sch...|   picture definitely homework garden dinner homework library
+  Room 8 later                      1 11:04 | Ben  11:24
+    Mum: definitely later definitely        |   tonight tonight tonight school football later football maybe library
+  Room 9 later                        10:57 | Mum  11:27
+    Ben: cinema tomorrow tonight football...|   picture garden bus football garden bus rain picture music school
+  Room 10 birthday                    10:50 | Grandad  11:30
+    Dad: garden Cornwall tonight football...|   tonight swimming dinner train maybe weekend dinner Grandad train birthday cinema football football piano bus
+  Room 11 picture                     10:43 |   cinema swimming garden definitely Grandad Grandad tonight cinema library cinema
+    Dad: bus bus weekend later pancakes     |   👍  2
+  Room 12 football                 26 10:36 | Mum  11:33
+    Ben: picture rain homework school lib...|   definitely Grandad tonight definitely piano cinema
+  Room 13 train                       10:29 | Ben  11:36
+    Ben: chocolate weekend Cornwall weeke...|   weekend picture
+  Room 14 maybe                       10:22 | Ana  11:39
+    Ben: tomorrow tomorrow rain school      |   pancakes weekend weekend garden definitely piano later piano rain dinner homework ok
+  Room 15 school                      10:15 |   pancakes library chocolate maybe swimming
+    Mum: garden rain Grandad piano football | Ben  11:45
+  Room 16 Cornwall                 18 10:08 |   Grandad homework tonight homework chocolate music later definitely
+    Dad: Grandad piano music later footba...| Mum  11:48
+  Room 17 Grandad                     10:01 |   school football pancakes maybe piano garden music rain swimming rain Cornwall homework
+    Ben: dinner definitely school train p...|   👍  2
+  Room 18 bus                         09:54 | Ana  11:51
+    Mum: Grandad swimming Cornwall piano ...|   definitely chocolate garden pancakes tomorrow birthday weekend weekend tomorrow rain train maybe
+  Room 19 dinner                      09:47 | Dad  11:54
+    Dad: swimming train garden definitely   |   weekend weekend
+  Room 20 rain                     15 09:40 | Grandad  11:57
+    Dad: rain definitely music tomorrow     |   school garden rain dinner homework later library maybe pancakes Grandad
+                                                                                                                                                     Up to date
+< Rooms             PgDn Newer          l Link#             u FirstNew          m Members           : Commands          ^N NextRoom         N PrevNew
+PgUp Older          Tab NextLink        s Save              G Latest            n NextNew           q Quit              ^P PrevRoom         O OTHER

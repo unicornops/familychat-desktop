@@ -1,0 +1,99 @@
+  FAMILY CHAT 0.0.0-test               @ana:smith.safechat.family  Room 9 of 11
+Under-14s football  Not encrypted  18 members
+Messages here are not end-to-end encrypted: the server can read them.
+────────────────────────────────────────────────────────────────────────────────
+
+
+
+
+
+  This is the start of Under-14s football.
+──────────────────────────────────── Monday ────────────────────────────────────
+  · Coach Rivera created the room and 6 more changes
+Coach Rivera  13:00
+  Welcome everyone! Training is Tuesdays at 6.
+  · Ben joined
+Ben  14:01
+  hi coach
+  · Dad changed their name to Dad (Ana's) and 2 more changes
+────────────────────────────────── Yesterday ───────────────────────────────────
+Coach Rivera  12:00
+  Training moves to Thursday this week
+                                                                     Up to date
+< Rooms      PgDn Newer   l Link#      u FirstNew   m Members    : Commands
+PgUp Older   Tab NextLink s Save       G Latest     n NextNew    O OTHER
+--- styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+BBBBBBBBBBBBBBBBBByyyyyyyyyyyyyyykkkkkkkkkkkk
+yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+
+
+
+
+
+  kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+  kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+BBBBBBBBBBBB  kkkkk
+kk
+  kkkkkkkkkkkk
+BBB  kkkkk
+kk
+  kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+BBBBBBBBBBBB  kkkkk
+kk
+                                                                     kkkkkkkkkkk
+R            RRRR         R            R            R            R
+RRRR         RRR          R            R            R            R
+--- NO_COLOR styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+
+
+
+
+
+
+
+
+
+BBBBBBBBBBBB
+
+
+BBB
+
+
+
+BBBBBBBBBBBB
+
+
+R            RRRR         R            R            R            R
+RRRR         RRR          R            R            R            R
+--- ASCII ---
+  FAMILY CHAT 0.0.0-test               @ana:smith.safechat.family  Room 9 of 11
+Under-14s football  Not encrypted  18 members
+Messages here are not end-to-end encrypted: the server can read them.
+--------------------------------------------------------------------------------
+
+
+
+
+
+  This is the start of Under-14s football.
+------------------------------------ Monday ------------------------------------
+  - Coach Rivera created the room and 6 more changes
+Coach Rivera  13:00
+  Welcome everyone! Training is Tuesdays at 6.
+  - Ben joined
+Ben  14:01
+  hi coach
+  - Dad changed their name to Dad (Ana's) and 2 more changes
+---------------------------------- Yesterday -----------------------------------
+Coach Rivera  12:00
+  Training moves to Thursday this week
+                                                                     Up to date
+< Rooms      PgDn Newer   l Link#      u FirstNew   m Members    : Commands
+PgUp Older   Tab NextLink s Save       G Latest     n NextNew    O OTHER

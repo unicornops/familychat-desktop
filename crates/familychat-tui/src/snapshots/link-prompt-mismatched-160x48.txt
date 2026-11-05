@@ -1,0 +1,195 @@
+  FAMILY CHAT 0.0.0-test                                                     ROOMS                                     @ana:smith.safechat.family  Room 6 of 11
+ 1 All  2 Unread  3 People  4 Invites       │ Summer holiday 2027  Encrypted  5 members
+────────────────────────────────────────────│ Cornwall, 2 to 16 August
+  Cousins                     invited 11:40 │ ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    Invitation from Aunt Clare              │
+  Smith family                   @1 3 11:58 │
+    Mum: Dinner at 7, don't be late! @Ana   │
+  Mum                                 11:25 │
+    You: Love you too ❤️                     │
+  Grandad                           2 09:00 │
+    Grandad: Sent an image                  │
+  Holiday photos                      07:00 │
+    Dad: Sent an image                      │
+› Summer holiday 2027                 03:00 │
+    Dad: Packing list is in the pinned mess…│
+  Homework help                   Yesterday │
+    Ben: What's 7 × 8 again?                │ ┌──────────────────────────────────────────────────────────────────┐
+  Ben                           • Yesterday │ │ Open this link?                                                  │──────────────────────────────────────────────
+    Ben: can I borrow your charger          │ │                                                                  │
+  Under-14s football                Tuesday │ │ https://tickets.evil.example/claim                               │
+    Coach Rivera: Training moves to Thursda…│ │                                                                  │
+  Birthday surprise                  Monday │ │ It goes to tickets.evil.example and opens in your browser.       │
+    Dad: Message deleted                    │ │                                                                  │
+  Book club                          Sunday │ │ This link is not what it shows                                   │
+    No messages yet                         │ │ The link's text shows www.bank.example, but it goes to           │
+                                            │ │ tickets.evil.example.                                            │
+                                            │ │                                                                  │
+                                            │ │ Y Open Link   C Copy the address   N Cancel                      │
+                                            │ └──────────────────────────────────────────────────────────────────┘
+                                            │ Grandad  02:30
+                                            │   │ Beach by lunchtime
+                                            │   Optimistic! Traffic on the A30 is bad terrible in August.
+                                            │ Dad  03:00
+                                            │   Cottage wifi is `SeaView-5G`, the code is in the welcome book:
+                                            │     Network:  SeaView-5G
+                                            │     Check-in: 16:00
+                                            │     Check-out: 10:00
+                                            │ Dad  03:10
+                                            │   Booking confirmation: cottages.example[1]. Surfing lessons for the kids at surf.example[2].
+                                            │ Ben  04:00
+                                            │   Free tickets!! https://www.bank.example[3]
+                                            │ Mum  04:02
+                                            │   Ben, don't click links like that. Ask in #family[4] first.
+                                            │ Ana  05:00
+                                            │   Spoiler for Ben: ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒ 🚤
+Open this link? (y open, c copy, n cancel)
+Y Open              N Cancel
+C Copy
+--- styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+ kkRRR  kk        kk        kk              k BBBBBBBBBBBBBBBBBBBkkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+  BBBBBBBBBBBBBBBBBBBBBBBBBBB ccccccc kkkkk k kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBBB rr B kkkkk k
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+                                      kkkkk k
+kkkkkkkkkkkkkkkkkkkkkkk kkkkkkkkkkkkkkkkkkkkk
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB B kkkkk k
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+                                      kkkkk k
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBkkkkk k
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+                                  kkkkkkkkk k
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBB B kkkkkkkkk k B BBBBBBBBBBBBBBB                                                  Bkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk B                                                                  B
+                                    kkkkkkk k B cccccccccccccccccccccccccccccccccc                               B
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk B                                                                  B
+                                     kkkkkk k B                                                                  B
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk B                                                                  B
+                                     kkkkkk k B rrrrrrrrrrrrrrrrrrrrrrrrrrrrrr                                   B
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk B rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr           B
+                                            k B rrrrrrrrrrrrrrrrrrrrr                                            B
+                                            k B                                                                  B
+                                            k B R             R                    R                             B
+                                            k BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+                                            k BBBBBBB  kkkkk
+                                            k kkkk
+                                            k kk                                  XXX UUUUUUUU
+                                            k BBB  kkkkk
+                                            k kk                gggggggggggg
+                                            k kkkkgggggggggggggggggggg
+                                            k kkkkggggggggggggggg
+                                            k kkkkgggggggggggggggg
+                                            k BBB  kkkkk
+                                            k kk                      ccccccccccccccccccc                                  ccccccccccccccc
+                                            k BBB  kkkkk
+                                            k kk               ccccccccccccccccccccccccccc
+                                            k BBB  kkkkk
+                                            k kkBBB                                      cccccccccc
+                                            k ccc  kkkkk
+                                            k kk                 kkkkkkkkkkkkkkkkkkkkkkkkkkk
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+R                   R
+R
+--- NO_COLOR styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+   RRR                                        BBBBBBBBBBBBBBBBBBB
+
+  BBBBBBBBBBBBBBBBBBBBBBBBBBB
+
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBBB BB B
+
+
+
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB B
+
+
+
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+
+                                              BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBB B             B BBBBBBBBBBBBBBB                                                  B
+                                              B                                                                  B
+                                              B UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU                               B
+                                              B                                                                  B
+                                              B                                                                  B
+                                              B                                                                  B
+                                              B BBBBBBBBBBBBBBBBBBBBBBBBBBBBBB                                   B
+                                              B BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB           B
+                                              B BBBBBBBBBBBBBBBBBBBBB                                            B
+                                              B                                                                  B
+                                              B R             R                    R                             B
+                                              BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+                                              BBBBBBB
+
+                                                                                  XXX UUUUUUUU
+                                              BBB
+
+
+
+
+                                              BBB
+                                                                      UUUUUUUUUUUUUUUUUUU                                  UUUUUUUUUUUUUUU
+                                              BBB
+                                                               RRRRRRRRRRRRRRRRRRRRRRRRRRR
+                                              BBB
+                                                BBB                                      UUUUUUUUUU
+                                              BBB
+
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+R                   R
+R
+--- ASCII ---
+  FAMILY CHAT 0.0.0-test                                                     ROOMS                                     @ana:smith.safechat.family  Room 6 of 11
+ 1 All  2 Unread  3 People  4 Invites       | Summer holiday 2027  Encrypted  5 members
+--------------------------------------------| Cornwall, 2 to 16 August
+  Cousins                     invited 11:40 | ------------------------------------------------------------------------------------------------------------------
+    Invitation from Aunt Clare              |
+  Smith family                   @1 3 11:58 |
+    Mum: Dinner at 7, don't be late! @Ana   |
+  Mum                                 11:25 |
+    You: Love you too ❤️                     |
+  Grandad                           2 09:00 |
+    Grandad: Sent an image                  |
+  Holiday photos                      07:00 |
+    Dad: Sent an image                      |
+> Summer holiday 2027                 03:00 |
+    Dad: Packing list is in the pinned me...|
+  Homework help                   Yesterday |
+    Ben: What's 7 × 8 again?                | +------------------------------------------------------------------+
+  Ben                           * Yesterday | | Open this link?                                                  |----------------------------------------------
+    Ben: can I borrow your charger          | |                                                                  |
+  Under-14s football                Tuesday | | https://tickets.evil.example/claim                               |
+    Coach Rivera: Training moves to Thurs...| |                                                                  |
+  Birthday surprise                  Monday | | It goes to tickets.evil.example and opens in your browser.       |
+    Dad: Message deleted                    | |                                                                  |
+  Book club                          Sunday | | This link is not what it shows                                   |
+    No messages yet                         | | The link's text shows www.bank.example, but it goes to           |
+                                            | | tickets.evil.example.                                            |
+                                            | |                                                                  |
+                                            | | Y Open Link   C Copy the address   N Cancel                      |
+                                            | +------------------------------------------------------------------+
+                                            | Grandad  02:30
+                                            |   | Beach by lunchtime
+                                            |   Optimistic! Traffic on the A30 is bad terrible in August.
+                                            | Dad  03:00
+                                            |   Cottage wifi is `SeaView-5G`, the code is in the welcome book:
+                                            |     Network:  SeaView-5G
+                                            |     Check-in: 16:00
+                                            |     Check-out: 10:00
+                                            | Dad  03:10
+                                            |   Booking confirmation: cottages.example[1]. Surfing lessons for the kids at surf.example[2].
+                                            | Ben  04:00
+                                            |   Free tickets!! https://www.bank.example[3]
+                                            | Mum  04:02
+                                            |   Ben, don't click links like that. Ask in #family[4] first.
+                                            | Ana  05:00
+                                            |   Spoiler for Ben: ########################### 🚤
+Open this link? (y open, c copy, n cancel)
+Y Open              N Cancel
+C Copy

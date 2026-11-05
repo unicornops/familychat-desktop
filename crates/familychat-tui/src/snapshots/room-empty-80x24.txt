@@ -1,0 +1,99 @@
+  FAMILY CHAT 0.0.0-test              @ana:smith.safechat.family  Room 11 of 11
+Book club  Encrypted  1 member
+────────────────────────────────────────────────────────────────────────────────
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  This is the start of Book club.
+──────────────────────────────────── Sunday ────────────────────────────────────
+  · Ana created the room
+                                                                     Up to date
+< Rooms      PgDn Newer   l Link#      u FirstNew   m Members    : Commands
+PgUp Older   Tab NextLink s Save       G Latest     n NextNew    O OTHER
+--- styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+BBBBBBBBBkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+  kkkkkkkkkkkkkkkkkkkkkk
+                                                                     kkkkkkkkkkk
+R            RRRR         R            R            R            R
+RRRR         RRR          R            R            R            R
+--- NO_COLOR styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+BBBBBBBBB
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+R            RRRR         R            R            R            R
+RRRR         RRR          R            R            R            R
+--- ASCII ---
+  FAMILY CHAT 0.0.0-test              @ana:smith.safechat.family  Room 11 of 11
+Book club  Encrypted  1 member
+--------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  This is the start of Book club.
+------------------------------------ Sunday ------------------------------------
+  - Ana created the room
+                                                                     Up to date
+< Rooms      PgDn Newer   l Link#      u FirstNew   m Members    : Commands
+PgUp Older   Tab NextLink s Save       G Latest     n NextNew    O OTHER

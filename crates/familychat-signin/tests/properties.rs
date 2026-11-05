@@ -145,7 +145,16 @@ proptest! {
             }
             let debug = format!("{link:?}");
             if let Some(code) = &link.code {
-                prop_assert!(!debug.contains(code.token.expose().as_str()) || code.token.expose().len() < 4);
+                // The token must not show, unless it is also part of what
+                // may show (a random token can be a substring of the server
+                // name, as "x.safechat.family" is of "ax.safechat.family").
+                let token = code.token.expose();
+                let public = format!("{:?} {:?} {:?}", code.hs, link.account_provider, link.login_hint);
+                prop_assert!(
+                    !debug.contains(token.as_str()) || token.len() < 4 || public.contains(token.as_str()),
+                    "the token shows in {:?}",
+                    debug
+                );
             }
         }
     }

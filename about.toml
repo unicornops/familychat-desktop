@@ -91,6 +91,23 @@ ignore-dev-dependencies = true
 #   drawing in crates/familychat-ui/src/rooms/rich_text.rs
 #   (src/reader/body.rs), and the benchmark
 #   crates/familychat-ui/src/view_tests/perf.rs (src/view_tests/perf.rs).
+# - The terminal UI (Phase 10, ADR 0008), same copyright and licence; keep
+#   each file's header notice. Copied from Zmail's zmail-security:
+#   crates/familychat-security/src/terminal.rs (src/terminal.rs) and
+#   crates/familychat-security/tests/terminal_corpus.rs
+#   (tests/terminal_corpus.rs). Copied from Zmail's zmail-tui:
+#   crates/familychat-tui/src/text.rs (src/text.rs),
+#   crates/familychat-tui/src/pane.rs (src/pane.rs, with a copy prefix
+#   added) and crates/familychat-tui/src/clipboard.rs (src/clipboard.rs,
+#   with its own settings type). Adapted from Zmail's zmail-tui:
+#   crates/familychat-tui/src/palette.rs (src/palette.rs), the frame,
+#   draw_pane, styled and the command bar in
+#   crates/familychat-tui/src/view.rs (src/view.rs), the environment, the
+#   effects, the mouse, selection and copy in
+#   crates/familychat-tui/src/app.rs (src/app.rs), the run loop in
+#   crates/familychat-tui/src/lib.rs (src/lib.rs), the OS opener in
+#   crates/familychat-tui/src/links.rs (src/links.rs) and the snapshot
+#   harness in crates/familychat-tui/src/tests.rs (src/tests.rs).
 # - crates/familychat-ui/src/testdata/signin-qr-screenshot.png is made for
 #   this project's tests (python-qrcode and Pillow), under its licence.
 #

@@ -1,0 +1,99 @@
+  FAMILY CHAT 0.0.0-test            WELCOME
+  COMMANDS ON THIS SCREEN
+  Type to narrow the list. Enter runs the one under the cursor, Esc closes.
+
+    Enter  Choose                                Open the room, or use the opti…
+    c      Sign in with a code from your parent  Paste the sign-in link, or pas…
+    p      Sign in with your password            Sign in to your family's Famil…
+    o      Use another Matrix server             Sign in to any Matrix homeserv…
+    ^V     Paste a sign-in link or QR code       Use the link or the QR code im…
+    q      Quit Family Chat                      Close every window and quit.
+
+
+
+
+
+
+
+
+
+
+
+:
+Enter Run
+Esc Close
+--- styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+BB
+RRRRR
+RRR
+--- NO_COLOR styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+
+
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+BB
+RRRRR
+RRR
+--- ASCII ---
+  FAMILY CHAT 0.0.0-test            WELCOME
+  COMMANDS ON THIS SCREEN
+  Type to narrow the list. Enter runs the one under the cursor, Esc closes.
+
+    Enter  Choose                                Open the room, or use the op...
+    c      Sign in with a code from your parent  Paste the sign-in link, or p...
+    p      Sign in with your password            Sign in to your family's Fam...
+    o      Use another Matrix server             Sign in to any Matrix homese...
+    ^V     Paste a sign-in link or QR code       Use the link or the QR code ...
+    q      Quit Family Chat                      Close every window and quit.
+
+
+
+
+
+
+
+
+
+
+
+:
+Enter Run
+Esc Close

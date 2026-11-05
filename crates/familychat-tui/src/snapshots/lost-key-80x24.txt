@@ -1,0 +1,99 @@
+  FAMILY CHAT 0.0.0-test      CAN'T OPEN YOUR DATA
+
+
+
+
+    Family Chat can't open your data
+
+    Family Chat's data on this computer is encrypted, and its key is no longer
+    in the keychain (after a system reinstall, a keychain reset, or copying
+    the data from another computer), so nobody can read it. Start over moves
+    it aside, in case the key turns up, and you sign in again. Your messages
+    are safe on your homeserver; to read encrypted messages again you need
+    your recovery key or another signed-in device.
+
+    Start over keeps the old data in a folder beside the new one, in case the
+    key turns up again. Press s to start over.
+
+
+
+
+
+
+s StartOvr   q Quit
+: Commands
+--- styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+
+
+
+
+    BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+
+
+
+
+
+
+
+
+    kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+    kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+
+
+
+
+
+
+R            R
+R
+--- NO_COLOR styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+
+
+
+
+    BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+R            R
+R
+--- ASCII ---
+  FAMILY CHAT 0.0.0-test      CAN'T OPEN YOUR DATA
+
+
+
+
+    Family Chat can't open your data
+
+    Family Chat's data on this computer is encrypted, and its key is no longer
+    in the keychain (after a system reinstall, a keychain reset, or copying
+    the data from another computer), so nobody can read it. Start over moves
+    it aside, in case the key turns up, and you sign in again. Your messages
+    are safe on your homeserver; to read encrypted messages again you need
+    your recovery key or another signed-in device.
+
+    Start over keeps the old data in a folder beside the new one, in case the
+    key turns up again. Press s to start over.
+
+
+
+
+
+
+s StartOvr   q Quit
+: Commands

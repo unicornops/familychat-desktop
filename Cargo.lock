@@ -2135,6 +2135,7 @@ name = "familychat-app"
 version = "0.0.1"
 dependencies = [
  "anyhow",
+ "crossterm",
  "familychat-assets",
  "familychat-core",
  "familychat-security",
@@ -2145,6 +2146,7 @@ dependencies = [
  "familychat-theme",
  "familychat-tui",
  "familychat-ui",
+ "ratatui",
  "tokio",
  "tracing",
  "winresource",
@@ -2180,6 +2182,7 @@ dependencies = [
  "html5ever 0.40.1",
  "image",
  "keyring",
+ "rand 0.8.8",
  "serde",
  "serde_json",
  "thiserror 2.0.21",
@@ -2280,9 +2283,17 @@ name = "familychat-tui"
 version = "0.0.1"
 dependencies = [
  "anyhow",
+ "base64 0.22.1",
+ "chrono",
  "crossterm",
  "familychat-core",
+ "familychat-security",
+ "familychat-test-support",
  "ratatui",
+ "tokio",
+ "tracing",
+ "unicode-width",
+ "zeroize",
 ]
 
 [[package]]

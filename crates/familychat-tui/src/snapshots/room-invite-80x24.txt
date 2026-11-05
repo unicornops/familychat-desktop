@@ -1,0 +1,99 @@
+  FAMILY CHAT 0.0.0-test               @ana:smith.safechat.family  Room 1 of 11
+Cousins  Encrypted  4 members
+────────────────────────────────────────────────────────────────────────────────
+
+  Aunt Clare invited you to Cousins.
+
+  Join or decline it in the Family Chat window. Answering invitations in the
+  terminal arrives in a later release.
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                     Up to date
+< Rooms      n NextNew    q Quit       ^P PrevRoom  1 All        3 People
+m Members    : Commands   ^N NextRoom  N PrevNew    2 Unread     O OTHER
+--- styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+BBBBBBBkkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+
+  kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+  kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                     kkkkkkkkkkk
+R            R            R            RR           R            R
+R            R            RR           R            R            R
+--- NO_COLOR styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+BBBBBBB
+
+
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+R            R            R            RR           R            R
+R            R            RR           R            R            R
+--- ASCII ---
+  FAMILY CHAT 0.0.0-test               @ana:smith.safechat.family  Room 1 of 11
+Cousins  Encrypted  4 members
+--------------------------------------------------------------------------------
+
+  Aunt Clare invited you to Cousins.
+
+  Join or decline it in the Family Chat window. Answering invitations in the
+  terminal arrives in a later release.
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                     Up to date
+< Rooms      n NextNew    q Quit       ^P PrevRoom  1 All        3 People
+m Members    : Commands   ^N NextRoom  N PrevNew    2 Unread     O OTHER

@@ -1,0 +1,195 @@
+  FAMILY CHAT 0.0.0-test                                                     ROOMS                                      @ana:smith.safechat.family  Room 1 of 3
+ 1 All  2 Unread  3 People  4 Invites       │ Smith family  Encrypted  3 members
+────────────────────────────────────────────│ Topictxt.exe
+› Smith family                   @1 2 11:59 │ ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    Mum: hi From: bank@example.com          │                                                                                       │ Joined, 3
+  Bennimda                            11:55 │                                                                                       │ Mum Dad              Admin
+    Ben: ok                                 │                                                                                       │ Ben
+  Cousins                     invited 11:50 │                                                                                       │ Ana (you)
+    Invitation from Aunt Clare              │                                                                                       │
+                                            │                                                                                       │
+                                            │                                                                                       │
+                                            │                                                                                       │
+                                            │                                                                                       │
+                                            │                                                                                       │
+                                            │                                                                                       │
+                                            │                                                                                       │
+                                            │                                                                                       │
+                                            │                                                                                       │
+                                            │                                                                                       │
+                                            │                                                                                       │
+                                            │                                                                                       │
+                                            │                                                                                       │
+                                            │                                                                                       │
+                                            │                                                                                       │
+                                            │                                                                                       │
+                                            │                                                                                       │
+                                            │                                                                                       │
+                                            │ ─────────────────────────────────────── Today ────────────────────────────────────────│
+                                            │ Mum Dad  11:30                                                                        │
+                                            │   Hello red                                                                           │
+                                            │   https://evil.example/click[1]        there                                          │
+                                            │   ok                                                                                  │
+                                            │ Ben  11:31                                                                            │
+                                            │   Visit bank[2] now                                                                   │
+                                            │   │ quoted text (edited)                                                              │
+                                            │ Ana  11:32                                                                            │
+                                            │   ┃ Ben: quoted                                                                       │
+                                            │   Not clicking that.                                                                  │
+                                            │   😀  1                                                                                │
+                                            │ Mum  11:33                                                                            │
+                                            │   [file] report.pdffdp.exe [3]  1 KB                                                  │
+                                            │   report.pdf                                                                          │
+                                            │   · Eve joined                                                                        │
+                                            │ Family Chat  11:35                                                                    │
+                                            │   Notice end                                                                          │
+                                                                                                                                                     Up to date
+< Rooms             PgDn Newer          l Link#             u FirstNew          m Members           : Commands          ^N NextRoom         N PrevNew
+PgUp Older          Tab NextLink        s Save              G Latest            n NextNew           q Quit              ^P PrevRoom         O OTHER
+--- styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+ kkRRR  kk        kk        kk              k BBBBBBBBBBBBkkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBrrBBBkkkkk k kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk                                                                                       k BBBBBBBBB
+                                      kkkkk k                                                                                       k                     kkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk                                                                                       k                          k
+  BBBBBBBBBBBBBBBBBBBBBBBBBBB ccccccc kkkkk k                                                                                       k                          k
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk                                                                                       k
+                                            k                                                                                       k
+                                            k                                                                                       k
+                                            k                                                                                       k
+                                            k                                                                                       k
+                                            k                                                                                       k
+                                            k                                                                                       k
+                                            k                                                                                       k
+                                            k                                                                                       k
+                                            k                                                                                       k
+                                            k                                                                                       k
+                                            k                                                                                       k
+                                            k                                                                                       k
+                                            k                                                                                       k
+                                            k                                                                                       k
+                                            k                                                                                       k
+                                            k                                                                                       k
+                                            k                                                                                       k
+                                            k                                                                                       k
+                                            k kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+                                            k BBBBBBB  kkkkk                                                                        k
+                                            k kk                                                                                    k
+                                            k kkccccccccccccccccccccccccccccc                                                       k
+                                            k kk                                                                                    k
+                                            k BBB  kkkkk                                                                            k
+                                            k kk      ccccccc                                                                       k
+                                            k kkkk           kkkkkkkkk                                                              k
+                                            k ccc  kkkkk                                                                            k
+                                            k kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+                                            k kk                                                                                    k
+                                            k   k kk                                                                                k
+                                            k BBB  kkkkk                                                                            k
+                                            k kkkkkkkkkccccccccccccccccccccckkkkkk                                                  k
+                                            k kk                                                                                    k
+                                            k   kkkkkkkkkkkk                                                                        k
+                                            k BBBBBBBBBBB  kkkkk                                                                    k
+                                            k kkkkkkkkkkkk                                                                          k
+                                                                                                                                                     kkkkkkkkkkk
+R                   RRRR                R                   R                   R                   R                   RR                  R
+RRRR                RRR                 R                   R                   R                   R                   RR                  R
+--- NO_COLOR styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+   RRR                                        BBBBBBBBBBBB
+
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB                                                                                          BBBBBBBBB
+
+
+  BBBBBBBBBBBBBBBBBBBBBBBBBBB
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                              BBBBBBB
+
+                                                UUUUUUUUUUUUUUUUUUUUUUUUUUUUU
+
+                                              BBB
+                                                      BBBBBBB
+
+                                              BBB
+
+
+
+                                              BBB
+                                                       UUUUUUUUUUUUUUUUUUUUU
+
+
+                                              BBBBBBBBBBB
+
+
+R                   RRRR                R                   R                   R                   R                   RR                  R
+RRRR                RRR                 R                   R                   R                   R                   RR                  R
+--- ASCII ---
+  FAMILY CHAT 0.0.0-test                                                     ROOMS                                      @ana:smith.safechat.family  Room 1 of 3
+ 1 All  2 Unread  3 People  4 Invites       | Smith family  Encrypted  3 members
+--------------------------------------------| Topictxt.exe
+> Smith family                   @1 2 11:59 | ------------------------------------------------------------------------------------------------------------------
+    Mum: hi From: bank@example.com          |                                                                                       | Joined, 3
+  Bennimda                            11:55 |                                                                                       | Mum Dad              Admin
+    Ben: ok                                 |                                                                                       | Ben
+  Cousins                     invited 11:50 |                                                                                       | Ana (you)
+    Invitation from Aunt Clare              |                                                                                       |
+                                            |                                                                                       |
+                                            |                                                                                       |
+                                            |                                                                                       |
+                                            |                                                                                       |
+                                            |                                                                                       |
+                                            |                                                                                       |
+                                            |                                                                                       |
+                                            |                                                                                       |
+                                            |                                                                                       |
+                                            |                                                                                       |
+                                            |                                                                                       |
+                                            |                                                                                       |
+                                            |                                                                                       |
+                                            |                                                                                       |
+                                            |                                                                                       |
+                                            |                                                                                       |
+                                            |                                                                                       |
+                                            |                                                                                       |
+                                            | --------------------------------------- Today ----------------------------------------|
+                                            | Mum Dad  11:30                                                                        |
+                                            |   Hello red                                                                           |
+                                            |   https://evil.example/click[1]        there                                          |
+                                            |   ok                                                                                  |
+                                            | Ben  11:31                                                                            |
+                                            |   Visit bank[2] now                                                                   |
+                                            |   | quoted text (edited)                                                              |
+                                            | Ana  11:32                                                                            |
+                                            |   | Ben: quoted                                                                       |
+                                            |   Not clicking that.                                                                  |
+                                            |   😀  1                                                                                |
+                                            | Mum  11:33                                                                            |
+                                            |   [file] report.pdffdp.exe [3]  1 KB                                                  |
+                                            |   report.pdf                                                                          |
+                                            |   - Eve joined                                                                        |
+                                            | Family Chat  11:35                                                                    |
+                                            |   Notice end                                                                          |
+                                                                                                                                                     Up to date
+< Rooms             PgDn Newer          l Link#             u FirstNew          m Members           : Commands          ^N NextRoom         N PrevNew
+PgUp Older          Tab NextLink        s Save              G Latest            n NextNew           q Quit              ^P PrevRoom         O OTHER

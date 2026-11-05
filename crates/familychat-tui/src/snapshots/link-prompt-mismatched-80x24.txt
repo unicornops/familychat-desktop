@@ -1,0 +1,99 @@
+  FAMILY CHAT 0.0.0-test               @ana:smith.safechat.family  Room 6 of 11
+Summer holiday 2027  Encrypted  5 members
+Cornwall, 2 to 16 August
+────────────────────────────────────────────────────────────────────────────────
+Granda┌──────────────────────────────────────────────────────────────────┐
+  │ Be│ Open this link?                                                  │
+  Opti│                                                                  │
+Dad  0│ https://tickets.evil.example/claim                               │
+  Cott│                                                                  │
+    Ne│ It goes to tickets.evil.example and opens in your browser.       │
+    Ch│                                                                  │
+    Ch│ This link is not what it shows                                   │
+Dad  0│ The link's text shows www.bank.example, but it goes to           │
+  Book│ tickets.evil.example.                                            │at
+  surf│                                                                  │
+Ben  0│ Y Open Link   C Copy the address   N Cancel                      │
+  Free└──────────────────────────────────────────────────────────────────┘
+Mum  04:02
+  Ben, don't click links like that. Ask in #family[4] first.
+Ana  05:00
+  Spoiler for Ben: ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒ 🚤
+Open this link? (y open, c copy, n cancel)
+Y Open       N Cancel
+C Copy
+--- styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+BBBBBBBBBBBBBBBBBBBkkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+kkkk  B BBBBBBBBBBBBBBB                                                  B
+kk    B                                                                  B
+BBB  kB cccccccccccccccccccccccccccccccccc                               B
+kk    B                                                                  B
+kkkkggB                                                                  B
+kkkkggB                                                                  B
+kkkkggB rrrrrrrrrrrrrrrrrrrrrrrrrrrrrr                                   B
+BBB  kB rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr           B
+kk    B rrrrrrrrrrrrrrrrrrrrr                                            B
+kkccccB                                                                  B
+BBB  kB R             R                    R                             B
+kk    BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+BBB  kkkkk
+kkBBB                                      cccccccccc
+ccc  kkkkk
+kk                 kkkkkkkkkkkkkkkkkkkkkkkkkkk
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+R            R
+R
+--- NO_COLOR styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+BBBBBBBBBBBBBBBBBBB
+
+
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+      B BBBBBBBBBBBBBBB                                                  B
+      B                                                                  B
+BBB   B UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU                               B
+      B                                                                  B
+      B                                                                  B
+      B                                                                  B
+      B BBBBBBBBBBBBBBBBBBBBBBBBBBBBBB                                   B
+BBB   B BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB           B
+      B BBBBBBBBBBBBBBBBBBBBB                                            B
+  UUUUB                                                                  B
+BBB   B R             R                    R                             B
+      BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+BBB
+  BBB                                      UUUUUUUUUU
+BBB
+
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+R            R
+R
+--- ASCII ---
+  FAMILY CHAT 0.0.0-test               @ana:smith.safechat.family  Room 6 of 11
+Summer holiday 2027  Encrypted  5 members
+Cornwall, 2 to 16 August
+--------------------------------------------------------------------------------
+Granda+------------------------------------------------------------------+
+  | Be| Open this link?                                                  |
+  Opti|                                                                  |
+Dad  0| https://tickets.evil.example/claim                               |
+  Cott|                                                                  |
+    Ne| It goes to tickets.evil.example and opens in your browser.       |
+    Ch|                                                                  |
+    Ch| This link is not what it shows                                   |
+Dad  0| The link's text shows www.bank.example, but it goes to           |
+  Book| tickets.evil.example.                                            |at
+  surf|                                                                  |
+Ben  0| Y Open Link   C Copy the address   N Cancel                      |
+  Free+------------------------------------------------------------------+
+Mum  04:02
+  Ben, don't click links like that. Ask in #family[4] first.
+Ana  05:00
+  Spoiler for Ben: ########################### 🚤
+Open this link? (y open, c copy, n cancel)
+Y Open       N Cancel
+C Copy

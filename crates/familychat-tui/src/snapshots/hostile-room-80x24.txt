@@ -1,0 +1,99 @@
+  FAMILY CHAT 0.0.0-test                @ana:smith.safechat.family  Room 1 of 3
+Smith family  Encrypted  3 members
+Topictxt.exe
+────────────────────────────────────────────────────────────────────────────────
+Joined, 3
+Mum Dad                                                                    Admin
+Ben
+Ana (you)
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                     Up to date
+< Rooms      PgDn Newer   l Link#      u FirstNew   m Members    : Commands
+PgUp Older   Tab NextLink s Save       G Latest     n NextNew    O OTHER
+--- styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+BBBBBBBBBBBBkkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+BBBBBBBBB
+                                                                          kkkkkk
+                                                                               k
+                                                                               k
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                     kkkkkkkkkkk
+R            RRRR         R            R            R            R
+RRRR         RRR          R            R            R            R
+--- NO_COLOR styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+BBBBBBBBBBBB
+
+
+BBBBBBBBB
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+R            RRRR         R            R            R            R
+RRRR         RRR          R            R            R            R
+--- ASCII ---
+  FAMILY CHAT 0.0.0-test                @ana:smith.safechat.family  Room 1 of 3
+Smith family  Encrypted  3 members
+Topictxt.exe
+--------------------------------------------------------------------------------
+Joined, 3
+Mum Dad                                                                    Admin
+Ben
+Ana (you)
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                     Up to date
+< Rooms      PgDn Newer   l Link#      u FirstNew   m Members    : Commands
+PgUp Older   Tab NextLink s Save       G Latest     n NextNew    O OTHER

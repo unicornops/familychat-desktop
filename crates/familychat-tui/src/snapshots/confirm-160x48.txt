@@ -1,0 +1,195 @@
+  FAMILY CHAT 0.0.0-test                                                    CONFIRM
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                           Sign in as @ana:smith.safechat.family?
+
+                                           Only continue if this is your account and you asked your parent for this
+                                           code.
+
+                                           Y Continue
+                                           P Use my password instead
+                                           N Cancel
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Y Continue          N Cancel
+P Password          ^C Quit
+--- styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                           BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+
+
+
+
+                                           R
+                                           R
+                                           R
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+R                   R
+R                   RR
+--- NO_COLOR styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                           BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+
+
+
+
+                                           R
+                                           R
+                                           R
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+R                   R
+R                   RR
+--- ASCII ---
+  FAMILY CHAT 0.0.0-test                                                    CONFIRM
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                           Sign in as @ana:smith.safechat.family?
+
+                                           Only continue if this is your account and you asked your parent for this
+                                           code.
+
+                                           Y Continue
+                                           P Use my password instead
+                                           N Cancel
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Y Continue          N Cancel
+P Password          ^C Quit

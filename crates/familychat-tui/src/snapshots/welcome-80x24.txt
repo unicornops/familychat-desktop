@@ -1,4 +1,66 @@
-  FAMILY CHAT 0.0.0-test             WELCOME
+  FAMILY CHAT 0.0.0-test            WELCOME
+
+
+
+
+   Welcome to Family Chat
+   Chat with your family. Choose how you'd like to sign in.
+
+   › c Sign in with a code from your parent
+       Paste the sign-in link your parent gave you.
+     p Sign in with your password
+       Use your family's address, your username and your password.
+     o Use another Matrix server
+       Sign in to any Matrix homeserver.
+
+   Paste a sign-in link here at any time to use it. This is alpha software.
+
+
+
+
+
+
+Enter Choose p Password   ^V Paste     q Quit
+c Code       o OtherSrv   : Commands
+--- styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+
+
+
+
+   BBBBBBBBBBBBBBBBBBBBBB
+
+
+     R RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+   kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+     R BBBBBBBBBBBBBBBBBBBBBBBBBB
+   kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+     R BBBBBBBBBBBBBBBBBBBBBBBBB
+   kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+
+   kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+
+
+
+
+
+
+RRRRR        R            RR           R
+R            R            R
+--- NO_COLOR styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+
+
+
+
+   BBBBBBBBBBBBBBBBBBBBBB
+
+
+     R RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+
+     R BBBBBBBBBBBBBBBBBBBBBBBBBB
+
+     R BBBBBBBBBBBBBBBBBBBBBBBBB
 
 
 
@@ -7,18 +69,31 @@
 
 
 
-                   Family Chat for the terminal is on its way.
 
-          Signing in and reading your chats arrive in a later release.
-                             This is alpha software.
-
-
-
+RRRRR        R            RR           R
+R            R            R
+--- ASCII ---
+  FAMILY CHAT 0.0.0-test            WELCOME
 
 
 
 
+   Welcome to Family Chat
+   Chat with your family. Choose how you'd like to sign in.
+
+   > c Sign in with a code from your parent
+       Paste the sign-in link your parent gave you.
+     p Sign in with your password
+       Use your family's address, your username and your password.
+     o Use another Matrix server
+       Sign in to any Matrix homeserver.
+
+   Paste a sign-in link here at any time to use it. This is alpha software.
 
 
-Q Quit
 
+
+
+
+Enter Choose p Password   ^V Paste     q Quit
+c Code       o OtherSrv   : Commands

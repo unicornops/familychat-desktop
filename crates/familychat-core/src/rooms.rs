@@ -277,6 +277,27 @@ impl RoomListFilter {
             Self::Invites => "Invites",
         }
     }
+
+    /// What an empty list under this filter is called (the window's and
+    /// the terminal's empty states).
+    pub fn empty_title(self) -> &'static str {
+        match self {
+            Self::All => "No rooms yet",
+            Self::Unread => "You're all caught up",
+            Self::People => "No direct chats",
+            Self::Invites => "No invitations",
+        }
+    }
+
+    /// The sentence under [`RoomListFilter::empty_title`].
+    pub fn empty_detail(self) -> &'static str {
+        match self {
+            Self::All => "When someone in your family adds you to a room, it shows up here.",
+            Self::Unread => "Rooms with new messages show up here.",
+            Self::People => "Chats with one other person show up here.",
+            Self::Invites => "When someone invites you to a room, it shows up here.",
+        }
+    }
 }
 
 /// Whether the room list has loaded.

@@ -27,5 +27,6 @@ pub use lock::{LockError, ProfileLock};
 pub use paths::{DataDir, DataDirError};
 pub use profile::{
     KeychainUnavailable, OpenError, Profile, ProfileState, RemoveAccountError, StartedOver,
-    Unreadable, UnreadableReason, keychain_unavailable_message, unreadable_message,
+    Unreadable, UnreadableReason, keychain_unavailable_message, linux_keychain_unavailable_message,
+    unreadable_message,
 };

@@ -1,0 +1,195 @@
+  FAMILY CHAT 0.0.0-test                                              SIGN IN WITH A CODE
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                           Sign in with a code from your parent
+                                           Paste the sign-in link your parent gave you. Family Chat asks you before
+                                           it uses the code.
+
+                                           Sign-in link           Paste the sign-in link
+
+                                           Paste with your terminal (Ctrl-Shift-V, or Cmd-V on a Mac), then press
+                                           Enter. A QR code image can be pasted or dropped in the Family Chat window.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Enter SignIn        Esc Back
+^V Paste            ^C Quit
+--- styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                           BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+
+
+
+                                           BBBBBBBBBBBBBBBBBBBBBBBkkkkkkkkkkkkkkkkkkkkkkR
+
+                                           kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+                                           kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+RRRRR               RRR
+RR                  RR
+--- NO_COLOR styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                           BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+
+
+
+                                           BBBBBBBBBBBBBBBBBBBBBBB                      R
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+RRRRR               RRR
+RR                  RR
+--- ASCII ---
+  FAMILY CHAT 0.0.0-test                                              SIGN IN WITH A CODE
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                           Sign in with a code from your parent
+                                           Paste the sign-in link your parent gave you. Family Chat asks you before
+                                           it uses the code.
+
+                                           Sign-in link           Paste the sign-in link
+
+                                           Paste with your terminal (Ctrl-Shift-V, or Cmd-V on a Mac), then press
+                                           Enter. A QR code image can be pasted or dropped in the Family Chat window.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Enter SignIn        Esc Back
+^V Paste            ^C Quit

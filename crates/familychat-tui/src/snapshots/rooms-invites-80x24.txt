@@ -1,0 +1,99 @@
+  FAMILY CHAT 0.0.0-test                @ana:smith.safechat.family  Room 1 of 1
+ 1 All  2 Unread  3 People  4 Invites
+────────────────────────────────────────────────────────────────────────────────
+› Cousins                                                         invited 11:40
+    Invitation from Aunt Clare
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                     Up to date
+Enter Open   : Commands   ^N NextRoom  N PrevNew    2 Unread     4 Invites
+n NextNew    q Quit       ^P PrevRoom  1 All        3 People     O OTHER
+--- styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+ kk     kk        kk        kkRRRRRRR
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRcccccccRkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                     kkkkkkkkkkk
+RRRRR        R            RR           R            R            R
+R            R            RR           R            R            R
+--- NO_COLOR styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+                              RRRRRRR
+
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+RRRRR        R            RR           R            R            R
+R            R            RR           R            R            R
+--- ASCII ---
+  FAMILY CHAT 0.0.0-test                @ana:smith.safechat.family  Room 1 of 1
+ 1 All  2 Unread  3 People  4 Invites
+--------------------------------------------------------------------------------
+> Cousins                                                         invited 11:40
+    Invitation from Aunt Clare
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                     Up to date
+Enter Open   : Commands   ^N NextRoom  N PrevNew    2 Unread     4 Invites
+n NextNew    q Quit       ^P PrevRoom  1 All        3 People     O OTHER

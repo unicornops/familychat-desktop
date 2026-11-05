@@ -1,0 +1,195 @@
+  FAMILY CHAT 0.0.0-test                                                     ROOMS                                      @ana:smith.safechat.family  Room 1 of 3
+ 1 All  2 Unread  3 People  4 Invites       │ Smith family  Encrypted  3 members
+────────────────────────────────────────────│ Topictxt.exe
+› Smith family                   @1 2 11:59 │ ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    Mum: hi From: bank@example.com          │
+  Bennimda                            11:55 │
+    Ben: ok                                 │
+  Cousins                     invited 11:50 │
+    Invitation from Aunt Clare              │
+                                            │
+                                            │
+                                            │
+                                            │
+                                            │
+                                            │
+                                            │
+                                            │
+                                            │
+                                            │
+                                            │
+                                            │
+                                            │
+                                            │
+                                            │
+                                            │
+                                            │
+                                            │
+                                            │ ───────────────────────────────────────────────────── Today ──────────────────────────────────────────────────────
+                                            │ Mum Dad  11:30
+                                            │   Hello red
+                                            │   https://evil.example/click[1]        there
+                                            │   ok
+                                            │ Ben  11:31
+                                            │   Visit bank[2] now
+                                            │   │ quoted text (edited)
+                                            │ Ana  11:32
+                                            │   ┃ Ben: quoted
+                                            │   Not clicking that.
+                                            │   😀  1
+                                            │ Mum  11:33
+                                            │   [file] report.pdffdp.exe [3]  1 KB
+                                            │   report.pdf
+                                            │   · Eve joined
+                                            │ Family Chat  11:35
+                                            │   Notice end
+                                                                                                                                                     Up to date
+Enter Open          : Commands          ^N NextRoom         N PrevNew           2 Unread            4 Invites           y Copy
+n NextNew           q Quit              ^P PrevRoom         1 All               3 People            m Members           b Bell
+--- styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+ kkRRR  kk        kk        kk              k BBBBBBBBBBBBkkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRrrRRRkkkkk k kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+                                      kkkkk k
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+  BBBBBBBBBBBBBBBBBBBBBBBBBBB ccccccc kkkkk k
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+                                            k
+                                            k
+                                            k
+                                            k
+                                            k
+                                            k
+                                            k
+                                            k
+                                            k
+                                            k
+                                            k
+                                            k
+                                            k
+                                            k
+                                            k
+                                            k
+                                            k
+                                            k
+                                            k kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+                                            k BBBBBBB  kkkkk
+                                            k kk
+                                            k kkccccccccccccccccccccccccccccc
+                                            k kk
+                                            k BBB  kkkkk
+                                            k kk      ccccccc
+                                            k kkkk           kkkkkkkkk
+                                            k ccc  kkkkk
+                                            k kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+                                            k kk
+                                            k   k kk
+                                            k BBB  kkkkk
+                                            k kkkkkkkkkccccccccccccccccccccckkkkkk
+                                            k kk
+                                            k   kkkkkkkkkkkk
+                                            k BBBBBBBBBBB  kkkkk
+                                            k kkkkkkkkkkkk
+                                                                                                                                                     kkkkkkkkkkk
+RRRRR               R                   RR                  R                   R                   R                   R
+R                   R                   RR                  R                   R                   R                   R
+--- NO_COLOR styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+   RRR                                        BBBBBBBBBBBB
+
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+
+
+  BBBBBBBBBBBBBBBBBBBBBBBBBBB
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                              BBBBBBB
+
+                                                UUUUUUUUUUUUUUUUUUUUUUUUUUUUU
+
+                                              BBB
+                                                      BBBBBBB
+
+                                              BBB
+
+
+
+                                              BBB
+                                                       UUUUUUUUUUUUUUUUUUUUU
+
+
+                                              BBBBBBBBBBB
+
+
+RRRRR               R                   RR                  R                   R                   R                   R
+R                   R                   RR                  R                   R                   R                   R
+--- ASCII ---
+  FAMILY CHAT 0.0.0-test                                                     ROOMS                                      @ana:smith.safechat.family  Room 1 of 3
+ 1 All  2 Unread  3 People  4 Invites       | Smith family  Encrypted  3 members
+--------------------------------------------| Topictxt.exe
+> Smith family                   @1 2 11:59 | ------------------------------------------------------------------------------------------------------------------
+    Mum: hi From: bank@example.com          |
+  Bennimda                            11:55 |
+    Ben: ok                                 |
+  Cousins                     invited 11:50 |
+    Invitation from Aunt Clare              |
+                                            |
+                                            |
+                                            |
+                                            |
+                                            |
+                                            |
+                                            |
+                                            |
+                                            |
+                                            |
+                                            |
+                                            |
+                                            |
+                                            |
+                                            |
+                                            |
+                                            |
+                                            |
+                                            | ----------------------------------------------------- Today ------------------------------------------------------
+                                            | Mum Dad  11:30
+                                            |   Hello red
+                                            |   https://evil.example/click[1]        there
+                                            |   ok
+                                            | Ben  11:31
+                                            |   Visit bank[2] now
+                                            |   | quoted text (edited)
+                                            | Ana  11:32
+                                            |   | Ben: quoted
+                                            |   Not clicking that.
+                                            |   😀  1
+                                            | Mum  11:33
+                                            |   [file] report.pdffdp.exe [3]  1 KB
+                                            |   report.pdf
+                                            |   - Eve joined
+                                            | Family Chat  11:35
+                                            |   Notice end
+                                                                                                                                                     Up to date
+Enter Open          : Commands          ^N NextRoom         N PrevNew           2 Unread            4 Invites           y Copy
+n NextNew           q Quit              ^P PrevRoom         1 All               3 People            m Members           b Bell
