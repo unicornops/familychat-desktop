@@ -17,18 +17,22 @@
 
 use std::{
     collections::BTreeMap,
+    path::PathBuf,
     sync::{Arc, Mutex, MutexGuard, PoisonError},
     thread,
     time::Duration,
 };
 
 use familychat_core::{
-    OwnedUserId, UserId,
+    OwnedRoomId, OwnedUserId, UserId,
     diff::ListDiff,
-    rooms::{RoomListCommand, RoomListFilter, RoomListLoading, RoomSummary},
+    media::{DecodedImage, MediaError, MediaInfo},
+    rooms::{
+        Membership, RoomListCommand, RoomListFilter, RoomListLoading, RoomMember, RoomSummary,
+    },
     session::{
-        AccountKey, AccountView, Reply, RoomListSubscription, SUBSCRIPTION_BUFFER, SessionApi,
-        SessionError, TimelineSubscription,
+        AccountKey, AccountView, MediaReply, Reply, RoomListSubscription, SUBSCRIPTION_BUFFER,
+        SessionApi, SessionError, TimelineSubscription,
     },
     signin::{
         ConfirmCode, Finished, PasswordForm, PasswordKind, SigninAnswer, SigninApi, SigninFlow,
@@ -36,11 +40,14 @@ use familychat_core::{
     },
     startup::{OpenState, Opened, StartupApi},
     sync::{AccountStatus, SyncState},
+    timeline::{PaginationState, TimelineCommand, TimelineItem, TimelineUpdate},
 };
 use familychat_security::KeychainError;
 use familychat_signin::wording;
 use familychat_store::{UnreadableReason, keychain_unavailable_message, unreadable_message};
 use tokio::sync::{mpsc, oneshot, watch};
+
+pub mod rooms;
 
 /// The fixture family's server name.
 pub const FIXTURE_SERVER: &str = "smith.safechat.family";
@@ -67,30 +74,74 @@ pub fn fixture_user() -> OwnedUserId {
 // FixtureSession
 // ---------------------------------------------------------------------------
 
-/// An open room list's session side, kept so the list stays open.
-type OpenList = (
-    mpsc::Sender<Vec<ListDiff<RoomSummary>>>,
-    watch::Sender<RoomListLoading>,
-    mpsc::UnboundedReceiver<RoomListCommand>,
-);
+/// How long the fixture's list and timeline threads wait between looks at
+/// their commands.
+const POLL: Duration = Duration::from_millis(5);
 
-/// The fixture `SessionApi`: accounts and their sync states, set by the
-/// test or the screenshot fixture. Room lists open empty; canned rooms and
-/// timelines arrive with the room list and timeline (Phase 6).
+/// What the fixture's media answers for a handle.
+type FixtureImage = Result<Arc<DecodedImage>, MediaError>;
+
+/// The fixture `SessionApi`: accounts and their sync states, rooms,
+/// timelines, members and pictures, set by the test or the screenshot
+/// fixture ([`FixtureSession::with_family`] loads the Smiths, and
+/// [`FixtureSession::with_large`] the 1,000-room fixture). Nothing touches
+/// the network, the keychain or the disk; every open list and timeline is
+/// served by a thread of its own over the same channels as the live
+/// session, and follows changes made here.
 #[derive(Default)]
 pub struct FixtureSession {
     accounts: watch::Sender<Vec<AccountView>>,
     statuses: Mutex<BTreeMap<AccountKey, watch::Sender<AccountStatus>>>,
     retried: Mutex<Vec<AccountKey>>,
-    lists: Mutex<Vec<OpenList>>,
+    rooms: watch::Sender<Vec<RoomSummary>>,
+    rooms_loading: Mutex<bool>,
+    timelines: Mutex<BTreeMap<OwnedRoomId, watch::Sender<Vec<TimelineItem>>>>,
+    members: Mutex<BTreeMap<OwnedRoomId, Vec<RoomMember>>>,
+    images: Mutex<BTreeMap<String, FixtureImage>>,
+    hold_pagination: Arc<Mutex<bool>>,
+    record: Arc<Mutex<SessionRecord>>,
+}
+
+/// What the window asked of the fixture session.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct SessionRecord {
+    /// Each filter a room list was opened or set to, in order.
+    pub filters: Vec<RoomListFilter>,
+    /// Each timeline opened, in order.
+    pub timelines: Vec<OwnedRoomId>,
+    /// How many times older messages were asked for.
+    pub paginations: usize,
+    /// Each invitation answered: the room, and whether it was accepted.
+    pub invites: Vec<(OwnedRoomId, bool)>,
+    /// The handles of the images asked for.
+    pub images: Vec<String>,
+    /// Each file saved: its suggested name and where it went.
+    pub saved: Vec<(String, PathBuf)>,
 }
 
 impl std::fmt::Debug for FixtureSession {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("FixtureSession")
             .field("accounts", &self.accounts.borrow().len())
+            .field("rooms", &self.rooms.borrow().len())
             .finish_non_exhaustive()
     }
+}
+
+/// The rooms `filter` shows, as the live list's filters choose them.
+pub fn filter_rooms(rooms: &[RoomSummary], filter: RoomListFilter) -> Vec<RoomSummary> {
+    rooms
+        .iter()
+        .filter(|room| match filter {
+            RoomListFilter::All => room.membership != Membership::Left,
+            RoomListFilter::Unread => {
+                room.membership == Membership::Joined && room.unread.is_unread()
+            }
+            RoomListFilter::People => room.is_direct && room.membership == Membership::Joined,
+            RoomListFilter::Invites => room.membership == Membership::Invited,
+        })
+        .cloned()
+        .collect()
 }
 
 impl FixtureSession {
@@ -134,6 +185,208 @@ impl FixtureSession {
     pub fn retried(&self) -> Vec<AccountKey> {
         lock(&self.retried).clone()
     }
+
+    /// Loads the Smith family's rooms, timelines, members and pictures.
+    pub fn with_family(&self) {
+        let now = rooms::now_ms();
+        let family = rooms::family_rooms(now);
+        for room in &family {
+            let id = room.room_id.as_str();
+            self.set_timeline(id, rooms::family_timeline_for(id, now));
+            lock(&self.members).insert(room.room_id.clone(), rooms::family_members(id));
+        }
+        self.set_rooms(family);
+        let mut images = lock(&self.images);
+        images.insert(rooms::SVG_HANDLE.to_owned(), Err(MediaError::Svg));
+        images.insert(
+            rooms::HUGE_HANDLE.to_owned(),
+            Err(MediaError::TooManyPixels),
+        );
+    }
+
+    /// Loads `rooms` rooms, the first with `events` events (the 1,000-room,
+    /// 10,000-event fixture of PLAN.md section 13.6).
+    pub fn with_large(&self, rooms: usize, events: usize) {
+        let now = rooms::now_ms();
+        let list = rooms::large_rooms(rooms, now);
+        if let Some(first) = list.first() {
+            self.set_timeline(first.room_id.as_str(), rooms::large_timeline(events, now));
+            lock(&self.members).insert(
+                first.room_id.clone(),
+                rooms::family_members(rooms::FAMILY_ROOM),
+            );
+        }
+        // The next rooms have a short timeline each, so moving through the
+        // list opens real rooms.
+        let short = rooms::family_timeline_for(rooms::FAMILY_ROOM, now);
+        for room in list.iter().skip(1).take(64) {
+            self.set_timeline(room.room_id.as_str(), short.clone());
+        }
+        self.set_rooms(list);
+    }
+
+    /// Replaces the rooms; open lists follow.
+    pub fn set_rooms(&self, rooms: Vec<RoomSummary>) {
+        self.rooms.send_replace(rooms);
+    }
+
+    /// The rooms.
+    pub fn rooms(&self) -> Vec<RoomSummary> {
+        self.rooms.borrow().clone()
+    }
+
+    /// Whether room lists open as still loading (the first sync has not
+    /// answered); they load when this is set back.
+    pub fn set_rooms_loading(&self, loading: bool) {
+        *lock(&self.rooms_loading) = loading;
+    }
+
+    /// Replaces a room's timeline; an open timeline follows.
+    pub fn set_timeline(&self, room: &str, items: Vec<TimelineItem>) {
+        let Ok(room) = OwnedRoomId::try_from(room) else {
+            return;
+        };
+        let mut timelines = lock(&self.timelines);
+        match timelines.get(&room) {
+            Some(timeline) => {
+                timeline.send_replace(items);
+            }
+            None => {
+                timelines.insert(room, watch::channel(items).0);
+            }
+        }
+    }
+
+    /// Changes a room's timeline in place; an open timeline follows.
+    pub fn update_timeline(&self, room: &str, change: impl FnOnce(&mut Vec<TimelineItem>)) {
+        let Ok(room) = OwnedRoomId::try_from(room) else {
+            return;
+        };
+        if let Some(timeline) = lock(&self.timelines).get(&room) {
+            timeline.send_modify(change);
+        }
+    }
+
+    /// The picture (or refusal) a media handle answers with.
+    pub fn set_image(&self, handle: &str, image: Result<DecodedImage, MediaError>) {
+        lock(&self.images).insert(handle.to_owned(), image.map(Arc::new));
+    }
+
+    /// Keeps older-message loads at "loading" (the screenshot of a
+    /// timeline loading its history).
+    pub fn hold_pagination(&self, hold: bool) {
+        *lock(&self.hold_pagination) = hold;
+    }
+
+    /// What the window asked for so far.
+    pub fn record(&self) -> SessionRecord {
+        lock(&self.record).clone()
+    }
+
+    fn image_for(&self, media: &MediaInfo) -> FixtureImage {
+        if let Some(image) = lock(&self.images).get(media.source.encoded()) {
+            return image.clone();
+        }
+        if media.is_svg() {
+            return Err(MediaError::Svg);
+        }
+        let (width, height) = media.declared_size().unwrap_or((640, 420));
+        Ok(Arc::new(rooms::picture(
+            media.source.encoded(),
+            width,
+            height,
+        )))
+    }
+}
+
+/// Serves an open room list: the filtered rooms, again after each filter
+/// change or room change, until the window drops it.
+fn serve_room_list(
+    rooms: watch::Receiver<Vec<RoomSummary>>,
+    mut filter: RoomListFilter,
+    updates: mpsc::Sender<Vec<ListDiff<RoomSummary>>>,
+    mut commands: mpsc::UnboundedReceiver<RoomListCommand>,
+    record: Arc<Mutex<SessionRecord>>,
+) {
+    let mut rooms = rooms;
+    loop {
+        if updates.is_closed() {
+            return;
+        }
+        let mut changed = rooms.has_changed().unwrap_or(false);
+        while let Ok(command) = commands.try_recv() {
+            if let RoomListCommand::SetFilter(new) = command {
+                filter = new;
+                changed = true;
+                lock(&record).filters.push(new);
+            }
+        }
+        if changed {
+            let values = filter_rooms(&rooms.borrow_and_update(), filter);
+            if updates
+                .blocking_send(vec![ListDiff::Reset { values }])
+                .is_err()
+            {
+                return;
+            }
+        }
+        thread::sleep(POLL);
+    }
+}
+
+/// Serves an open timeline: its items, again after each change, and
+/// "nothing older" (or "loading", held) for each request for history.
+fn serve_timeline(
+    items: watch::Receiver<Vec<TimelineItem>>,
+    updates: mpsc::Sender<TimelineUpdate>,
+    mut commands: mpsc::UnboundedReceiver<TimelineCommand>,
+    record: Arc<Mutex<SessionRecord>>,
+    hold: Arc<Mutex<bool>>,
+) {
+    let mut items = items;
+    loop {
+        if updates.is_closed() {
+            return;
+        }
+        while let Ok(TimelineCommand::PaginateBackwards { .. }) = commands.try_recv() {
+            lock(&record).paginations += 1;
+            let state = if *lock(&hold) {
+                PaginationState::Loading
+            } else {
+                PaginationState::ReachedStart
+            };
+            if updates
+                .blocking_send(TimelineUpdate::Pagination(state))
+                .is_err()
+            {
+                return;
+            }
+        }
+        if items.has_changed().unwrap_or(false) {
+            let values = items.borrow_and_update().clone();
+            if updates
+                .blocking_send(TimelineUpdate::Items(vec![ListDiff::Reset { values }]))
+                .is_err()
+            {
+                return;
+            }
+        }
+        thread::sleep(POLL);
+    }
+}
+
+fn spawn(name: &str, work: impl FnOnce() + Send + 'static) {
+    thread::Builder::new()
+        .name(name.to_owned())
+        .spawn(work)
+        .unwrap_or_else(|error| panic!("the fixture thread starts: {error}"));
+}
+
+/// An answer on a fresh oneshot.
+fn answered<T>(value: T) -> oneshot::Receiver<T> {
+    let (answer, reply) = oneshot::channel();
+    let _ = answer.send(value);
+    reply
 }
 
 impl SessionApi for FixtureSession {
@@ -150,30 +403,108 @@ impl SessionApi for FixtureSession {
     fn room_list(
         &self,
         account: &AccountKey,
-        _filter: RoomListFilter,
+        filter: RoomListFilter,
     ) -> Reply<RoomListSubscription> {
-        let (answer, reply) = oneshot::channel();
         if !lock(&self.statuses).contains_key(account) {
-            let _ = answer.send(Err(SessionError::UnknownAccount));
-            return reply;
+            return answered(Err(SessionError::UnknownAccount));
         }
+        lock(&self.record).filters.push(filter);
         let (updates_tx, updates) = mpsc::channel(SUBSCRIPTION_BUFFER);
-        let _ = updates_tx.try_send(vec![ListDiff::Reset { values: Vec::new() }]);
-        let (loading_tx, loading) = watch::channel(RoomListLoading::Loaded { total: Some(0) });
+        let loading_now = *lock(&self.rooms_loading);
+        let (loading_tx, loading) = watch::channel(if loading_now {
+            RoomListLoading::NotLoaded
+        } else {
+            RoomListLoading::Loaded {
+                total: u32::try_from(self.rooms.borrow().len()).ok(),
+            }
+        });
         let (commands_tx, commands) = mpsc::unbounded_channel();
-        lock(&self.lists).push((updates_tx, loading_tx, commands));
-        let _ = answer.send(Ok(RoomListSubscription::new(updates, loading, commands_tx)));
-        reply
+        let mut rooms = self.rooms.subscribe();
+        if !loading_now {
+            // The first batch is there at once, as a synced list's is.
+            let values = filter_rooms(&rooms.borrow_and_update(), filter);
+            let _ = updates_tx.try_send(vec![ListDiff::Reset { values }]);
+        }
+        let record = self.record.clone();
+        spawn("familychat-fixture-rooms", move || {
+            // Keeps the loading state's sender alive with the list.
+            let _loading = loading_tx;
+            serve_room_list(rooms, filter, updates_tx, commands, record);
+        });
+        answered(Ok(RoomListSubscription::new(updates, loading, commands_tx)))
     }
 
     fn timeline(
         &self,
-        _account: &AccountKey,
-        _room: &familychat_core::RoomId,
+        account: &AccountKey,
+        room: &familychat_core::RoomId,
     ) -> Reply<TimelineSubscription> {
-        let (answer, reply) = oneshot::channel();
-        let _ = answer.send(Err(SessionError::UnknownRoom));
-        reply
+        if !lock(&self.statuses).contains_key(account) {
+            return answered(Err(SessionError::UnknownAccount));
+        }
+        let Some(mut items) = lock(&self.timelines)
+            .get(room)
+            .map(watch::Sender::subscribe)
+        else {
+            return answered(Err(SessionError::UnknownRoom));
+        };
+        lock(&self.record).timelines.push(room.to_owned());
+        let (updates_tx, updates) = mpsc::channel(SUBSCRIPTION_BUFFER);
+        let values = items.borrow_and_update().clone();
+        let _ = updates_tx.try_send(TimelineUpdate::Items(vec![ListDiff::Reset { values }]));
+        let (commands_tx, commands) = mpsc::unbounded_channel();
+        let (record, hold) = (self.record.clone(), self.hold_pagination.clone());
+        spawn("familychat-fixture-timeline", move || {
+            serve_timeline(items, updates_tx, commands, record, hold);
+        });
+        answered(Ok(TimelineSubscription::new(updates, commands_tx)))
+    }
+
+    fn members(
+        &self,
+        _account: &AccountKey,
+        room: &familychat_core::RoomId,
+    ) -> Reply<Vec<RoomMember>> {
+        answered(
+            lock(&self.members)
+                .get(room)
+                .cloned()
+                .ok_or(SessionError::UnknownRoom),
+        )
+    }
+
+    fn answer_invite(
+        &self,
+        _account: &AccountKey,
+        room: &familychat_core::RoomId,
+        accept: bool,
+    ) -> Reply<()> {
+        lock(&self.record).invites.push((room.to_owned(), accept));
+        self.rooms.send_modify(|rooms| {
+            if accept {
+                for summary in rooms.iter_mut().filter(|summary| summary.room_id == room) {
+                    summary.membership = Membership::Joined;
+                    summary.invited_by = None;
+                }
+            } else {
+                rooms.retain(|summary| summary.room_id != room);
+            }
+        });
+        answered(Ok(()))
+    }
+
+    fn image(&self, _account: &AccountKey, media: &MediaInfo) -> MediaReply<Arc<DecodedImage>> {
+        lock(&self.record)
+            .images
+            .push(media.source.encoded().to_owned());
+        answered(self.image_for(media))
+    }
+
+    fn save_file(&self, _account: &AccountKey, media: &MediaInfo, path: PathBuf) -> MediaReply<()> {
+        lock(&self.record)
+            .saved
+            .push((media.filename.clone(), path));
+        answered(Ok(()))
     }
 
     fn retry_sync(&self, account: &AccountKey) {
