@@ -10,12 +10,19 @@
 //! - [`redact`]: [`Redacted`] and the scrubber every log line passes
 //!   through.
 //! - [`logging`]: the local log file and the crash log.
+//! - [`matrix_html`]: the Matrix HTML sanitiser, which turns a message's
+//!   `formatted_body` into `familychat-core`'s rich-text tree (ADR 0007).
+//! - [`images`]: decoding message images within byte, size and frame
+//!   limits, never SVG.
+//! - [`file_names`]: safe names for downloaded files.
 //!
-//! Later phases add the Matrix HTML and terminal sanitisers, safe download
-//! names and image limits here (PLAN.md, section 5.1).
+//! The terminal sanitiser arrives with the terminal UI (Phase 10).
 
+pub mod file_names;
+pub mod images;
 pub mod keychain;
 pub mod logging;
+pub mod matrix_html;
 pub mod redact;
 pub mod secret;
 pub mod time;
