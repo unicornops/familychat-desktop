@@ -7,7 +7,7 @@
 //! (`familychat_assets::INTER_FACES`) and register it before the first
 //! window opens.
 
-use gpui::{App, Styled};
+use gpui::App;
 
 /// Registers the platform's bundled UI font, if it has one. Call once at
 /// startup, before opening a window. A failure is logged and the UI falls
@@ -30,18 +30,5 @@ pub(crate) fn register_ui_font(cx: &mut App) {
     {
         // Only Linux bundles a font.
         let _ = cx;
-    }
-}
-
-/// Sets the bundled UI font on `element` where there is one (Linux);
-/// elsewhere GPUI's default, the system UI font, applies.
-pub(crate) fn with_ui_font<E: Styled>(element: E) -> E {
-    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-    {
-        element.font_family(familychat_assets::UI_FONT_FAMILY)
-    }
-    #[cfg(any(target_os = "macos", target_os = "windows"))]
-    {
-        element
     }
 }

@@ -5,9 +5,15 @@ edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
 publish = false
-description = "Test support for Family Chat: the live homeserver harness driver and its test-only HTTP client"
+description = "Test support for Family Chat: the screenshot and view-test fixtures, and the live homeserver harness driver with its test-only HTTP client"
 
 [features]
+# FixtureSession, FixtureSignin and FixtureStartup, for the window's view
+# tests and `familychat launch-ui-fixture` (an opt-in feature of
+# familychat-app, never in a release build: scripts/check-release-features.sh).
+# No network, keychain or disk; the sentences are the sign-in's and the
+# store's own.
+fixtures = ["dep:familychat-core", "dep:familychat-security", "dep:familychat-signin", "dep:familychat-store", "dep:tokio"]
 # The harness driver and its HTTP client, which trusts the harness's
 # throwaway CA and resolves the harness hostnames to loopback. Test builds
 # only: a release build with it on fails to compile, and CI checks that no
@@ -17,6 +23,10 @@ test-harness = ["dep:reqwest", "dep:serde_json", "dep:tokio"]
 
 [dependencies]
 anyhow.workspace = true
+familychat-core = { path = "../familychat-core", optional = true }
+familychat-security = { path = "../familychat-security", optional = true }
+familychat-signin = { path = "../familychat-signin", optional = true }
+familychat-store = { path = "../familychat-store", optional = true }
 reqwest = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
 tokio = { workspace = true, optional = true }
@@ -25,7 +35,7 @@ tokio = { workspace = true, optional = true }
 # The crate's own tests (the unit tests and tests/live_homeserver_harness.rs)
 # build with the harness on, so the workspace-wide clippy and test runs
 # compile the driver; nothing outside test builds sees the feature.
-familychat-test-support = { path = ".", features = ["test-harness"] }
+familychat-test-support = { path = ".", features = ["fixtures", "test-harness"] }
 tokio.workspace = true
 
 [[test]]

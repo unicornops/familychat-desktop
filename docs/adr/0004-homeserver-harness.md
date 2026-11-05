@@ -138,7 +138,10 @@ can see it. Three guards keep it out of releases:
   dependencies, every target) and fails if it contains
   `familychat-test-support` or any `test-harness` feature; it self-tests
   against the feature turned on. CI's quality job and the release workflow
-  run it;
+  run it. (From Phase 5 the app's opt-in `ui-fixture` feature reaches
+  `familychat-test-support`'s fixtures, never the harness; the check also
+  fails if that feature becomes a default, and self-tests that it sees it,
+  ADR 0011);
 - the allowlist's `test-harness` feature (PLAN.md section 6.5), when the
   sign-in crate adds it in Phase 4, is held to the same check.
 

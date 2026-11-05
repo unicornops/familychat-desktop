@@ -503,6 +503,7 @@ Scope:
 - Components from zmail-ui; Family Chat themes; keymaps; command palette from the commands table.
 - Welcome, code (paste link, paste or drop QR image), confirm, expired code, password, other server, keychain and recovery screens; sync state.
 - `FixtureSession`, `launch-ui-fixture`, `scripts/capture-ui-screenshots.sh`, the CI UI Screenshots job; view tests.
+- ADR 0011 (0007 to 0010 are reserved for the phases that name them).
 
 Acceptance criteria:
 - Sign-in to the harness with a pasted link, a pasted QR image and a password (manual on each OS and view tests).

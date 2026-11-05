@@ -17,8 +17,8 @@
 //! - One-off answers are [`oneshot`] receivers ([`Reply`]).
 //!
 //! The live implementation is `familychat-session`'s `LiveSession`; a
-//! fixture implementation for screenshots and view tests arrives with the
-//! GUI shell (Phase 5).
+//! fixture implementation for screenshots and view tests is
+//! `familychat-test-support`'s `FixtureSession`.
 
 use std::fmt;
 

@@ -51,6 +51,30 @@ ignore-dev-dependencies = true
 #   lock and its two-process test (zmail-store's lock.rs) in
 #   crates/familychat-store/src/lock.rs; the migrations (zmail-store's
 #   apply_migrations) in crates/familychat-store/src/app_store.rs.
+# - The window's component set and its foundations, copied from Zmail's
+#   zmail-ui (Phase 5, ADR 0011), same copyright and licence; keep each
+#   file's header notice: crates/familychat-ui/src/components/ (actions,
+#   avatar, badge, banner, button, hit_target, kbd, menu, modal, popover,
+#   scrollbar, test_support, text_input and its tests, theme, title_bar,
+#   toast, tooltip, window_frame), src/styles.rs and src/styles/ (contrast,
+#   high_contrast, platform, typography), src/a11y.rs, src/motion.rs,
+#   src/widgets.rs and src/keymap.rs; src/command_palette.rs is adapted from
+#   zmail-ui's, and crates/familychat-core/src/fuzzy.rs is copied from
+#   zmail-core's. Three of the components are Zmail's ports from Zed
+#   (https://github.com/zed-industries/zed), Copyright Zed Industries, Inc.:
+#   - crates/familychat-ui/src/components/text_input.rs
+#     Ported from crates/gpui/examples/input.rs in Zed v1.24.2, licensed
+#     under the Apache License 2.0 (crates/familychat-ui/LICENSE-APACHE).
+#   - crates/familychat-ui/src/components/title_bar.rs
+#     Ported from crates/platform_title_bar in Zed v1.24.2, licensed under
+#     GPL-3.0-or-later (used under GPL-3.0-only).
+#   - crates/familychat-ui/src/components/window_frame.rs
+#     Ported from client_side_decorations in crates/workspace
+#     (GPL-3.0-or-later, used under GPL-3.0-only) and
+#     crates/gpui/examples/window_shadow.rs (Apache License 2.0,
+#     crates/familychat-ui/LICENSE-APACHE) in Zed v1.24.2.
+# - crates/familychat-ui/src/testdata/signin-qr-screenshot.png is made for
+#   this project's tests (python-qrcode and Pillow), under its licence.
 #
 # Nothing is copied from the Element X forks (AGPL-3.0); see PLAN.md,
 # section 2.
@@ -67,6 +91,12 @@ ignore-dev-dependencies = true
 # - assets/icons/*.svg
 #   Lucide (https://lucide.dev), licensed under the ISC License; the icons
 #   Lucide derives from Feather are also under MIT (assets/icons/LICENSE.txt,
-#   copied from the Lucide repository). A subset of Zmail's copy. Embedded
+#   copied from the Lucide repository). A subset of Zmail's copy (with minus,
+#   square, octagon-alert, clock, refresh-cw and server added from it in
+#   Phase 5), plus
+#   clipboard-paste, circle-check, circle-pause, globe, house, key-round,
+#   link, lock, lock-keyhole, log-out, message-circle-heart, qr-code,
+#   scan-qr-code and shield-check from Lucide 1.68.0
+#   (https://github.com/lucide-icons/lucide/tree/1.68.0/icons). Embedded
 #   in all builds; release archives ship the licence as
 #   licenses/Lucide-LICENSE.txt.

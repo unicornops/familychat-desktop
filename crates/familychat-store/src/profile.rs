@@ -208,26 +208,54 @@ impl KeychainUnavailable {
 
     /// What to tell the user, with what to do next.
     pub fn message(&self) -> String {
-        let what = match &self.error {
-            KeychainError::Locked(_) => format!(
-                "{APP_NAME} can't open its data because the keychain is locked. Unlock it and \
-                 try again."
-            ),
-            _ => format!(
-                "{APP_NAME} can't reach the keychain, where it keeps the key to its data.\
-                 {KEYCHAIN_HINT} Try again once it is available."
-            ),
-        };
-        format!(
-            "{what} {APP_NAME} never keeps its data without encryption. ({})",
-            self.error
-        )
+        keychain_unavailable_message(&self.error)
     }
 
     /// Tries again, still holding the profile.
     pub fn retry(self) -> Result<ProfileState, OpenError> {
         open_locked(self.held)
     }
+}
+
+/// What [`KeychainUnavailable::message`] says for `error`: what went wrong,
+/// what to do next, and that there is no plaintext fallback. Public so a
+/// screenshot fixture shows the same sentence without a keychain.
+pub fn keychain_unavailable_message(error: &KeychainError) -> String {
+    let what = match error {
+        KeychainError::Locked(_) => format!(
+            "{APP_NAME} can't open its data because the keychain is locked. Unlock it and try \
+             again."
+        ),
+        _ => format!(
+            "{APP_NAME} can't reach the keychain, where it keeps the key to its data.\
+             {KEYCHAIN_HINT} Try again once it is available."
+        ),
+    };
+    format!("{what} {APP_NAME} never keeps its data without encryption. ({error})")
+}
+
+/// What [`Unreadable::message`] says for `reason`: what happened, what
+/// Start Over does and what is lost. Public for the screenshot fixture.
+pub fn unreadable_message(reason: UnreadableReason) -> String {
+    let what = match reason {
+        UnreadableReason::KeyMissing => format!(
+            "{APP_NAME}'s data on this computer is encrypted, and its key is no longer in the \
+             keychain (after a system reinstall, a keychain reset, or copying the data from \
+             another computer), so nobody can read it."
+        ),
+        UnreadableReason::WrongKey => format!(
+            "{APP_NAME}'s data on this computer is encrypted, and the key in the keychain \
+             doesn't open it, so nobody can read it."
+        ),
+        UnreadableReason::Damaged => {
+            format!("{APP_NAME}'s data on this computer is damaged and can't be read.")
+        }
+    };
+    format!(
+        "{what} Start over moves it aside, in case the key turns up, and you sign in again. \
+         Your messages are safe on your homeserver; to read encrypted messages again you need \
+         your recovery key or another signed-in device."
+    )
 }
 
 /// Where to look when the keychain can't be reached.
@@ -281,25 +309,7 @@ impl Unreadable {
 
     /// What to tell the user, with what Start Over does and what is lost.
     pub fn message(&self) -> String {
-        let what = match self.reason {
-            UnreadableReason::KeyMissing => format!(
-                "{APP_NAME}'s data on this computer is encrypted, and its key is no longer in the \
-                 keychain (after a system reinstall, a keychain reset, or copying the data from \
-                 another computer), so nobody can read it."
-            ),
-            UnreadableReason::WrongKey => format!(
-                "{APP_NAME}'s data on this computer is encrypted, and the key in the keychain \
-                 doesn't open it, so nobody can read it."
-            ),
-            UnreadableReason::Damaged => {
-                format!("{APP_NAME}'s data on this computer is damaged and can't be read.")
-            }
-        };
-        format!(
-            "{what} Start over moves it aside, in case the key turns up, and you sign in again. \
-             Your messages are safe on your homeserver; to read encrypted messages again you \
-             need your recovery key or another signed-in device."
-        )
+        unreadable_message(self.reason)
     }
 
     /// Tries again, still holding the profile (if the keychain was restored

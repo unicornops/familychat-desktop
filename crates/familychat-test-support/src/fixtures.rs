@@ -1,0 +1,802 @@
+//! Fixtures for screenshots and view tests (PLAN.md, sections 5.3 and 9):
+//! [`FixtureSession`], [`FixtureSignin`] and [`FixtureStartup`], the
+//! fixture implementations of `familychat-core`'s `SessionApi`,
+//! `SigninApi` and `StartupApi`.
+//!
+//! None of them touches the network, the keychain or the disk. They say
+//! what the app says: the sign-in's sentences are `familychat-signin`'s
+//! wording and the keychain and lost-key sentences `familychat-store`'s,
+//! so a screenshot shows the real copy. The sign-in fixture follows the
+//! flow's shape (a code is always confirmed before it is "redeemed"), not
+//! its rules: it signs in whoever it is told to, and records every start
+//! and answer, without their secrets, for the view tests.
+//!
+//! Each flow runs on a thread of its own and talks over the same
+//! `tokio::sync` channels as the live sign-in, so the window awaits it
+//! exactly as it awaits `LiveSignin`; there is no Tokio runtime.
+
+use std::{
+    collections::BTreeMap,
+    sync::{Arc, Mutex, MutexGuard, PoisonError},
+    thread,
+    time::Duration,
+};
+
+use familychat_core::{
+    OwnedUserId, UserId,
+    diff::ListDiff,
+    rooms::{RoomListCommand, RoomListFilter, RoomListLoading, RoomSummary},
+    session::{
+        AccountKey, AccountView, Reply, RoomListSubscription, SUBSCRIPTION_BUFFER, SessionApi,
+        SessionError, TimelineSubscription,
+    },
+    signin::{
+        ConfirmCode, Finished, PasswordForm, PasswordKind, SigninAnswer, SigninApi, SigninFlow,
+        SigninProblem, SigninStart, SigninStep, Working,
+    },
+    startup::{OpenState, Opened, StartupApi},
+    sync::{AccountStatus, SyncState},
+};
+use familychat_security::KeychainError;
+use familychat_signin::wording;
+use familychat_store::{UnreadableReason, keychain_unavailable_message, unreadable_message};
+use tokio::sync::{mpsc, oneshot, watch};
+
+/// The fixture family's server name.
+pub const FIXTURE_SERVER: &str = "smith.safechat.family";
+
+/// The account the fixture's codes and passwords sign in.
+pub const FIXTURE_USER: &str = "@ana:smith.safechat.family";
+
+/// A sign-in link with a code, as a parent's QR code carries it.
+pub const FIXTURE_LINK: &str = "https://safechat.family/app/login?account_provider=smith.safechat.family&login_hint=mxid:%40ana%3Asmith.safechat.family&hs=smith.safechat.family&token=fixture-login-token";
+
+/// The fixture account's homeserver URL.
+pub const FIXTURE_HOMESERVER_URL: &str = "https://smith.safechat.family/";
+
+fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
+    mutex.lock().unwrap_or_else(PoisonError::into_inner)
+}
+
+/// The fixture account's user id.
+pub fn fixture_user() -> OwnedUserId {
+    OwnedUserId::try_from(FIXTURE_USER).unwrap_or_else(|_| unreachable!("a valid user id"))
+}
+
+// ---------------------------------------------------------------------------
+// FixtureSession
+// ---------------------------------------------------------------------------
+
+/// An open room list's session side, kept so the list stays open.
+type OpenList = (
+    mpsc::Sender<Vec<ListDiff<RoomSummary>>>,
+    watch::Sender<RoomListLoading>,
+    mpsc::UnboundedReceiver<RoomListCommand>,
+);
+
+/// The fixture `SessionApi`: accounts and their sync states, set by the
+/// test or the screenshot fixture. Room lists open empty; canned rooms and
+/// timelines arrive with the room list and timeline (Phase 6).
+#[derive(Default)]
+pub struct FixtureSession {
+    accounts: watch::Sender<Vec<AccountView>>,
+    statuses: Mutex<BTreeMap<AccountKey, watch::Sender<AccountStatus>>>,
+    retried: Mutex<Vec<AccountKey>>,
+    lists: Mutex<Vec<OpenList>>,
+}
+
+impl std::fmt::Debug for FixtureSession {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("FixtureSession")
+            .field("accounts", &self.accounts.borrow().len())
+            .finish_non_exhaustive()
+    }
+}
+
+impl FixtureSession {
+    /// A session with no accounts.
+    pub fn new() -> Arc<Self> {
+        Arc::new(Self::default())
+    }
+
+    /// Adds a signed-in account in `sync`.
+    pub fn add_account(&self, user_id: &UserId, sync: SyncState) -> AccountKey {
+        let mut statuses = lock(&self.statuses);
+        let key = AccountKey(format!("fixture-account-{}", statuses.len() + 1));
+        statuses.insert(
+            key.clone(),
+            watch::channel(AccountStatus {
+                sync,
+                problem: None,
+            })
+            .0,
+        );
+        drop(statuses);
+        let server = user_id.server_name().to_string();
+        self.accounts.send_modify(|accounts| {
+            accounts.push(AccountView {
+                key: key.clone(),
+                user_id: user_id.to_owned(),
+                homeserver_url: format!("https://{server}/"),
+            });
+        });
+        key
+    }
+
+    /// Moves an account's sync to `sync`.
+    pub fn set_sync(&self, account: &AccountKey, sync: SyncState) {
+        if let Some(status) = lock(&self.statuses).get(account) {
+            status.send_modify(|status| status.sync = sync);
+        }
+    }
+
+    /// The accounts `retry_sync` was asked for, in order.
+    pub fn retried(&self) -> Vec<AccountKey> {
+        lock(&self.retried).clone()
+    }
+}
+
+impl SessionApi for FixtureSession {
+    fn accounts(&self) -> watch::Receiver<Vec<AccountView>> {
+        self.accounts.subscribe()
+    }
+
+    fn account_status(&self, account: &AccountKey) -> Option<watch::Receiver<AccountStatus>> {
+        lock(&self.statuses)
+            .get(account)
+            .map(watch::Sender::subscribe)
+    }
+
+    fn room_list(
+        &self,
+        account: &AccountKey,
+        _filter: RoomListFilter,
+    ) -> Reply<RoomListSubscription> {
+        let (answer, reply) = oneshot::channel();
+        if !lock(&self.statuses).contains_key(account) {
+            let _ = answer.send(Err(SessionError::UnknownAccount));
+            return reply;
+        }
+        let (updates_tx, updates) = mpsc::channel(SUBSCRIPTION_BUFFER);
+        let _ = updates_tx.try_send(vec![ListDiff::Reset { values: Vec::new() }]);
+        let (loading_tx, loading) = watch::channel(RoomListLoading::Loaded { total: Some(0) });
+        let (commands_tx, commands) = mpsc::unbounded_channel();
+        lock(&self.lists).push((updates_tx, loading_tx, commands));
+        let _ = answer.send(Ok(RoomListSubscription::new(updates, loading, commands_tx)));
+        reply
+    }
+
+    fn timeline(
+        &self,
+        _account: &AccountKey,
+        _room: &familychat_core::RoomId,
+    ) -> Reply<TimelineSubscription> {
+        let (answer, reply) = oneshot::channel();
+        let _ = answer.send(Err(SessionError::UnknownRoom));
+        reply
+    }
+
+    fn retry_sync(&self, account: &AccountKey) {
+        lock(&self.retried).push(account.clone());
+    }
+}
+
+// ---------------------------------------------------------------------------
+// FixtureSignin
+// ---------------------------------------------------------------------------
+
+/// How a flow started, without the link's text.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FixtureStart {
+    /// A pasted or decoded link; whether it had a code in it.
+    Link {
+        /// The text had a `token=` parameter.
+        with_code: bool,
+    },
+    /// "Sign in with your password".
+    FamilyChatPassword,
+    /// "Use another Matrix server".
+    OtherServer,
+}
+
+/// An answer the fixture received, without the password.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum FixtureAnswer {
+    /// Use the code: the fixture "redeems" it.
+    Continue,
+    /// Don't use the code.
+    UsePassword,
+    /// A password form was submitted.
+    SubmitPassword {
+        /// The server field.
+        server: String,
+        /// The username field.
+        username: String,
+        /// Whether the password was not empty.
+        with_password: bool,
+    },
+    /// Stop.
+    Cancel,
+}
+
+/// What the fixture recorded, in order.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum FixtureEvent {
+    /// A flow started.
+    Started(FixtureStart),
+    /// The step the flow showed.
+    Showed(SigninStep),
+    /// The person answered.
+    Answered(FixtureAnswer),
+    /// The fixture redeemed a code (it only does after `Continue` on a
+    /// confirmation).
+    Redeemed,
+}
+
+/// What a redeemed code or a submitted password leads to.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum FixtureOutcome {
+    /// The account signs in.
+    SignIn,
+    /// Back to the password form with this problem.
+    Problem(SigninProblem),
+}
+
+#[derive(Debug)]
+struct SigninScript {
+    first_step: Option<SigninStep>,
+    code: FixtureOutcome,
+    password: FixtureOutcome,
+}
+
+/// The fixture `SigninApi`.
+pub struct FixtureSignin {
+    session: Arc<FixtureSession>,
+    script: Mutex<SigninScript>,
+    events: Arc<Mutex<Vec<FixtureEvent>>>,
+}
+
+impl std::fmt::Debug for FixtureSignin {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("FixtureSignin").finish_non_exhaustive()
+    }
+}
+
+impl FixtureSignin {
+    /// A sign-in whose codes and passwords sign [`FIXTURE_USER`] in to
+    /// `session`.
+    pub fn new(session: Arc<FixtureSession>) -> Arc<Self> {
+        Arc::new(Self {
+            session,
+            script: Mutex::new(SigninScript {
+                first_step: None,
+                code: FixtureOutcome::SignIn,
+                password: FixtureOutcome::SignIn,
+            }),
+            events: Arc::default(),
+        })
+    }
+
+    /// The next flow shows `step` first, whatever it starts with (the
+    /// screenshot fixture uses it to show one step and stay there).
+    pub fn start_at(&self, step: SigninStep) {
+        lock(&self.script).first_step = Some(step);
+    }
+
+    /// What a redeemed code leads to.
+    pub fn set_code_outcome(&self, outcome: FixtureOutcome) {
+        lock(&self.script).code = outcome;
+    }
+
+    /// What a submitted password leads to.
+    pub fn set_password_outcome(&self, outcome: FixtureOutcome) {
+        lock(&self.script).password = outcome;
+    }
+
+    /// Everything recorded so far.
+    pub fn events(&self) -> Vec<FixtureEvent> {
+        lock(&self.events).clone()
+    }
+
+    /// The answers recorded so far.
+    pub fn answers(&self) -> Vec<FixtureAnswer> {
+        self.events()
+            .into_iter()
+            .filter_map(|event| match event {
+                FixtureEvent::Answered(answer) => Some(answer),
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// How many codes were redeemed.
+    pub fn redeemed(&self) -> usize {
+        self.events()
+            .iter()
+            .filter(|event| **event == FixtureEvent::Redeemed)
+            .count()
+    }
+}
+
+impl SigninApi for FixtureSignin {
+    fn start(&self, start: SigninStart) -> SigninFlow {
+        let (kind, first) = match &start {
+            SigninStart::Link(text) => {
+                let text = text.expose().trim();
+                let with_code = text.contains("token=");
+                let is_link = (text.starts_with("https://") || text.starts_with("familychat://"))
+                    && text.contains("/app/login");
+                let first = if !is_link {
+                    SigninStep::NotALink(wording::NOT_A_LINK.to_owned())
+                } else if with_code {
+                    confirm_step()
+                } else {
+                    SigninStep::Password(PasswordForm {
+                        notice: None,
+                        ..link_form()
+                    })
+                };
+                (FixtureStart::Link { with_code }, first)
+            }
+            SigninStart::FamilyChatPassword => (
+                FixtureStart::FamilyChatPassword,
+                SigninStep::Password(blank_form(PasswordKind::FamilyChat)),
+            ),
+            SigninStart::OtherServer => (
+                FixtureStart::OtherServer,
+                SigninStep::Password(blank_form(PasswordKind::OtherServer)),
+            ),
+        };
+        drop(start);
+        let (script, events) = {
+            let mut script = lock(&self.script);
+            let first = script.first_step.take().unwrap_or(first);
+            (
+                (first, script.code.clone(), script.password.clone()),
+                self.events.clone(),
+            )
+        };
+        lock(&events).push(FixtureEvent::Started(kind));
+        let (steps, receiver) = watch::channel(SigninStep::Starting);
+        let (answers, answers_receiver) = mpsc::unbounded_channel();
+        let flow = FixtureFlow {
+            session: self.session.clone(),
+            events,
+            steps,
+            answers: answers_receiver,
+            code: script.1,
+            password: script.2,
+        };
+        let first = script.0;
+        thread::Builder::new()
+            .name("familychat-fixture-signin".to_owned())
+            .spawn(move || flow.run(first))
+            .unwrap_or_else(|error| panic!("the fixture sign-in thread starts: {error}"));
+        SigninFlow::new(receiver, answers)
+    }
+}
+
+fn blank_form(kind: PasswordKind) -> PasswordForm {
+    PasswordForm {
+        kind,
+        server: String::new(),
+        server_placeholder: match kind {
+            PasswordKind::FamilyChat => wording::FAMILY_SERVER_PLACEHOLDER.to_owned(),
+            PasswordKind::OtherServer => "matrix.org".to_owned(),
+        },
+        username: String::new(),
+        notice: None,
+        problem: None,
+    }
+}
+
+/// The password form a fixture link leads to: its server and hint.
+fn link_form() -> PasswordForm {
+    PasswordForm {
+        server: FIXTURE_SERVER.to_owned(),
+        username: "ana".to_owned(),
+        ..blank_form(PasswordKind::FamilyChat)
+    }
+}
+
+/// The confirmation for the fixture link.
+pub fn confirm_step() -> SigninStep {
+    let user = fixture_user();
+    SigninStep::Confirm(ConfirmCode {
+        question: wording::confirm_user(&user),
+        detail: wording::CONFIRM_DETAIL.to_owned(),
+        user_id: Some(user),
+        server: FIXTURE_SERVER.to_owned(),
+    })
+}
+
+/// The steps the screenshot fixture shows (each in dark and light).
+pub mod steps {
+    use super::*;
+
+    /// The password form after a used or expired code (the contract's
+    /// password fallback).
+    pub fn code_used_or_expired() -> SigninStep {
+        SigninStep::Password(PasswordForm {
+            problem: Some(SigninProblem::new(wording::CODE_USED_OR_EXPIRED)),
+            ..link_form()
+        })
+    }
+
+    /// The password form after a link whose code could not be used.
+    pub fn code_not_used() -> SigninStep {
+        SigninStep::Password(PasswordForm {
+            notice: Some(wording::CODE_NOT_USED.to_owned()),
+            ..link_form()
+        })
+    }
+
+    /// The Family Chat password form, filled in, after a wrong password.
+    pub fn wrong_password() -> SigninStep {
+        SigninStep::Password(PasswordForm {
+            problem: Some(SigninProblem::new(wording::WRONG_PASSWORD)),
+            ..link_form()
+        })
+    }
+
+    /// The Family Chat password form after `M_LIMIT_EXCEEDED`.
+    pub fn rate_limited(wait: Duration) -> SigninStep {
+        SigninStep::Password(PasswordForm {
+            problem: Some(SigninProblem {
+                message: wording::rate_limited(Some(wait)),
+                retry_after: Some(wait),
+            }),
+            ..link_form()
+        })
+    }
+
+    /// Another server's form after a server outside the allowlist was
+    /// refused (shown on the Family Chat form).
+    pub fn not_family_chat() -> SigninStep {
+        SigninStep::Password(PasswordForm {
+            server: "matrix.example.org".to_owned(),
+            username: "ana".to_owned(),
+            problem: Some(SigninProblem::new(wording::NOT_FAMILY_CHAT)),
+            ..blank_form(PasswordKind::FamilyChat)
+        })
+    }
+
+    /// The account is signed in already.
+    pub fn already_signed_in() -> SigninStep {
+        SigninStep::AlreadySignedIn(wording::already_signed_in(&fixture_user()))
+    }
+}
+
+struct FixtureFlow {
+    session: Arc<FixtureSession>,
+    events: Arc<Mutex<Vec<FixtureEvent>>>,
+    steps: watch::Sender<SigninStep>,
+    answers: mpsc::UnboundedReceiver<SigninAnswer>,
+    code: FixtureOutcome,
+    password: FixtureOutcome,
+}
+
+impl FixtureFlow {
+    fn record(&self, event: FixtureEvent) {
+        lock(&self.events).push(event);
+    }
+
+    fn show(&self, step: SigninStep) {
+        self.record(FixtureEvent::Showed(step.clone()));
+        self.steps.send_replace(step);
+    }
+
+    fn answer(&mut self) -> Option<SigninAnswer> {
+        let answer = self.answers.blocking_recv();
+        let recorded = match &answer {
+            Some(SigninAnswer::Continue) => FixtureAnswer::Continue,
+            Some(SigninAnswer::UsePassword) => FixtureAnswer::UsePassword,
+            Some(SigninAnswer::SubmitPassword {
+                server,
+                username,
+                password,
+            }) => FixtureAnswer::SubmitPassword {
+                server: server.clone(),
+                username: username.clone(),
+                with_password: !password.expose().is_empty(),
+            },
+            Some(SigninAnswer::Cancel) | None => FixtureAnswer::Cancel,
+        };
+        self.record(FixtureEvent::Answered(recorded));
+        answer
+    }
+
+    fn finish(&self) -> SigninStep {
+        let user_id = fixture_user();
+        let account = self.session.add_account(&user_id, SyncState::Running);
+        SigninStep::Finished(Finished { account, user_id })
+    }
+
+    fn run(mut self, first: SigninStep) {
+        let mut step = first;
+        loop {
+            self.show(step.clone());
+            step = match step.clone() {
+                SigninStep::Confirm(_) => match self.answer() {
+                    Some(SigninAnswer::Continue) => {
+                        self.show(SigninStep::Working(Working::RedeemingCode));
+                        self.record(FixtureEvent::Redeemed);
+                        match self.code.clone() {
+                            FixtureOutcome::SignIn => self.finish(),
+                            FixtureOutcome::Problem(problem) => {
+                                SigninStep::Password(PasswordForm {
+                                    problem: Some(problem),
+                                    ..link_form()
+                                })
+                            }
+                        }
+                    }
+                    Some(SigninAnswer::UsePassword) => SigninStep::Password(link_form()),
+                    Some(SigninAnswer::Cancel) | None => SigninStep::Cancelled,
+                    // The live flow ignores a password here, and so does
+                    // the fixture.
+                    Some(SigninAnswer::SubmitPassword { .. }) => continue,
+                },
+                SigninStep::Password(mut form) => match self.answer() {
+                    Some(SigninAnswer::SubmitPassword {
+                        server, username, ..
+                    }) => {
+                        self.show(SigninStep::Working(Working::SigningIn));
+                        match self.password.clone() {
+                            FixtureOutcome::SignIn => self.finish(),
+                            FixtureOutcome::Problem(problem) => {
+                                form.server = server;
+                                form.username = username;
+                                form.problem = Some(problem);
+                                SigninStep::Password(form)
+                            }
+                        }
+                    }
+                    Some(SigninAnswer::Cancel) | None => SigninStep::Cancelled,
+                    Some(SigninAnswer::Continue | SigninAnswer::UsePassword) => {
+                        continue;
+                    }
+                },
+                // Shown and kept (the screenshot fixture's working steps).
+                SigninStep::Starting | SigninStep::Working(_) => loop {
+                    match self.answer() {
+                        Some(SigninAnswer::Cancel) | None => break SigninStep::Cancelled,
+                        Some(_) => {}
+                    }
+                },
+                SigninStep::Finished(_)
+                | SigninStep::AlreadySignedIn(_)
+                | SigninStep::NotALink(_)
+                | SigninStep::Cancelled => return,
+            };
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// FixtureStartup
+// ---------------------------------------------------------------------------
+
+/// What [`FixtureStartup`] opens as.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FixtureProfile {
+    /// Open, with the fixture session and sign-in.
+    Ready,
+    /// The keychain is locked.
+    KeychainLocked,
+    /// The keychain can't be reached (no Secret Service on Linux).
+    KeychainUnreachable,
+    /// The data's key is gone.
+    LostKey,
+}
+
+/// The fixture `StartupApi`: answers each `open` with the next state of a
+/// sequence (staying on the last), and Start over with the ready profile.
+pub struct FixtureStartup {
+    session: Arc<FixtureSession>,
+    signin: Arc<FixtureSignin>,
+    sequence: Mutex<Vec<FixtureProfile>>,
+    opens: Mutex<usize>,
+    started_over: Mutex<bool>,
+}
+
+impl std::fmt::Debug for FixtureStartup {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("FixtureStartup")
+            .field("sequence", &*lock(&self.sequence))
+            .finish_non_exhaustive()
+    }
+}
+
+/// Where the fixture's Start over says the old data went.
+pub const FIXTURE_MOVED_TO: &str = "unreadable-20261105T093000Z";
+
+impl FixtureStartup {
+    /// Opens as each of `sequence` in turn, over a new fixture session and
+    /// sign-in.
+    pub fn new(sequence: &[FixtureProfile]) -> Arc<Self> {
+        let session = FixtureSession::new();
+        let signin = FixtureSignin::new(session.clone());
+        Self::with(session, signin, sequence)
+    }
+
+    /// Opens as each of `sequence` in turn, over `session` and `signin`.
+    pub fn with(
+        session: Arc<FixtureSession>,
+        signin: Arc<FixtureSignin>,
+        sequence: &[FixtureProfile],
+    ) -> Arc<Self> {
+        Arc::new(Self {
+            session,
+            signin,
+            sequence: Mutex::new(sequence.to_vec()),
+            opens: Mutex::new(0),
+            started_over: Mutex::new(false),
+        })
+    }
+
+    /// The fixture session.
+    pub fn session(&self) -> &Arc<FixtureSession> {
+        &self.session
+    }
+
+    /// The fixture sign-in.
+    pub fn signin(&self) -> &Arc<FixtureSignin> {
+        &self.signin
+    }
+
+    /// How many times the window asked to open (Try again included).
+    pub fn opens(&self) -> usize {
+        *lock(&self.opens)
+    }
+
+    /// Whether the window asked to start over.
+    pub fn started_over(&self) -> bool {
+        *lock(&self.started_over)
+    }
+
+    fn state(&self, profile: FixtureProfile, notice: Option<String>) -> OpenState {
+        match profile {
+            FixtureProfile::Ready => OpenState::Ready(Opened {
+                session: self.session.clone(),
+                signin: self.signin.clone(),
+                notice,
+            }),
+            FixtureProfile::KeychainLocked => {
+                OpenState::KeychainUnavailable(keychain_unavailable_message(
+                    &KeychainError::Locked("the login keychain is locked".to_owned()),
+                ))
+            }
+            FixtureProfile::KeychainUnreachable => OpenState::KeychainUnavailable(
+                keychain_unavailable_message(&KeychainError::Unavailable(
+                    "no Secret Service is running in this session".to_owned(),
+                )),
+            ),
+            FixtureProfile::LostKey => {
+                OpenState::Unreadable(unreadable_message(UnreadableReason::KeyMissing))
+            }
+        }
+    }
+}
+
+impl StartupApi for FixtureStartup {
+    fn open(&self) -> oneshot::Receiver<OpenState> {
+        let (answer, receiver) = oneshot::channel();
+        let index = {
+            let mut opens = lock(&self.opens);
+            *opens += 1;
+            *opens - 1
+        };
+        let profile = {
+            let sequence = lock(&self.sequence);
+            sequence
+                .get(index)
+                .or(sequence.last())
+                .copied()
+                .unwrap_or(FixtureProfile::Ready)
+        };
+        let _ = answer.send(self.state(profile, None));
+        receiver
+    }
+
+    fn start_over(&self) -> oneshot::Receiver<OpenState> {
+        let (answer, receiver) = oneshot::channel();
+        *lock(&self.started_over) = true;
+        let notice = format!(
+            "Moved the data that can't be read to {FIXTURE_MOVED_TO}. Delete it once you are \
+             sure its key won't turn up."
+        );
+        let _ = answer.send(self.state(FixtureProfile::Ready, Some(notice)));
+        receiver
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use familychat_core::signin::SecretText;
+
+    use super::*;
+
+    fn next_step(steps: &mut watch::Receiver<SigninStep>, until: impl Fn(&SigninStep) -> bool) {
+        let deadline = std::time::Instant::now() + Duration::from_secs(5);
+        while !until(&steps.borrow()) {
+            assert!(std::time::Instant::now() < deadline, "{:?}", steps.borrow());
+            thread::sleep(Duration::from_millis(5));
+        }
+    }
+
+    #[test]
+    fn a_code_is_redeemed_only_after_continue() {
+        let session = FixtureSession::new();
+        let signin = FixtureSignin::new(session.clone());
+        let flow = signin.start(SigninStart::Link(SecretText::from(FIXTURE_LINK)));
+        let mut steps = flow.steps();
+        next_step(&mut steps, |step| matches!(step, SigninStep::Confirm(_)));
+        assert_eq!(signin.redeemed(), 0);
+        assert!(flow.answer(SigninAnswer::Continue));
+        next_step(&mut steps, |step| matches!(step, SigninStep::Finished(_)));
+        assert_eq!(signin.redeemed(), 1);
+        assert_eq!(signin.answers(), [FixtureAnswer::Continue]);
+        assert_eq!(session.accounts().borrow().len(), 1);
+        assert!(
+            !format!("{:?}", signin.events()).contains("fixture-login-token"),
+            "the link is never recorded"
+        );
+    }
+
+    #[test]
+    fn other_text_is_not_a_link_and_passwords_follow_the_script() {
+        let signin = FixtureSignin::new(FixtureSession::new());
+        let flow = signin.start(SigninStart::Link(SecretText::from("hello")));
+        let mut steps = flow.steps();
+        next_step(&mut steps, |step| matches!(step, SigninStep::NotALink(_)));
+
+        signin.set_password_outcome(FixtureOutcome::Problem(SigninProblem::new(
+            wording::WRONG_PASSWORD,
+        )));
+        let flow = signin.start(SigninStart::FamilyChatPassword);
+        let mut steps = flow.steps();
+        next_step(&mut steps, |step| matches!(step, SigninStep::Password(_)));
+        flow.answer(SigninAnswer::SubmitPassword {
+            server: FIXTURE_SERVER.to_owned(),
+            username: "ana".to_owned(),
+            password: SecretText::from("secret"),
+        });
+        next_step(
+            &mut steps,
+            |step| matches!(step, SigninStep::Password(form) if form.problem.is_some()),
+        );
+        drop(flow);
+        assert!(!format!("{:?}", signin.events()).contains("secret"));
+    }
+
+    #[test]
+    fn startup_follows_its_sequence_and_starts_over_ready() {
+        let startup = FixtureStartup::new(&[FixtureProfile::KeychainLocked, FixtureProfile::Ready]);
+        let first = startup.open().blocking_recv().expect("an answer");
+        assert!(
+            matches!(&first, OpenState::KeychainUnavailable(message) if message.contains("locked"))
+        );
+        assert!(matches!(
+            startup.open().blocking_recv(),
+            Ok(OpenState::Ready(_))
+        ));
+        assert!(matches!(
+            startup.open().blocking_recv(),
+            Ok(OpenState::Ready(_))
+        ));
+        let lost = FixtureStartup::new(&[FixtureProfile::LostKey]);
+        assert!(matches!(
+            lost.open().blocking_recv(),
+            Ok(OpenState::Unreadable(_))
+        ));
+        let Ok(OpenState::Ready(opened)) = lost.start_over().blocking_recv() else {
+            panic!("ready after starting over");
+        };
+        assert!(
+            opened
+                .notice
+                .is_some_and(|notice| notice.contains(FIXTURE_MOVED_TO))
+        );
+    }
+}

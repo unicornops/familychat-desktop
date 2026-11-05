@@ -1,0 +1,251 @@
+//! Reduced motion, copied from Zmail's `zmail-ui` (its UI plan, Phase 8).
+//!
+//! Every animation in the UI goes through GPUI's `with_animation`, which
+//! draws one still frame and schedules no more while [`App::reduce_motion`]
+//! is set. These are all the animations there are:
+//!
+//! - the spinning loader of `IconButton::spinning` and of the sign-in
+//!   steps that wait on the network, which stands still;
+//! - animated images (GPUI's `img`), which show their first frame.
+//!
+//! Nothing slides. Menus, popovers, the sidebar overlay, modals and toasts
+//! appear and go at once, the overlay scrollbar shows and hides without a
+//! fade, and the text cursor does not blink. New motion must go through
+//! `with_animation` (or check `cx.reduce_motion()` itself) and should be a
+//! fade rather than a slide.
+//!
+//! [`MotionMode`] (a setting from Phase 13) forces reduced or full motion,
+//! or follows the system:
+//!
+//! - macOS: Accessibility → Display → Reduce motion
+//!   (`NSWorkspace.accessibilityDisplayShouldReduceMotion`);
+//! - Windows: `HKCU\Control Panel\Desktop\WindowMetrics\MinAnimate`, as a
+//!   proxy for Settings → Accessibility → Visual effects → Animation
+//!   effects. The value itself is the "Animate windows when minimizing and
+//!   maximizing" effect (`SPI_GETANIMATION`); turning Animation effects off
+//!   clears it along with Windows' other animations. It is not the
+//!   client-area animation setting (`SPI_GETCLIENTAREAANIMATION`), which
+//!   has no registry value and needs unsafe code to read, so a user who
+//!   turns off only that one in Performance Options is not detected, and
+//!   one who turns off only the minimise animation reduces motion here;
+//! - Linux and the BSDs: GNOME's
+//!   `org.gnome.desktop.interface enable-animations`, read by a
+//!   short-lived `gsettings` subprocess (like the power monitor of Zmail's `zmail_sync`,
+//!   with no platform binding).
+//!
+//! The setting is read on a background thread. A setting that cannot be
+//! read (a missing key or tool, a timeout, a value that does not parse) is
+//! unknown, and unknown means motion is allowed.
+//!
+//! [`App::reduce_motion`]: gpui::App::reduce_motion
+
+use std::io::Read as _;
+use std::process::{Command, Stdio};
+use std::time::{Duration, Instant};
+
+use gpui::{App, AppContext as _, Global};
+
+/// Whether animations follow the system or are forced on or off. The
+/// setting arrives with Settings (Phase 13); until then the app follows
+/// the system.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[allow(dead_code)]
+pub(crate) enum MotionMode {
+    /// Follow the operating system's reduce-motion setting (full motion
+    /// where the platform cannot tell).
+    #[default]
+    System,
+    /// Never animate: spinners stay still.
+    Reduce,
+    /// Always animate, whatever the system says.
+    Full,
+}
+
+/// The longest a system setting read may take before it counts as unknown.
+const SYSTEM_READ_TIMEOUT: Duration = Duration::from_secs(1);
+
+/// What the system last said about reduced motion: `Some(true)` asks for
+/// less motion, `None` means it could not be read.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub(crate) struct SystemMotion(pub(crate) Option<bool>);
+
+impl Global for SystemMotion {}
+
+/// Whether the UI should reduce motion for the user's choice, given what
+/// the system asks for. An unknown system setting allows motion.
+pub(crate) fn reduces_motion(mode: MotionMode, system: Option<bool>) -> bool {
+    match mode {
+        MotionMode::System => system.unwrap_or(false),
+        MotionMode::Reduce => true,
+        MotionMode::Full => false,
+    }
+}
+
+/// Applies `mode` to every window, with the last system setting read.
+pub(crate) fn apply(mode: MotionMode, cx: &mut App) {
+    let system = cx.try_global::<SystemMotion>().copied().unwrap_or_default();
+    cx.set_reduce_motion(reduces_motion(mode, system.0));
+}
+
+/// Reads the system's setting off the main thread and follows it. Call
+/// once at startup.
+pub(crate) fn follow_system(cx: &mut App) {
+    cx.spawn(async move |cx| {
+        let system = cx.background_spawn(async { read_system_setting() }).await;
+        cx.update(|cx| {
+            cx.set_global(SystemMotion(system));
+            apply(MotionMode::System, cx);
+        });
+    })
+    .detach();
+}
+
+/// Reads the system's reduce-motion setting. Blocks for up to
+/// [`SYSTEM_READ_TIMEOUT`], so call it off the main thread.
+pub(crate) fn read_system_setting() -> Option<bool> {
+    if cfg!(target_os = "macos") {
+        macos_reduce_motion()
+    } else if cfg!(target_os = "windows") {
+        windows_min_animate().and_then(|value| parse_windows_min_animate(&value))
+    } else if cfg!(unix) {
+        command_output(
+            "gsettings",
+            &["get", "org.gnome.desktop.interface", "enable-animations"],
+        )
+        .and_then(|output| parse_gnome_enable_animations(&output))
+    } else {
+        None
+    }
+}
+
+/// Accessibility → Display → Reduce motion.
+#[cfg(target_os = "macos")]
+fn macos_reduce_motion() -> Option<bool> {
+    use objc2_app_kit::NSWorkspace;
+
+    Some(NSWorkspace::sharedWorkspace().accessibilityDisplayShouldReduceMotion())
+}
+
+#[cfg(not(target_os = "macos"))]
+fn macos_reduce_motion() -> Option<bool> {
+    None
+}
+
+/// The `MinAnimate` string under `Control Panel\Desktop\WindowMetrics`.
+#[cfg(target_os = "windows")]
+fn windows_min_animate() -> Option<String> {
+    use windows_registry::CURRENT_USER;
+
+    CURRENT_USER
+        .open(r"Control Panel\Desktop\WindowMetrics")
+        .and_then(|key| key.get_string("MinAnimate"))
+        .ok()
+}
+
+#[cfg(not(target_os = "windows"))]
+fn windows_min_animate() -> Option<String> {
+    None
+}
+
+/// `MinAnimate`: `"0"` (animations off) reduces.
+fn parse_windows_min_animate(value: &str) -> Option<bool> {
+    match value.trim() {
+        "0" => Some(true),
+        "1" => Some(false),
+        _ => None,
+    }
+}
+
+/// `gsettings get org.gnome.desktop.interface enable-animations`: `false`
+/// reduces.
+fn parse_gnome_enable_animations(output: &str) -> Option<bool> {
+    match output.trim() {
+        "false" => Some(true),
+        "true" => Some(false),
+        _ => None,
+    }
+}
+
+/// Runs `program` and returns what it printed, or `None` if it could not
+/// start, failed, or took longer than [`SYSTEM_READ_TIMEOUT`].
+fn command_output(program: &str, args: &[&str]) -> Option<String> {
+    let mut child = Command::new(program)
+        .args(args)
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
+        .ok()?;
+    let deadline = Instant::now() + SYSTEM_READ_TIMEOUT;
+    // The answer is one short line, which fits in the pipe, so waiting
+    // before reading cannot deadlock.
+    loop {
+        match child.try_wait() {
+            Ok(Some(status)) if status.success() => break,
+            Ok(None) if Instant::now() < deadline => {
+                std::thread::sleep(Duration::from_millis(10));
+            }
+            Ok(Some(_)) => return None,
+            Ok(None) | Err(_) => {
+                let _ = child.kill();
+                let _ = child.wait();
+                return None;
+            }
+        }
+    }
+    let mut output = String::new();
+    child.stdout.take()?.read_to_string(&mut output).ok()?;
+    Some(output)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_choice_wins_and_system_follows_the_platform() {
+        for system in [None, Some(false), Some(true)] {
+            assert!(reduces_motion(MotionMode::Reduce, system));
+            assert!(!reduces_motion(MotionMode::Full, system));
+        }
+        assert!(reduces_motion(MotionMode::System, Some(true)));
+        assert!(!reduces_motion(MotionMode::System, Some(false)));
+        assert!(
+            !reduces_motion(MotionMode::System, None),
+            "an unknown system setting allows motion"
+        );
+    }
+
+    #[test]
+    fn platform_answers_parse_and_anything_else_is_unknown() {
+        assert_eq!(parse_windows_min_animate("0"), Some(true));
+        assert_eq!(parse_windows_min_animate("1"), Some(false));
+        assert_eq!(parse_windows_min_animate(""), None);
+        assert_eq!(parse_windows_min_animate("yes"), None);
+        assert_eq!(parse_gnome_enable_animations("false\n"), Some(true));
+        assert_eq!(parse_gnome_enable_animations("true\n"), Some(false));
+        assert_eq!(
+            parse_gnome_enable_animations("No such schema “org.gnome.desktop.interface”"),
+            None
+        );
+    }
+
+    #[test]
+    fn commands_that_fail_or_do_not_exist_are_unknown() {
+        assert_eq!(command_output("familychat-no-such-program", &[]), None);
+        if cfg!(unix) {
+            assert_eq!(command_output("false", &[]), None);
+            assert_eq!(command_output("echo", &["true"]).as_deref(), Some("true\n"));
+        }
+    }
+
+    #[test]
+    fn a_command_that_hangs_times_out() {
+        if !cfg!(unix) {
+            return;
+        }
+        let started = Instant::now();
+        assert_eq!(command_output("sleep", &["5"]), None);
+        assert!(started.elapsed() < Duration::from_secs(4));
+    }
+}

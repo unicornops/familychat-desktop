@@ -392,7 +392,7 @@ mod tests {
         assert_eq!(semantic.background.as_deref(), Some("#FFFFFF"));
         assert_eq!(semantic.hover_background.as_deref(), Some("#F5F5F4"));
         // The website's primary teal.
-        assert_eq!(semantic.accent.as_deref(), Some("#0D9488"));
+        assert_eq!(semantic.accent.as_deref(), Some("#0F766E"));
     }
 
     #[test]

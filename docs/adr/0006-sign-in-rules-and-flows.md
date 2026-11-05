@@ -50,7 +50,8 @@ network or SDK: `SigninApi::start(SigninStart) -> SigninFlow`, a
 `Password`, `Finished`, `AlreadySignedIn`, `NotALink`, `Cancelled`) and an
 unbounded sender of `SigninAnswer`s (`Continue`, `UsePassword`,
 `SubmitPassword`, `Cancel`). `LiveSignin` implements it on the background
-runtime; a fixture for screenshots arrives with the screens (Phase 5).
+runtime; `familychat-test-support`'s `FixtureSignin` is the fixture the
+window's screenshots and view tests draw (ADR 0011).
 Dropping the flow cancels it and wipes a code not yet redeemed.
 
 ### Server names, the allowlist and the environments

@@ -116,10 +116,10 @@ Chat's own contract documents (PLAN.md, section 2).
 - Upstream inputs are pinned tightly and moved deliberately: GPUI by the
   weekly bump workflow (ADR 0002), matrix-sdk to an exact minor from
   Phase 3.
-- The Phase 0 window has system decorations only. Zmail's client-side
+- The Phase 0 window had system decorations only. Zmail's client-side
   title bar and window frame (for compositors without server-side
-  decorations, such as GNOME on Wayland) arrive with the GUI shell in
-  Phase 5.
+  decorations, such as GNOME on Wayland) arrived with the GUI shell in
+  Phase 5 (ADR 0011).
 
 ## Decisions
 

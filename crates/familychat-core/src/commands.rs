@@ -1,0 +1,163 @@
+//! The commands table (PLAN.md, section 5.3): every command both frontends
+//! offer, with its name, what it does and its default keys in the window
+//! and in the terminal UI.
+//!
+//! The window defines one GPUI action per command (`familychat::<id>`),
+//! binds it in its keymap files (`keymaps/default.json`, `macos.json`) to
+//! the keys listed here, and builds its command palette from this table;
+//! the terminal UI (Phase 10) builds its command bar and `:` palette from
+//! it. A command without a key in either frontend fails the tests here and
+//! in `familychat-ui`, so the two cannot drift apart.
+//!
+//! GUI keys use GPUI's keystroke syntax: `secondary-` is Cmd on macOS and
+//! Ctrl elsewhere, so one keymap serves every platform. TUI keys are the
+//! terminal UI's names (`q`, `:`, `esc`, `ctrl-v`).
+
+/// Where a command makes sense, so a frontend offers it only there.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CommandScope {
+    /// Anywhere.
+    Global,
+    /// While nobody is signed in, or a sign-in is being added.
+    SignIn,
+}
+
+/// One command.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Command {
+    /// The stable id: the GPUI action's name after `familychat::`, and the
+    /// terminal UI's command name.
+    pub id: &'static str,
+    /// What menus and the palette call it.
+    pub name: &'static str,
+    /// One sentence on what it does (the palette and the cheat sheet).
+    pub description: &'static str,
+    /// Its default keys in the window, in GPUI syntax, first one shown.
+    pub gui_keys: &'static [&'static str],
+    /// Its default key in the terminal UI.
+    pub tui_key: &'static str,
+    /// Where it makes sense.
+    pub scope: CommandScope,
+    /// An icon for the palette (a Lucide name in `assets/icons`).
+    pub icon: &'static str,
+}
+
+/// Every command, in the order the palette lists them.
+pub const COMMANDS: &[Command] = &[
+    Command {
+        id: "ToggleCommandPalette",
+        name: "Command palette",
+        description: "Search every command and run one.",
+        gui_keys: &["secondary-k"],
+        tui_key: ":",
+        scope: CommandScope::Global,
+        icon: "search",
+    },
+    Command {
+        id: "SignInWithCode",
+        name: "Sign in with a code from your parent",
+        description: "Paste the sign-in link, or paste or drop the QR code image.",
+        gui_keys: &["secondary-1"],
+        tui_key: "c",
+        scope: CommandScope::SignIn,
+        icon: "qr-code",
+    },
+    Command {
+        id: "SignInWithPassword",
+        name: "Sign in with your password",
+        description: "Sign in to your family's Family Chat server with your password.",
+        gui_keys: &["secondary-2"],
+        tui_key: "p",
+        scope: CommandScope::SignIn,
+        icon: "key-round",
+    },
+    Command {
+        id: "UseAnotherServer",
+        name: "Use another Matrix server",
+        description: "Sign in to any Matrix homeserver with a password.",
+        gui_keys: &["secondary-3"],
+        tui_key: "o",
+        scope: CommandScope::SignIn,
+        icon: "globe",
+    },
+    Command {
+        id: "PasteSignInCode",
+        name: "Paste a sign-in link or QR code",
+        description: "Use the link or the QR code image on the clipboard to sign in.",
+        gui_keys: &["secondary-shift-v"],
+        tui_key: "ctrl-v",
+        scope: CommandScope::SignIn,
+        icon: "clipboard-paste",
+    },
+    Command {
+        id: "GoBack",
+        name: "Back",
+        description: "Leave this step and go back.",
+        gui_keys: &["escape"],
+        tui_key: "esc",
+        scope: CommandScope::SignIn,
+        icon: "arrow-left",
+    },
+    Command {
+        id: "Quit",
+        name: "Quit Family Chat",
+        description: "Close every window and quit.",
+        gui_keys: &["secondary-q"],
+        tui_key: "q",
+        scope: CommandScope::Global,
+        icon: "log-out",
+    },
+];
+
+/// The command with this id.
+pub fn command(id: &str) -> Option<&'static Command> {
+    COMMANDS.iter().find(|command| command.id == id)
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeSet;
+
+    use super::*;
+
+    #[test]
+    fn every_command_has_a_key_in_both_frontends() {
+        for command in COMMANDS {
+            assert!(
+                !command.gui_keys.is_empty() && command.gui_keys.iter().all(|key| !key.is_empty()),
+                "{} has no window key",
+                command.id
+            );
+            assert!(!command.tui_key.is_empty(), "{} has no TUI key", command.id);
+            assert!(!command.name.is_empty() && !command.description.is_empty());
+            assert!(!command.icon.is_empty());
+        }
+    }
+
+    #[test]
+    fn ids_and_keys_are_unique() {
+        let ids: BTreeSet<_> = COMMANDS.iter().map(|command| command.id).collect();
+        assert_eq!(ids.len(), COMMANDS.len(), "two commands share an id");
+        let tui: BTreeSet<_> = COMMANDS.iter().map(|command| command.tui_key).collect();
+        assert_eq!(tui.len(), COMMANDS.len(), "two commands share a TUI key");
+        let gui: BTreeSet<_> = COMMANDS
+            .iter()
+            .flat_map(|command| command.gui_keys.iter())
+            .collect();
+        assert_eq!(
+            gui.len(),
+            COMMANDS
+                .iter()
+                .map(|command| command.gui_keys.len())
+                .sum::<usize>(),
+            "two commands share a window key"
+        );
+        assert!(ids.iter().all(|id| id.chars().all(char::is_alphanumeric)));
+    }
+
+    #[test]
+    fn commands_are_found_by_id() {
+        assert_eq!(command("Quit").map(|command| command.tui_key), Some("q"));
+        assert!(command("Nope").is_none());
+    }
+}

@@ -255,7 +255,8 @@ impl SigninFlow {
 }
 
 /// Starts sign-ins. `familychat-signin`'s `LiveSignin` is the live one; a
-/// fixture for screenshots arrives with the sign-in screens (Phase 5).
+/// fixture for screenshots and view tests is `familychat-test-support`'s
+/// `FixtureSignin`.
 pub trait SigninApi: Send + Sync {
     /// Starts a flow.
     fn start(&self, start: SigninStart) -> SigninFlow;
