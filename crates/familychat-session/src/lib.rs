@@ -13,6 +13,9 @@
 //! - [`LiveSession`]: the [`SessionApi`](familychat_core::session::SessionApi)
 //!   both frontends consume, with each account's notifications (the SDK's
 //!   notification handler) and unread total.
+//! - `encryption`: the client's encryption settings (ADR 0009), the
+//!   account's identity, recovery, verification, devices, room key files
+//!   and identity warnings.
 //! - [`LiveSettings`]: the [`SettingsApi`](familychat_core::settings::SettingsApi)
 //!   over the profile's preferences.
 //!
@@ -27,6 +30,7 @@
 mod account;
 mod backoff;
 mod config;
+mod encryption;
 mod failure;
 mod live;
 mod manager;

@@ -20,6 +20,9 @@
 //! - [`rich_text`]: the rich-text AST a message's text becomes (ADR 0007);
 //! - [`links`]: which links open in the app and which ask first;
 //! - [`media`]: images and files, as the session hands them over;
+//! - [`encryption`]: this device's confirmation, the account's identity
+//!   and recovery, verification flows, devices, room key files, identity
+//!   warnings and why a message can't be read (ADR 0009);
 //! - [`notifications`]: the notifications the session reports, for
 //!   `familychat-notify` to compose;
 //! - [`settings`]: the preferences a frontend reads and changes
@@ -35,6 +38,7 @@
 
 pub mod commands;
 pub mod diff;
+pub mod encryption;
 pub mod fuzzy;
 pub mod identity;
 pub mod links;

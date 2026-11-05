@@ -12,7 +12,7 @@
 //! does both).
 
 use familychat_core::{OwnedUserId, UserId, session::AccountKey};
-use familychat_security::AccountSession;
+use familychat_security::{AccountSession, Secret};
 use familychat_session::{AccountManager, AddAccountError, OpenError, PostLoginCheck, account_key};
 use futures_util::future::BoxFuture;
 use reqwest::Url;
@@ -45,11 +45,15 @@ pub trait AccountSink: Send + Sync {
     fn is_signed_in(&self, user_id: &UserId) -> bool;
 
     /// Restores `session` as a new account, runs `check` once the client
-    /// has it, and starts its sync.
+    /// has it, and starts its sync. `password` is a password sign-in's:
+    /// the session uses it once, if the server asks for it when the
+    /// account's cross-signing identity is made (ADR 0009), and wipes it.
+    /// It is never stored.
     fn add(
         &self,
         session: AccountSession,
         check: Box<dyn PostLoginCheck>,
+        password: Option<Secret<String>>,
     ) -> BoxFuture<'_, Result<AccountKey, AddFailure>>;
 }
 
@@ -70,9 +74,13 @@ impl AccountSink for AccountManager {
         &self,
         session: AccountSession,
         check: Box<dyn PostLoginCheck>,
+        password: Option<Secret<String>>,
     ) -> BoxFuture<'_, Result<AccountKey, AddFailure>> {
         Box::pin(async move {
-            match self.add_account(session, check.as_ref()).await {
+            match self
+                .add_account_with_password(session, check.as_ref(), password)
+                .await
+            {
                 Ok(id) => Ok(account_key(id)),
                 Err(AddAccountError::Open(OpenError::Refused(refusal))) => {
                     Err(AddFailure::Refused(refusal))

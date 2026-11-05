@@ -7,8 +7,9 @@ use familychat_core::{
     rich_text::RichText,
     rooms::{Encryption, Membership, RoomPreview, RoomSummary, UnreadCounts},
     timeline::{
-        MembershipChange, MessageBody, MessageKind, Reaction, ReplyPreview, SendState, StateChange,
-        TimelineContent, TimelineEvent, TimelineItem, TimelineItemId, TimelineItemKind,
+        MembershipChange, MessageBody, MessageKind, Reaction, ReplyPreview, SendProblem, SendState,
+        StateChange, TimelineContent, TimelineEvent, TimelineItem, TimelineItemId,
+        TimelineItemKind, UtdReason,
     },
 };
 use familychat_security::{file_names::sanitize_filename, matrix_html::message_text};
@@ -25,13 +26,15 @@ use matrix_sdk::{
         },
     },
 };
+use matrix_sdk_base::{crypto::types::events::UtdCause, store::QueueWedgeError};
 use matrix_sdk_ui::{
     eyeball_im::VectorDiff,
     room_list_service::RoomListItem,
     timeline::{
-        AnyOtherStateEventContentChange, EventSendState, EventTimelineItem, InReplyToDetails,
-        LatestEventValue, MembershipChange as SdkMembershipChange, Message, MsgLikeKind, Profile,
-        ReactionsByKeyBySender, RoomExt, TimelineDetails, TimelineItemContent, VirtualTimelineItem,
+        AnyOtherStateEventContentChange, EncryptedMessage, EventSendState, EventTimelineItem,
+        InReplyToDetails, LatestEventValue, MembershipChange as SdkMembershipChange, Message,
+        MsgLikeKind, Profile, ReactionsByKeyBySender, RoomExt, TimelineDetails,
+        TimelineItemContent, VirtualTimelineItem,
     },
 };
 
@@ -251,13 +254,51 @@ fn timeline_event(event: &EventTimelineItem, own_user: &UserId) -> TimelineEvent
         content: content(event.content(), sender_html(event).as_deref()),
         send_state: event.send_state().map(|state| match state {
             EventSendState::NotSentYet { .. } => SendState::Sending,
-            EventSendState::SendingFailed { is_recoverable, .. } => SendState::Failed {
+            EventSendState::SendingFailed {
+                error,
+                is_recoverable,
+            } => SendState::Failed {
                 recoverable: *is_recoverable,
+                problem: send_problem(error),
             },
             EventSendState::Sent { .. } => SendState::Sent,
         }),
         in_reply_to,
         reactions,
+    }
+}
+
+/// Why the encryption stopped a send, when it did (ADR 0009).
+fn send_problem(error: &matrix_sdk::Error) -> Option<SendProblem> {
+    match QueueWedgeError::from(error) {
+        QueueWedgeError::InsecureDevices { .. } => Some(SendProblem::UnconfirmedDevices),
+        QueueWedgeError::IdentityViolations { .. } => Some(SendProblem::IdentityChanged),
+        QueueWedgeError::CrossVerificationRequired => Some(SendProblem::ConfirmThisDevice),
+        _ => None,
+    }
+}
+
+/// Why this device can't read a message, from matrix-sdk-ui's cause (the
+/// cause the unable-to-decrypt hook reports too).
+pub(crate) fn utd_reason(encrypted: &EncryptedMessage) -> UtdReason {
+    match encrypted {
+        EncryptedMessage::MegolmV1AesSha2 { cause, .. } => utd_cause(*cause),
+        _ => UtdReason::Waiting,
+    }
+}
+
+/// The view model's reason for an SDK cause.
+pub(crate) fn utd_cause(cause: UtdCause) -> UtdReason {
+    match cause {
+        UtdCause::SentBeforeWeJoined => UtdReason::SentBeforeJoined,
+        UtdCause::VerificationViolation => UtdReason::SenderIdentityChanged,
+        UtdCause::UnsignedDevice => UtdReason::UnconfirmedSender,
+        UtdCause::UnknownDevice => UtdReason::UnknownSender,
+        UtdCause::HistoricalMessageAndBackupIsDisabled => UtdReason::HistoryNotAvailable,
+        UtdCause::HistoricalMessageAndDeviceIsUnverified => UtdReason::ConfirmForHistory,
+        UtdCause::WithheldForUnverifiedOrInsecureDevice => UtdReason::ConfirmThisDevice,
+        UtdCause::WithheldBySender => UtdReason::WithheldBySender,
+        _ => UtdReason::Waiting,
     }
 }
 
@@ -299,7 +340,9 @@ fn content(content: &TimelineItemContent, sender_html: Option<&str>) -> Timeline
                 body: MessageBody::new(sticker.content().body.clone()),
             },
             MsgLikeKind::Redacted => TimelineContent::Redacted,
-            MsgLikeKind::UnableToDecrypt(_) => TimelineContent::UnableToDecrypt,
+            MsgLikeKind::UnableToDecrypt(encrypted) => {
+                TimelineContent::UnableToDecrypt(utd_reason(encrypted))
+            }
             MsgLikeKind::Poll(_) => TimelineContent::Other {
                 event_type: Some("m.poll.start".to_owned()),
             },

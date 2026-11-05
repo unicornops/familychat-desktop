@@ -5,6 +5,10 @@
 use std::{path::PathBuf, sync::Arc};
 
 use familychat_core::{
+    encryption::{
+        AuthOutcome, DeviceView, EncryptionStatus, IdentityWarning, KeyImport, SecretText,
+        VerificationFlow,
+    },
     media::{DecodedImage, MediaError, MediaInfo},
     messaging::{Draft, MediaLimits, Mention, NewRoom, RoomDone, RoomRequest, ServerDefaults},
     notifications::IncomingNotification,
@@ -19,7 +23,7 @@ use familychat_core::{
 use matrix_sdk::{
     Client, RoomMemberships,
     ruma::{
-        OwnedEventId, OwnedRoomId, OwnedUserId, RoomId,
+        OwnedEventId, OwnedRoomId, OwnedUserId, RoomId, UserId,
         events::room::{member::MembershipState, power_levels::UserPowerLevel},
     },
 };
@@ -31,7 +35,9 @@ use tokio::{
 
 use tracing::info;
 
-use crate::{account::Ready, manager::AccountManager, media, messaging, room_list, timeline};
+use crate::{
+    account::Ready, encryption, manager::AccountManager, media, messaging, room_list, timeline,
+};
 
 /// A draft as the app store keeps it (encrypted, ADR 0003).
 fn draft_json(draft: &Draft) -> Value {
@@ -210,6 +216,7 @@ impl SessionApi for LiveSession {
                 room,
                 ready.sync.room_list_service(),
                 ready.timelines.clone(),
+                ready.utd_hook.clone(),
             )
             .await
         })
@@ -358,6 +365,121 @@ impl SessionApi for LiveSession {
         if let Some(account) = self.manager.account_by_key(account) {
             account.retry_sync();
         }
+    }
+    fn encryption(&self, account: &AccountKey) -> Option<watch::Receiver<EncryptionStatus>> {
+        self.manager
+            .account_by_key(account)
+            .map(|account| account.encryption())
+    }
+
+    fn set_up_identity(
+        &self,
+        account: &AccountKey,
+        password: Option<SecretText>,
+    ) -> Reply<AuthOutcome> {
+        let shared = self
+            .manager
+            .account_by_key(account)
+            .map(|account| account.encryption_shared());
+        let password = encryption::password_secret(password);
+        self.reply(account, move |ready| async move {
+            let shared = shared.ok_or(SessionError::UnknownAccount)?;
+            encryption::set_up_identity(&ready.client, &shared, password).await
+        })
+    }
+
+    fn verify_this_device(&self, account: &AccountKey) -> Reply<VerificationFlow> {
+        self.reply(account, move |ready| async move {
+            encryption::verify_this_device(&ready.client).await
+        })
+    }
+
+    fn verify_device(&self, account: &AccountKey, device_id: &str) -> Reply<VerificationFlow> {
+        let device_id = device_id.to_owned();
+        self.reply(account, move |ready| async move {
+            encryption::verify_device(&ready.client, &device_id).await
+        })
+    }
+
+    fn verification_requests(
+        &self,
+    ) -> mpsc::Receiver<familychat_core::session::IncomingVerification> {
+        self.manager.verification_feed().subscribe()
+    }
+
+    fn enable_recovery(&self, account: &AccountKey) -> Reply<SecretText> {
+        self.reply(account, move |ready| async move {
+            encryption::enable_recovery(&ready.client).await
+        })
+    }
+
+    fn recover(&self, account: &AccountKey, recovery_key: SecretText) -> Reply<()> {
+        self.reply(account, move |ready| async move {
+            encryption::recover(&ready.client, recovery_key).await
+        })
+    }
+
+    fn devices(&self, account: &AccountKey) -> Reply<Vec<DeviceView>> {
+        self.reply(account, move |ready| async move {
+            encryption::devices(&ready.client).await
+        })
+    }
+
+    fn sign_out_device(
+        &self,
+        account: &AccountKey,
+        device_id: &str,
+        password: Option<SecretText>,
+    ) -> Reply<AuthOutcome> {
+        let device_id = device_id.to_owned();
+        let password = encryption::password_secret(password);
+        self.reply(account, move |ready| async move {
+            encryption::sign_out_device(&ready.client, &device_id, password).await
+        })
+    }
+
+    fn export_room_keys(
+        &self,
+        account: &AccountKey,
+        path: PathBuf,
+        passphrase: SecretText,
+    ) -> Reply<()> {
+        self.reply(account, move |ready| async move {
+            encryption::export_room_keys(&ready.client, path, passphrase).await
+        })
+    }
+
+    fn import_room_keys(
+        &self,
+        account: &AccountKey,
+        path: PathBuf,
+        passphrase: SecretText,
+    ) -> Reply<KeyImport> {
+        self.reply(account, move |ready| async move {
+            encryption::import_room_keys(&ready.client, path, passphrase).await
+        })
+    }
+
+    fn identity_warnings(
+        &self,
+        account: &AccountKey,
+        room: &RoomId,
+    ) -> Reply<watch::Receiver<Vec<IdentityWarning>>> {
+        let room: OwnedRoomId = room.to_owned();
+        self.reply(account, move |ready| async move {
+            let room = ready
+                .client
+                .get_room(&room)
+                .ok_or(SessionError::UnknownRoom)?;
+            encryption::identity_warnings(room).await
+        })
+    }
+
+    fn acknowledge_identity(&self, account: &AccountKey, user: &UserId) -> Reply<()> {
+        let user = user.to_owned();
+        self.reply(account, move |ready| async move {
+            encryption::acknowledge_identity(&ready.client, &user).await
+        })
     }
 }
 

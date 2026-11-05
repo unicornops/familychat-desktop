@@ -23,16 +23,16 @@
     Dad: Message deleted                    │
   Book club                          Sunday │
     No messages yet                         │
-                                            │
-                                            │
-                                            │
-                                            │
-                                            │
                                             │ ───────────────────────────────────────────────────── Monday ─────────────────────────────────────────────────────
                                             │   · Dad turned on end-to-end encryption
                                             │ Mum  10:01
                                             │   Waiting for this message's key. It shows once a device that can read it shares the key.
-                                            │   Waiting for this message's key. It shows once a device that can read it shares the key.
+                                            │   This message was sent before this device signed in. Confirm it's you with another device or your recovery key to
+                                            │   read older messages.
+                                            │ Grandad  10:03
+                                            │   You can't read this message: it was sent before you joined.
+                                            │ Ben  10:04
+                                            │   The sender didn't share this message's key with you.
                                             │ Dad  11:00
                                             │   Cake is ordered. Chocolate, obviously.
                                             │ Ana  11:05
@@ -72,16 +72,16 @@ BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBkkkkkk k
 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
                                      kkkkkk k
 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
-                                            k
-                                            k
-                                            k
-                                            k
-                                            k
                                             k kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
                                             k   kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
                                             k BBB  kkkkk
                                             k   kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
-                                            k   kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+                                            k   kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+                                            k   kkkkkkkkkkkkkkkkkkkk
+                                            k BBBBBBB  kkkkk
+                                            k   kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+                                            k BBB  kkkkk
+                                            k   kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
                                             k BBB  kkkkk
                                             k kk
                                             k ccc  kkkkk
@@ -123,14 +123,14 @@ BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 
 
 
-
-
-
-
-
                                               BBB
                                                 IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
-                                                IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+                                                IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+                                                IIIIIIIIIIIIIIIIIIII
+                                              BBBBBBB
+                                                IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+                                              BBB
+                                                IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
                                               BBB
 
                                               BBB
@@ -170,16 +170,16 @@ RRRR                RRR                 R                   R                   
     Dad: Message deleted                    |
   Book club                          Sunday |
     No messages yet                         |
-                                            |
-                                            |
-                                            |
-                                            |
-                                            |
                                             | ----------------------------------------------------- Monday -----------------------------------------------------
                                             |   - Dad turned on end-to-end encryption
                                             | Mum  10:01
                                             |   Waiting for this message's key. It shows once a device that can read it shares the key.
-                                            |   Waiting for this message's key. It shows once a device that can read it shares the key.
+                                            |   This message was sent before this device signed in. Confirm it's you with another device or your recovery key to
+                                            |   read older messages.
+                                            | Grandad  10:03
+                                            |   You can't read this message: it was sent before you joined.
+                                            | Ben  10:04
+                                            |   The sender didn't share this message's key with you.
                                             | Dad  11:00
                                             |   Cake is ordered. Chocolate, obviously.
                                             | Ana  11:05

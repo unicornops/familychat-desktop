@@ -71,6 +71,17 @@ Phase 7, writing ([#8](https://github.com/unicornops/familychat-desktop/issues/8
 - the room hears when you are typing and how far you have read; new rooms and direct chats are encrypted unless your server says otherwise
 - all of it through `familychat-actions`, which the terminal UI will use too
 
+Phase 8, end-to-end encryption ([#9](https://github.com/unicornops/familychat-desktop/issues/9), [ADR 0009](./docs/adr/0009-end-to-end-encryption.md)):
+
+- "Confirm it's you" after signing in on a new device: compare emoji with a phone or computer that is already signed in (or let the phone scan a code the window shows), or enter your recovery key; you can skip for now, after a warning, and a banner reminds you
+- your account's cross-signing is set up for you: a sign-in with a code from a parent needs no password on Family Chat, and if another server asks for one, the window explains why and asks for it
+- recovery: a recovery key, shown once with Copy and Save, and an encrypted backup of your message keys on your server, so a new device can read your history
+- your devices, with which ones are verified; verify or sign out the others
+- verification requests from your other devices open in the window; a banner in a room when someone's identity changes, and a reason under every message this device can't read
+- a message that stops because someone has a device they haven't confirmed says so, with Send anyway
+- room keys exported to a file protected by a passphrase, and imported from one (what moving your family to its own address needs)
+- Element X's encryption defaults (ADR 0009 lists them and the one place Family Chat differs)
+
 Phase 9, notifications, single instance and sign-in links ([#10](https://github.com/unicornops/familychat-desktop/issues/10), [ADR 0013](./docs/adr/0013-notifications-single-instance-and-sign-in-links.md)):
 
 - your computer's own notifications for new messages while Family Chat is open, for the rooms you aren't looking at: who wrote, where and what (or just "New message" if you turn the text off in Notification settings, Ctrl+Alt+N or Cmd+Option+N), one per room however many arrive, and never more than six a minute; clicking one opens the room
@@ -88,7 +99,7 @@ Phase 10, the terminal UI: sign-in and reading ([#11](https://github.com/unicorn
 - the mouse (click, scroll, drag to select and copy, as in Zellij), new messages in the status line with an optional bell (`--bell`), `NO_COLOR` and ASCII drawing (`--ascii`)
 - every name, message and file name from a server is filtered for escape sequences before it reaches your terminal
 
-Writing from the terminal (Phase 11), encryption and the rest follow in the later phases; opening `familychat://` links straight from your browser needs the installers of Phase 12.
+Writing and encryption from the terminal (Phase 11) and the rest follow in the later phases; opening `familychat://` links straight from your browser needs the installers of Phase 12.
 
 ## Building
 

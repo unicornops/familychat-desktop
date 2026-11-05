@@ -17,7 +17,7 @@ use familychat_core::{
 use futures_util::StreamExt as _;
 use matrix_sdk::{Room, ruma::OwnedUserId};
 use matrix_sdk_ui::timeline::RoomExt as _;
-use matrix_sdk_ui::{RoomListService, Timeline};
+use matrix_sdk_ui::{RoomListService, Timeline, unable_to_decrypt_hook::UtdHookManager};
 use tokio::sync::{Mutex, mpsc};
 use tracing::info;
 
@@ -33,10 +33,13 @@ pub(crate) async fn open(
     room: Room,
     service: Arc<RoomListService>,
     open: OpenTimelines,
+    utd_hook: Arc<UtdHookManager>,
 ) -> Result<TimelineSubscription, SessionError> {
     service.set_room_subscriptions(&[room.room_id()]).await;
     let timeline = room
-        .timeline()
+        .timeline_builder()
+        .with_unable_to_decrypt_hook(utd_hook)
+        .build()
         .await
         .map_err(|error| SessionError::Failed(format!("The room couldn't be opened: {error}")))?;
     let (updates_tx, updates) = mpsc::channel(SUBSCRIPTION_BUFFER);

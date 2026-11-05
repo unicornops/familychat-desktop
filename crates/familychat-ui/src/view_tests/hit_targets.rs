@@ -21,7 +21,7 @@ use crate::components::hit_target::recorded;
 
 /// Redraws the window and checks every target it drew. Returns how many
 /// were checked.
-fn check_targets(what: &str, cx: &mut VisualTestContext) -> usize {
+pub(super) fn check_targets(what: &str, cx: &mut VisualTestContext) -> usize {
     recorded::take();
     cx.update(|window, _| window.refresh());
     cx.run_until_parked();

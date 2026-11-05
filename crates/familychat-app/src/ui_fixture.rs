@@ -15,17 +15,21 @@ use std::{sync::Arc, time::Duration};
 use anyhow::{Result, bail};
 use familychat_core::{
     ThemeAppearance,
+    encryption::{DeviceTrust, EncryptionStatus, IdentitySetup, RecoveryState, VerificationStep},
     rooms::RoomListFilter,
     settings::NotificationSettings,
     signin::{SigninStep, Working},
     sync::SyncState,
+    timeline::SendProblem,
 };
 use familychat_test_support::fixtures::{
-    FIXTURE_LINK, FixtureProfile, FixtureSession, FixtureSignin, FixtureStartup, fixture_user,
+    FIXTURE_LINK, FixtureProfile, FixtureSession, FixtureSignin, FixtureStartup,
+    encryption::{family_warnings, fixture_emoji, fixture_qr, settled},
+    fixture_user,
     rooms::{self, LARGE_EVENTS, LARGE_ROOMS},
     steps,
 };
-use familychat_ui::{ComposerLaunch, InitialView, LaunchOptions, RoomsLaunch};
+use familychat_ui::{ComposerLaunch, EncryptionLaunch, InitialView, LaunchOptions, RoomsLaunch};
 
 /// Every fixture view, in the screenshot matrix's order.
 pub(crate) const VIEWS: &[&str] = &[
@@ -86,6 +90,25 @@ pub(crate) const VIEWS: &[&str] = &[
     "room-paused",
     "message-actions",
     "message-delete",
+    "confirm-identity",
+    "confirm-recovery-key",
+    "confirm-skip",
+    "confirm-skipped",
+    "confirm-password",
+    "verify-waiting",
+    "verify-qr",
+    "verify-emoji",
+    "verify-done",
+    "verify-incoming",
+    "recovery-offer",
+    "recovery-setup",
+    "recovery-key",
+    "devices",
+    "device-sign-out",
+    "keys-export",
+    "keys-import",
+    "room-identity-changed",
+    "room-not-sent",
 ];
 
 /// The rooms a signed-in fixture has.
@@ -116,6 +139,16 @@ struct Fixture {
     rooms: Rooms,
     /// Notifications hide the message's text.
     hide_content: bool,
+    /// The account's encryption, when it isn't settled.
+    encryption: Option<EncryptionStatus>,
+    /// The step a verification starts at.
+    verification: Option<VerificationStep>,
+    /// Another device asks to verify.
+    incoming_request: bool,
+    /// The family room shows identity warnings.
+    identity_warnings: bool,
+    /// The account's newest message in the family room was stopped.
+    stopped: Option<SendProblem>,
 }
 
 impl Fixture {
@@ -127,6 +160,11 @@ impl Fixture {
             account: None,
             rooms: Rooms::Family,
             hide_content: false,
+            encryption: None,
+            verification: None,
+            incoming_request: false,
+            identity_warnings: false,
+            stopped: None,
         }
     }
 
@@ -177,6 +215,33 @@ impl Fixture {
     fn with_rooms(mut self, rooms: Rooms) -> Self {
         self.rooms = rooms;
         self
+    }
+
+    /// The family's rooms with an encryption screen or dialog open.
+    fn encryption(launch: Option<EncryptionLaunch>) -> Self {
+        Self::rooms(RoomsLaunch {
+            encryption: launch,
+            ..RoomsLaunch::default()
+        })
+    }
+
+    fn with_encryption(mut self, status: EncryptionStatus) -> Self {
+        self.encryption = Some(status);
+        self
+    }
+
+    fn verifying_from(mut self, step: VerificationStep) -> Self {
+        self.verification = Some(step);
+        self
+    }
+}
+
+/// This device isn't confirmed; the account has an identity, another
+/// device and recovery.
+fn unconfirmed() -> EncryptionStatus {
+    EncryptionStatus {
+        device: DeviceTrust::Unverified,
+        ..settled()
     }
 }
 
@@ -313,6 +378,66 @@ fn fixture(view: &str) -> Result<Fixture> {
             delete_prompt: true,
             ..RoomsLaunch::default()
         }),
+        "confirm-identity" => Fixture::encryption(None).with_encryption(unconfirmed()),
+        "confirm-recovery-key" => Fixture::encryption(Some(EncryptionLaunch::RecoveryKeyEntry))
+            .with_encryption(unconfirmed()),
+        "confirm-skip" => {
+            Fixture::encryption(Some(EncryptionLaunch::SkipWarning)).with_encryption(unconfirmed())
+        }
+        "confirm-skipped" => {
+            Fixture::encryption(Some(EncryptionLaunch::Skipped)).with_encryption(unconfirmed())
+        }
+        // A code sign-in on a server that asks for the password before
+        // the first cross-signing upload (no MSC3967).
+        "confirm-password" => Fixture::encryption(None).with_encryption(EncryptionStatus {
+            device: DeviceTrust::Unverified,
+            identity: IdentitySetup::NeedsPassword,
+            recovery: RecoveryState::Disabled,
+            other_devices: false,
+        }),
+        "verify-waiting" => Fixture::encryption(Some(EncryptionLaunch::Verify))
+            .with_encryption(unconfirmed())
+            .verifying_from(VerificationStep::Waiting),
+        "verify-qr" => Fixture::encryption(Some(EncryptionLaunch::Verify))
+            .with_encryption(unconfirmed())
+            .verifying_from(VerificationStep::Ready {
+                qr: Some(fixture_qr()),
+            }),
+        "verify-emoji" => Fixture::encryption(Some(EncryptionLaunch::Verify))
+            .with_encryption(unconfirmed())
+            .verifying_from(VerificationStep::CompareEmoji(fixture_emoji())),
+        "verify-done" => Fixture::encryption(Some(EncryptionLaunch::Verify))
+            .verifying_from(VerificationStep::Done),
+        "verify-incoming" => Fixture {
+            incoming_request: true,
+            ..Fixture::encryption(None)
+        },
+        "recovery-offer" => Fixture::encryption(None).with_encryption(EncryptionStatus {
+            recovery: RecoveryState::Disabled,
+            ..settled()
+        }),
+        "recovery-setup" => Fixture::encryption(Some(EncryptionLaunch::SetUpRecovery))
+            .with_encryption(EncryptionStatus {
+                recovery: RecoveryState::Disabled,
+                ..settled()
+            }),
+        "recovery-key" => Fixture::encryption(Some(EncryptionLaunch::RecoveryKeyShown))
+            .with_encryption(EncryptionStatus {
+                recovery: RecoveryState::Disabled,
+                ..settled()
+            }),
+        "devices" => Fixture::encryption(Some(EncryptionLaunch::Devices)),
+        "device-sign-out" => Fixture::encryption(Some(EncryptionLaunch::SignOutDevice)),
+        "keys-export" => Fixture::encryption(Some(EncryptionLaunch::Export)),
+        "keys-import" => Fixture::encryption(Some(EncryptionLaunch::Import)),
+        "room-identity-changed" => Fixture {
+            identity_warnings: true,
+            ..Fixture::room(rooms::FAMILY_ROOM)
+        },
+        "room-not-sent" => Fixture {
+            stopped: Some(SendProblem::UnconfirmedDevices),
+            ..Fixture::room(rooms::FAMILY_ROOM)
+        },
         other => bail!(
             "unknown fixture view `{other}`; the views are: {}",
             VIEWS.join(", ")
@@ -343,7 +468,16 @@ pub(crate) fn startup(
     let fixture = fixture(view)?;
     let session = FixtureSession::new();
     if let Some(sync) = fixture.account {
-        session.add_account(&fixture_user(), sync);
+        let account = session.add_account(&fixture_user(), sync);
+        if let Some(status) = fixture.encryption.clone() {
+            session.set_encryption(&account, status);
+        }
+        if let Some(step) = fixture.verification.clone() {
+            session.start_verification_at(step);
+        }
+        if fixture.incoming_request {
+            session.request_verification(&account);
+        }
         match fixture.rooms {
             Rooms::Family => session.with_family(),
             Rooms::FamilyNoInvites => {
@@ -360,6 +494,12 @@ pub(crate) fn startup(
             Rooms::Loading => session.set_rooms_loading(true),
             Rooms::Large => session.with_large(LARGE_ROOMS, LARGE_EVENTS),
         }
+    }
+    if fixture.identity_warnings {
+        session.set_identity_warnings(rooms::FAMILY_ROOM, family_warnings());
+    }
+    if let Some(problem) = fixture.stopped {
+        session.stop_own_message(rooms::FAMILY_ROOM, problem);
     }
     let signin = FixtureSignin::new(session.clone());
     if let Some(step) = fixture.step {

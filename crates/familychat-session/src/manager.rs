@@ -9,7 +9,7 @@ use std::{
 
 use familychat_core::session::{AccountKey, AccountView};
 use familychat_security::{
-    AccountId, AccountSession, Keychain,
+    AccountId, AccountSession, Keychain, Secret,
     keychain::{load_session, save_session},
 };
 use familychat_store::{DataDir, NewAccount, Profile};
@@ -21,6 +21,7 @@ use tracing::{info, warn};
 use crate::{
     SessionConfig,
     account::{Account, OpenError, OpenParams},
+    encryption::VerificationFeed,
     notifications::NotificationFeed,
 };
 
@@ -81,6 +82,7 @@ pub struct AccountManager {
     accounts: RwLock<BTreeMap<AccountId, Arc<Account>>>,
     views: watch::Sender<Vec<AccountView>>,
     notifications: NotificationFeed,
+    verifications: VerificationFeed,
 }
 
 impl std::fmt::Debug for AccountManager {
@@ -104,6 +106,7 @@ impl AccountManager {
             accounts: RwLock::new(BTreeMap::new()),
             views: watch::channel(Vec::new()).0,
             notifications: NotificationFeed::default(),
+            verifications: VerificationFeed::default(),
         }
     }
 
@@ -148,7 +151,9 @@ impl AccountManager {
                 config: self.config.clone(),
                 keychain: self.keychain.clone(),
                 notifications: self.notifications.clone(),
+                verifications: self.verifications.clone(),
             },
+            None,
             None,
         )
         .await?;
@@ -164,6 +169,19 @@ impl AccountManager {
         &self,
         session: AccountSession,
         check: &dyn PostLoginCheck,
+    ) -> Result<AccountId, AddAccountError> {
+        self.add_account_with_password(session, check, None).await
+    }
+
+    /// [`Self::add_account`] for a password sign-in: `password` answers the
+    /// server's user-interactive auth if it asks for it when the account's
+    /// cross-signing identity is made (ADR 0009), and is wiped once that is
+    /// done. It is never stored.
+    pub async fn add_account_with_password(
+        &self,
+        session: AccountSession,
+        check: &dyn PostLoginCheck,
+        password: Option<Secret<String>>,
     ) -> Result<AccountId, AddAccountError> {
         let id = self.profile().add_account(&NewAccount {
             user_id: session.user_id.clone(),
@@ -181,8 +199,10 @@ impl AccountManager {
                     config: self.config.clone(),
                     keychain: self.keychain.clone(),
                     notifications: self.notifications.clone(),
+                    verifications: self.verifications.clone(),
                 },
                 Some(check),
+                password,
             )
             .await?;
             Ok::<_, AddAccountError>(account)
@@ -275,6 +295,11 @@ impl AccountManager {
     /// Where every account's notifications go.
     pub(crate) fn notification_feed(&self) -> &NotificationFeed {
         &self.notifications
+    }
+
+    /// Where every account's incoming verification requests go.
+    pub(crate) fn verification_feed(&self) -> &VerificationFeed {
+        &self.verifications
     }
 
     /// Runs `with` on the profile (the registry, preferences, UI state).

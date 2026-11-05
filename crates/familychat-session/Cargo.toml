@@ -44,5 +44,8 @@ wiremock = "0.6.5"
 [[test]]
 name = "live_session"
 
+[[test]]
+name = "live_encryption"
+
 [lints]
 workspace = true

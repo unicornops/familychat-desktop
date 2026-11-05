@@ -23,6 +23,7 @@ use std::{
 use chrono::{DateTime, Datelike, Local, TimeZone};
 use ruma::{OwnedEventId, OwnedUserId};
 
+pub use crate::encryption::UtdReason;
 use crate::{diff::ListDiff, media::MediaInfo, rich_text::RichText};
 
 /// A timeline item's id: stable while the item is in the timeline, also
@@ -160,8 +161,8 @@ pub enum TimelineContent {
     },
     /// A message that was deleted.
     Redacted,
-    /// An encrypted message this device can't read (yet).
-    UnableToDecrypt,
+    /// An encrypted message this device can't read (yet), and why.
+    UnableToDecrypt(UtdReason),
     /// Someone joined, left, was invited, removed or banned.
     Membership {
         /// Whose membership changed.
@@ -224,7 +225,7 @@ impl TimelineContent {
     fn groups_with_sender(&self) -> bool {
         matches!(
             self,
-            Self::Message { .. } | Self::Sticker { .. } | Self::Redacted | Self::UnableToDecrypt
+            Self::Message { .. } | Self::Sticker { .. } | Self::Redacted | Self::UnableToDecrypt(_)
         )
     }
 }
@@ -262,9 +263,42 @@ pub enum SendState {
     Failed {
         /// The send queue will try again on its own.
         recoverable: bool,
+        /// Why it stopped, when the encryption stopped it.
+        problem: Option<SendProblem>,
     },
     /// The server has it; the event id arrives with it.
     Sent,
+}
+
+/// Why the encryption stopped a message going (ADR 0009: room keys go to
+/// devices as Element X sends them, which stops when a verified person's
+/// devices or identity need a look).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum SendProblem {
+    /// A verified person (often the account itself) has a device they
+    /// haven't confirmed; "Send anyway" sends to it too.
+    UnconfirmedDevices,
+    /// A verified person's identity changed; "Send anyway" withdraws the
+    /// old verification and sends.
+    IdentityChanged,
+    /// This device has to be confirmed first.
+    ConfirmThisDevice,
+}
+
+impl SendProblem {
+    /// What the message says under it.
+    pub fn message(self) -> &'static str {
+        match self {
+            Self::UnconfirmedDevices => crate::encryption::wording::UNCONFIRMED_DEVICES_NOT_SENT,
+            Self::IdentityChanged => crate::encryption::wording::IDENTITY_CHANGED_NOT_SENT,
+            Self::ConfirmThisDevice => crate::encryption::wording::CONFIRM_THIS_DEVICE_NOT_SENT,
+        }
+    }
+
+    /// Whether "Send anyway" can resolve it.
+    pub fn can_send_anyway(self) -> bool {
+        !matches!(self, Self::ConfirmThisDevice)
+    }
 }
 
 /// An event in the timeline.
@@ -455,10 +489,7 @@ pub fn summary_label(first: &str, count: usize) -> String {
 pub fn placeholder(content: &TimelineContent) -> Option<&'static str> {
     match content {
         TimelineContent::Redacted => Some("Message deleted"),
-        TimelineContent::UnableToDecrypt => Some(
-            "Waiting for this message's key. It shows once a device that can read it shares \
-             the key.",
-        ),
+        TimelineContent::UnableToDecrypt(reason) => Some(reason.message()),
         TimelineContent::Other { .. } => Some("Family Chat can't show this kind of message yet."),
         _ => None,
     }

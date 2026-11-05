@@ -271,7 +271,7 @@ impl Flow {
             logout(services.transport.as_ref(), credentials).await;
             return Err(SigninProblem::new(wording::CODE_FOR_ANOTHER_ACCOUNT).into());
         }
-        self.finish(credentials, AuthKind::LoginToken).await
+        self.finish(credentials, AuthKind::LoginToken, None).await
     }
 
     /// The password form, until it signs in or is cancelled.
@@ -371,7 +371,12 @@ impl Flow {
             | LoginFailure::Refused { .. }
             | LoginFailure::Unreadable => SigninProblem::new(wording::SIGNIN_FAILED),
         })?;
-        self.finish(credentials, AuthKind::Password).await
+        // The password goes with the credentials once, for the server's
+        // user-interactive auth when the account's cross-signing identity
+        // is made (ADR 0009); the session wipes it after.
+        let password = Secret::new(password.expose().clone());
+        self.finish(credentials, AuthKind::Password, Some(password))
+            .await
     }
 
     /// Opens the account `credentials` signed in, or signs its device out.
@@ -379,6 +384,7 @@ impl Flow {
         &self,
         credentials: Credentials,
         auth_kind: AuthKind,
+        password: Option<Secret<String>>,
     ) -> Result<Finished, NotFinished> {
         let services = self.services.clone();
         if services.accounts.is_signed_in(&credentials.user_id) {
@@ -405,7 +411,7 @@ impl Flow {
             refresh_token: credentials.refresh_token.clone(),
             auth_kind,
         };
-        match services.accounts.add(session, check).await {
+        match services.accounts.add(session, check, password).await {
             Ok(account) => {
                 info!("the sign-in finished");
                 Ok(Finished { account, user_id })

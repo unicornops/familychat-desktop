@@ -599,3 +599,78 @@ fn the_encryption_default_is_on_unless_turned_off() {
         encryption_default: Some(false)
     }));
 }
+
+#[tokio::test]
+async fn a_message_the_encryption_stopped_is_sent_anyway_unless_paused() {
+    use familychat_core::{
+        session::SessionApi as _,
+        timeline::{SendProblem, SendState, TimelineItem, TimelineItemKind, TimelineUpdate},
+    };
+
+    let setup = Setup::new();
+    setup
+        .session
+        .stop_own_message(rooms::FAMILY_ROOM, SendProblem::UnconfirmedDevices);
+    let mut timeline = setup
+        .session
+        .timeline(&setup.account, &family())
+        .await
+        .expect("an answer")
+        .expect("the timeline");
+    let Some(TimelineUpdate::Items(diffs)) = timeline.updates.recv().await else {
+        panic!("the first items");
+    };
+    let mut items: Vec<TimelineItem> = Vec::new();
+    familychat_core::diff::apply_all(&mut items, diffs).expect("the diffs apply");
+    let stopped = items
+        .iter()
+        .find_map(|item| match &item.kind {
+            TimelineItemKind::Event(event)
+                if matches!(
+                    event.send_state,
+                    Some(SendState::Failed {
+                        problem: Some(SendProblem::UnconfirmedDevices),
+                        ..
+                    })
+                ) =>
+            {
+                Some(MessageRef {
+                    item: item.id.clone(),
+                    event_id: event.event_id.clone(),
+                })
+            }
+            _ => None,
+        })
+        .expect("a stopped message");
+
+    setup.session.set_sync(
+        &setup.account,
+        SyncState::Suspended {
+            recheck_in: Duration::from_secs(30),
+        },
+    );
+    setup.actions.send_anyway(&family(), stopped.clone()).await;
+    assert!(setup.requests().is_empty(), "nothing is sent while paused");
+    assert!(matches!(
+        setup.events().as_slice(),
+        [ActionEvent::Refused {
+            refusal: Refusal::Paused,
+            ..
+        }]
+    ));
+
+    setup.session.set_sync(&setup.account, SyncState::Running);
+    setup.actions.send_anyway(&family(), stopped.clone()).await;
+    assert_eq!(setup.requests(), [RoomRequest::SendAnyway(stopped)]);
+    assert!(matches!(
+        setup.events().as_slice(),
+        [ActionEvent::Done {
+            action: Action::SendAnyway,
+            ..
+        }]
+    ));
+    assert_eq!(
+        familychat_core::timeline::SendProblem::UnconfirmedDevices.message(),
+        familychat_core::encryption::wording::UNCONFIRMED_DEVICES_NOT_SENT
+    );
+}
