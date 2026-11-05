@@ -89,7 +89,10 @@ impl HomeserverHarness {
             .context("MAS's token endpoint")?;
         let status = response.status();
         let body: Value = response.json().await.unwrap_or(Value::Null);
-        ensure!(status == 200, "MAS refused the admin client ({status}): {body}");
+        ensure!(
+            status == 200,
+            "MAS refused the admin client ({status}): {body}"
+        );
         body.get("access_token")
             .and_then(Value::as_str)
             .map(str::to_owned)
@@ -113,7 +116,10 @@ impl HomeserverHarness {
             .context("MAS's admin API")?;
         let status = response.status();
         let body: Value = response.json().await.unwrap_or(Value::Null);
-        ensure!(status == 201, "creating {localpart} on MAS answered {status}: {body}");
+        ensure!(
+            status == 201,
+            "creating {localpart} on MAS answered {status}: {body}"
+        );
         let id = body
             .pointer("/data/id")
             .and_then(Value::as_str)
@@ -209,7 +215,12 @@ impl fmt::Debug for MasBrowser {
 }
 
 impl MasBrowser {
-    async fn request(&mut self, method: Method, url: Url, form: Option<&[(&str, &str)]>) -> Result<Page> {
+    async fn request(
+        &mut self,
+        method: Method,
+        url: Url,
+        form: Option<&[(&str, &str)]>,
+    ) -> Result<Page> {
         let mut request = self.client.request(method.clone(), url.clone());
         if !self.cookies.is_empty() {
             let cookies = self

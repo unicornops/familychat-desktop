@@ -27,8 +27,7 @@ use familychat_core::{
 use familychat_security::{AuthKind, Keychain, MemoryKeychain, keychain::load_session};
 use familychat_session::{AccountManager, SessionConfig};
 use familychat_signin::{
-    Allowlist, LiveSignin, ReqwestTransport, Services, device_display_name,
-    methods::probe,
+    Allowlist, LiveSignin, ReqwestTransport, Services, device_display_name, methods::probe,
     oauth::client_metadata,
 };
 use familychat_store::{DataDir, Profile, ProfileState};
@@ -249,7 +248,9 @@ async fn oauth_sign_in(
     let redirect = browser.sign_in_at(step.url.expose(), user).await?;
     ensure!(browser.come_back(&redirect).await? == 200, "the app's page");
     match flow
-        .until("the end", |step| step.is_final() || matches!(step, SigninStep::Password(_)))
+        .until("the end", |step| {
+            step.is_final() || matches!(step, SigninStep::Password(_))
+        })
         .await?
     {
         SigninStep::Finished(finished) => {
@@ -312,12 +313,19 @@ async fn the_browser_and_qr_codes_are_offered_only_where_they_work() -> Result<(
             let browser = offer.methods.browser.context("MAS's browser sign-in")?;
             ensure!(browser.kind == BrowserKind::OAuth && browser.address == MAS_ISSUER);
             ensure!(offer.methods.qr_code, "MSC4108 on Synapse with MAS");
-            ensure!(!offer.methods.password, "the password stays hidden with OAuth");
+            ensure!(
+                !offer.methods.password,
+                "the password stays hidden with OAuth"
+            );
         } else {
             // Family Chat's Palpo today (PLAN.md section 6.10), and
             // Synapse without MAS or single sign-on: the password only.
             ensure!(offer.methods.password, "{base}");
-            ensure!(offer.methods.browser.is_none(), "{base}: {:?}", offer.methods);
+            ensure!(
+                offer.methods.browser.is_none(),
+                "{base}: {:?}",
+                offer.methods
+            );
             ensure!(!offer.methods.qr_code, "{base}: {:?}", offer.methods);
         }
     }
@@ -590,7 +598,10 @@ async fn a_signed_in_computer_signs_a_new_phone_in_with_its_qr_code() -> Result<
         .cross_signing_status()
         .await
         .context("the phone's cross-signing")?;
-    ensure!(status.is_complete(), "the phone got the account's keys: {status:?}");
+    ensure!(
+        status.is_complete(),
+        "the phone got the account's keys: {status:?}"
+    );
     let _ = std::fs::remove_dir_all(&store);
     Ok(())
 }

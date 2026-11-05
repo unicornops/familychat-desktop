@@ -109,6 +109,17 @@ code page and the flow's steps. Every rule, server and sentence is
   fields the step pre-fills (the link's `account_provider`, never `hs`),
   mask the password and wipe it once sent, and hold Enter while a rate
   limit's countdown runs; nothing retries.
+- **The browser** (Phase 14, ADR 0010). "Use another Matrix server" asks
+  for the server first, then shows what it offers: Ctrl-B "Continue in
+  your browser" where the server has OAuth or single sign-on, Ctrl-E to
+  change the server. "Continue in your browser?" shows the whole address
+  and only `y` answers `Continue`; the browser step that follows opens the
+  address once with the system's opener (`o` opens it again, `c` copies
+  it, for a browser on another computer), and nothing of the address's
+  query is drawn. QR codes are the window's: the form says the server
+  offers one, and `LinkDevice` ("Sign in a new device") is in
+  `commands::LATER` (a QR code a phone reads from a terminal is later
+  work).
 
 ### Rooms and timelines
 

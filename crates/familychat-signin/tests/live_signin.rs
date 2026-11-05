@@ -704,7 +704,10 @@ async fn another_server_signs_in_with_a_password_on_synapse() -> Result<()> {
         })
         .await?;
     ensure!(form(&step)?.kind == PasswordKind::OtherServer);
-    let methods = form(&step)?.methods.clone().context("the server's methods")?;
+    let methods = form(&step)?
+        .methods
+        .clone()
+        .context("the server's methods")?;
     ensure!(
         methods.password && methods.browser.is_none() && !methods.qr_code,
         "{methods:?}"
