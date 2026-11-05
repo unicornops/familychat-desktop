@@ -187,14 +187,31 @@ impl Device {
         Ok(room)
     }
 
-    /// Waits until the room's timeline shows `text` decrypted.
+    /// Waits until the room's timeline shows `text` decrypted. On a
+    /// failure, the log's lines about backups and decryption come with the
+    /// error (the log is the app's own, redacted).
     async fn reads(&self, room: &OwnedRoomId, text: &str) -> Result<()> {
         let mut timeline = Followed::open(self, room).await?;
-        timeline
+        let read = timeline
             .until(&format!("{text:?} decrypted"), |items| {
                 message(items, text).is_some()
             })
-            .await
+            .await;
+        read.map_err(|error| {
+            let log = log_text();
+            let lines: Vec<&str> = log
+                .lines()
+                .filter(|line| {
+                    let line = line.to_ascii_lowercase();
+                    line.contains("backup")
+                        || line.contains("decrypt")
+                        || line.contains("room key")
+                        || line.contains("secret")
+                })
+                .collect();
+            let tail = lines[lines.len().saturating_sub(60)..].join("\n");
+            error.context(format!("the log about keys and backups:\n{tail}"))
+        })
     }
 
     /// The account's client, for the facts `SessionApi` doesn't report

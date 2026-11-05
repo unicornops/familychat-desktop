@@ -80,7 +80,7 @@ Phase 8, end-to-end encryption ([#9](https://github.com/unicornops/familychat-de
 - verification requests from your other devices open in the window; a banner in a room when someone's identity changes, and a reason under every message this device can't read
 - a message that stops because someone has a device they haven't confirmed says so, with Send anyway
 - room keys exported to a file protected by a passphrase, and imported from one (what moving your family to its own address needs)
-- Element X's encryption defaults (ADR 0009 lists them and the two places Family Chat differs)
+- Element X's encryption defaults (ADR 0009 lists them and the one place Family Chat differs)
 
 Phase 9, notifications, single instance and sign-in links ([#10](https://github.com/unicornops/familychat-desktop/issues/10), [ADR 0013](./docs/adr/0013-notifications-single-instance-and-sign-in-links.md)):
 

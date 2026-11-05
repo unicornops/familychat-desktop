@@ -67,17 +67,16 @@ use crate::backoff::Backoff;
 // ---------------------------------------------------------------------------
 
 /// The client's encryption settings (ADR 0009): Element X's at the pinned
-/// SDK, with two differences. Cross-signing is made by [`ensure_identity`]
-/// rather than by the SDK's login, which never sees our sign-ins (ADR
-/// 0006). And the key backup is downloaded whole, once, as soon as this
-/// device has the backup's key (after a verification or the recovery key),
-/// instead of one key per message that fails to decrypt: a family's
-/// history is small, and it is readable at once rather than message by
-/// message. Backups are made when the account has none.
+/// SDK, except that cross-signing is made by [`ensure_identity`] rather
+/// than by the SDK's login, which never sees our sign-ins (ADR 0006).
+/// Backups are made when the account has none, and a message this device
+/// can't read asks the backup for its key: the per-session endpoint, which
+/// the pinned Palpo answers correctly (its whole-backup download is
+/// malformed, so `OneShot` reads nothing there).
 pub(crate) fn encryption_settings() -> EncryptionSettings {
     EncryptionSettings {
         auto_enable_cross_signing: false,
-        backup_download_strategy: BackupDownloadStrategy::OneShot,
+        backup_download_strategy: BackupDownloadStrategy::AfterDecryptionFailure,
         auto_enable_backups: true,
     }
 }

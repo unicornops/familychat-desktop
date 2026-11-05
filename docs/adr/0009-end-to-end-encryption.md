@@ -47,9 +47,9 @@ nothing copied):
 | Share history on invite (MSC4268) | on | on | the same; a child added to the family room can read what came before |
 | Make backups when the account has none | on | on | the same |
 | Cross-signing made automatically | on (at the SDK's login, with the password) | off: `encryption::set_up_identity` makes it | the SDK's login never sees our sign-ins; see below |
-| Backup download | `AfterDecryptionFailure` (the FFI default) | `OneShot` | see below |
+| Backup download | `AfterDecryptionFailure` (the FFI default) | `AfterDecryptionFailure` | the same; see below for why not `OneShot` |
 
-Two differences, each for a reason:
+One difference, for a reason:
 
 - **Cross-signing is made by the session, not by the SDK's login.** After
   every sign-in and restore, `encryption::follow` asks the server (one
@@ -63,13 +63,19 @@ Two differences, each for a reason:
   set a password in the Family Chat panel, takes the password and tries
   again, or "Not now" (with the skip warning). Element X gets the same
   result from the SDK's login with the password.
-- **The backup is downloaded whole, once.** As soon as this device has the
-  backup's key (from another device after a verification, or from secret
-  storage with the recovery key), every key in the backup is fetched.
-  Element X fetches one key each time a message fails to decrypt, which
-  suits large accounts; a family's history is small, and with `OneShot`
-  the history that was unreadable a moment ago becomes readable at once,
-  without the person opening each room.
+
+The backup is read one key at a time, as Element X reads it: each message
+that fails to decrypt asks the backup for its key
+(`GET /room_keys/keys/{room}/{session}`), and when the backup's key
+arrives (after a verification, or from secret storage with the recovery
+key) the SDK's redecryptor tries the messages it holds again, which
+fetches theirs. Downloading the whole backup at once (`OneShot`) was
+tried first and fails on the pinned Palpo: its `GET /room_keys/keys` (and
+`/room_keys/keys/{room}`) answer each stored key's encrypted payload as if
+it were a room's `{"sessions": …}` map, so the SDK finds no sessions and
+the history stays unreadable; the per-session endpoint answers correctly.
+That Palpo bug is a follow-up for the fork, and Element X's choice works
+around it.
 
 The SDK's `automatic-room-key-forwarding` feature stays off (ADR 0005):
 keys reach a new device through verification and the backup. Secret
@@ -235,9 +241,9 @@ terminal UI lists them in `LATER` for Phase 11.
   is confirmed). This is Element X's behaviour and the price of MSC4153's
   direction; turning on "exclude insecure devices" later is a change of
   two settings here.
-- `OneShot` fetches the whole backup when the backup key arrives; on a
-  very large account that is one long download. Family Chat accounts are
-  small; another server's large account would see it once per device.
+- The pinned Palpo's whole-backup download (`GET /room_keys/keys`) answers
+  in the wrong shape; until the fork fixes it, the backup must be read key
+  by key (as here), and a client using `OneShot` reads nothing from it.
 - One copy of a UIA password lives in ruma's request while it is sent.
 - Not yet: verifying other people, resetting the identity or the recovery
   key, dehydrated devices, and the terminal UI's encryption (Phase 11);
