@@ -22,6 +22,8 @@ It is alpha software. Phase 0 (the scaffold) is in place: an empty Family Chat w
 - `docs/adr/0001-architecture.md`: the workspace, crates and their rules, the GPUI and Tokio pattern, the identifiers
 - `docs/adr/0002-gpui-zed-stable-pin.md`: pinning GPUI to Zed stable release tags, with the build costs
 - `docs/upstream/zed.md`: the current GPUI pin, the mirrored patches and how to bump
+- `docs/adr/0004-homeserver-harness.md`: the local homeserver harness, its test-only CA trust and how releases are kept free of it
+- `docs/upstream/homeservers.md`: the harness's image pins (Palpo follows family-chat's `PALPO_IMAGE`) and how to move them
 
 ## Workspace Overview
 
@@ -32,6 +34,7 @@ It is alpha software. Phase 0 (the scaffold) is in place: an empty Family Chat w
 - `crates/familychat-session`: `BackgroundRuntime`, the dedicated Tokio runtime copied from Zmail's `zmail-sync`; the Matrix sessions arrive in Phase 3
 - `crates/familychat-theme`: the Zed theme compatibility layer (copied from Zmail's `zmail-theme`) and the bundled Family Chat light and dark themes (`themes/`)
 - `crates/familychat-assets`: embedded Lucide icons (`assets/icons`) and the Inter faces Linux builds use (`assets/fonts/inter`), copied from Zmail's `zmail-assets`
+- `crates/familychat-test-support`: test support, never a dependency of the app. `HarnessEnv` reads the homeserver harness's settings; behind the `test-harness` feature (test builds only), `HomeserverHarness` drives the harness (members, rooms, sending as any member, login tokens, suspension) through a client that trusts only the harness CA and resolves only the harness hosts. Its live tests are `tests/live_homeserver_harness.rs`
 
 ## Repo Expectations For Agents
 
@@ -54,6 +57,18 @@ cargo test --workspace --locked
 ```
 
 UI view tests use GPUI's test platform (`#[gpui::test]` with `TestAppContext`, from the `test-support` feature in `familychat-ui`'s dev-dependencies). They run headless with no display server; on Linux they only need the build packages below. A test that waits on another thread (the Tokio runtime) calls `cx.executor().allow_parking()` first.
+
+Live homeserver harness (ADR 0004; needs Docker with Compose, `curl`, `jq` and `openssl`):
+
+```bash
+scripts/homeserver-harness.sh up       # Palpo (Family Chat's image) + Postgres, Synapse, the TLS front end; bootstraps the admin bot
+cargo test -p familychat-test-support --test live_homeserver_harness -- --ignored
+scripts/homeserver-harness.sh env      # the FAMILYCHAT_HARNESS_* settings the tests read
+scripts/homeserver-harness.sh mint-token alice   # a single-use m.login.token for @alice:hs1.familychat.test
+scripts/homeserver-harness.sh down
+```
+
+The front end serves `hs1.familychat.test` (a Family Chat family's edge proxy, Palpo), `smith.test` (a custom domain whose well-known delegates to hs1), `evil.familychat.example` (a homeserver outside the allowlist) and `synapse.test` on `127.0.0.1:18443`, with a CA made on every `up` (`target/homeserver-harness/ca.pem`); Palpo's admin API is on `127.0.0.1:18008`. Nothing on the machine trusts the CA: only `familychat-test-support`'s client does. Live tests are `#[ignore]` and need the harness up first; CI's quality job runs them with `-- --ignored`, with Docker Hub logins from the optional `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` secrets. Create members through the admin API (`HomeserverHarness::new_user`), not registration: Palpo allows a burst of only three registrations per peer, and the whole harness is one peer. `scripts/check-release-features.sh` (CI and the release workflow) fails if a release build of `familychat-app` could include `familychat-test-support` or any `test-harness` feature; never make the app depend on either.
 
 Release build, and the app itself:
 

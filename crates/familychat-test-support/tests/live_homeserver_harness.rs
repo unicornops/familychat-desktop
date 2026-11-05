@@ -61,9 +61,13 @@ async fn palpo_advertises_the_spec_versions_and_login_types_family_chat_relies_o
         unstable["org.matrix.msc3916.stable"] == true,
         "no authenticated media: {unstable}"
     );
-    if let Some(name) = versions.body["server"]["name"].as_str() {
-        ensure!(name == "Palpo", "hs1 is not Palpo but {name}");
-    }
+    // Palpo names itself through MSC4383 (homeserver implementation
+    // metadata), so the answer is known to come from Palpo, not Synapse.
+    let server = &versions.body["net.zemos.msc4383.server"];
+    ensure!(
+        server["name"] == "Palpo",
+        "hs1 does not say it is Palpo: {server}"
+    );
 
     let login = harness
         .client_api(Method::GET, &["v3", "login"], None, None)
@@ -460,8 +464,12 @@ async fn a_suspended_member_cannot_send() -> Result<()> {
         refused.body
     );
 
-    // What reads do while suspended: PLAN.md section 6.8 expects them to
-    // keep working; this records what the pinned Palpo does.
+    // PLAN.md section 6.8 expects reads to keep working while suspended
+    // (MSC3823). The pinned Palpo refuses every authenticated request of a
+    // suspended member, reads included (its access-token check calls
+    // ensure_account_usable), so "Chat is paused" cannot keep syncing. This
+    // pins that down: when Palpo starts allowing reads, this fails, and
+    // PLAN.md and the curfew phase follow.
     let whoami = harness
         .client_api(
             Method::GET,
@@ -470,10 +478,11 @@ async fn a_suspended_member_cannot_send() -> Result<()> {
             None,
         )
         .await?;
-    println!(
-        "while suspended, whoami answers {} {:?}",
+    ensure!(
+        whoami.status == 403 && whoami.errcode() == Some("M_USER_SUSPENDED"),
+        "a suspended member's whoami answered {}: {} (Palpo now allows reads; update PLAN.md section 6.8)",
         whoami.status,
-        whoami.errcode()
+        whoami.body
     );
 
     harness.set_suspended(&member.user_id, false).await?;

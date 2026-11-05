@@ -18,7 +18,8 @@
 
 server_name = "hs1.familychat.test"
 # Registration stays closed except via the registration token; the harness
-# script uses it once, to bootstrap the admin bot, as the control panel does.
+# script uses it to bootstrap the admin bot, as the control panel does (and
+# one live test registers with it).
 allow_registration = false
 registration_token = "@REGISTRATION_TOKEN@"
 # ~11 MiB, just under the edge proxy's 11m client_max_body_size.
