@@ -64,8 +64,9 @@ anything else, by the window, the terminal UI and `familychat accounts`
 alike. A second process is refused at once with "Family Chat is already
 open with this profile", before it touches the keychain, the store or
 the logs. The OS drops the lock when the process ends, so a crash never
-leaves a profile locked. Forwarding a second window's links to the first
-is Phase 9.
+leaves a profile locked. Since Phase 9 a second window forwards its
+sign-in link (or "come forward") to the first over a user-only socket or
+pipe and exits (ADR 0013).
 
 ### 3. Secrets: only in the OS keychain
 

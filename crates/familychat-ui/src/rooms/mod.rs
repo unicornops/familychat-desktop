@@ -35,9 +35,9 @@ use familychat_core::{
     timeline::time_label,
 };
 use gpui::{
-    AnyElement, App, ClipboardItem, Context, Entity, FocusHandle, Focusable, FontWeight,
-    IntoElement, Render, Role, SharedString, Subscription, Task, UniformListScrollHandle, Window,
-    div, prelude::*, px, rgb, uniform_list,
+    AnyElement, App, ClipboardItem, Context, Entity, EventEmitter, FocusHandle, Focusable,
+    FontWeight, IntoElement, Render, Role, SharedString, Subscription, Task,
+    UniformListScrollHandle, Window, div, prelude::*, px, rgb, uniform_list,
 };
 
 pub(crate) use self::media::ImageCache;
@@ -89,6 +89,11 @@ pub struct RoomsLaunch {
     pub expand_changes: bool,
 }
 
+/// A room came in front of the person (the shell marks its
+/// notifications seen when the window has focus).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct RoomOpened(pub(crate) OwnedRoomId);
+
 /// The open room.
 struct OpenRoom {
     timeline: Entity<TimelineView>,
@@ -118,12 +123,16 @@ pub(crate) struct RoomsView {
     link_prompt: Option<LinkPrompt>,
     link_modal: ModalState,
     launch: Option<RoomsLaunch>,
+    /// A room a notification opened that the list doesn't hold.
+    notified: Option<RoomSummary>,
     answering: Vec<OwnedRoomId>,
     _list_task: Task<()>,
     _loading_task: Task<()>,
     members_task: Task<()>,
     action_task: Task<()>,
 }
+
+impl EventEmitter<RoomOpened> for RoomsView {}
 
 impl RoomsView {
     /// The rooms of `account`.
@@ -212,6 +221,7 @@ impl RoomsView {
             link_prompt: None,
             link_modal: ModalState::new(cx),
             launch,
+            notified: None,
             answering: Vec::new(),
             _list_task: list_task,
             _loading_task: Task::ready(()),
@@ -236,6 +246,43 @@ impl RoomsView {
     #[cfg_attr(not(test), allow(dead_code))]
     pub(crate) fn selected(&self) -> Option<&OwnedRoomId> {
         self.selected.as_ref()
+    }
+
+    /// The room the person can see: the open room, unless a narrow window
+    /// shows the list instead.
+    pub(crate) fn room_in_view(&self, window: &Window) -> Option<&OwnedRoomId> {
+        let narrow = f32::from(window.viewport_size().width) < NARROW_BELOW;
+        self.selected
+            .as_ref()
+            .filter(|_| !narrow || self.room_in_front)
+    }
+
+    /// The account the rooms are of.
+    pub(crate) fn account(&self) -> &AccountView {
+        &self.account
+    }
+
+    /// Opens the room a notification named: from the list when it is
+    /// there, otherwise from what the notification said (a room past the
+    /// list's first page, or outside its filter).
+    pub(crate) fn open_notified_room(
+        &mut self,
+        room: OwnedRoomId,
+        name: String,
+        is_direct: bool,
+        is_invite: bool,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if !self.rooms.iter().any(|summary| summary.room_id == room) {
+            let mut summary = RoomSummary::new(room.clone(), name);
+            summary.is_direct = is_direct;
+            if is_invite {
+                summary.membership = familychat_core::rooms::Membership::Invited;
+            }
+            self.notified = Some(summary);
+        }
+        self.open_room(room, window, cx);
     }
 
     /// The open room's timeline.
@@ -350,7 +397,14 @@ impl RoomsView {
             .rooms
             .iter()
             .find(|summary| summary.room_id == room)
-            .cloned();
+            .cloned()
+            .or_else(|| {
+                self.notified
+                    .take()
+                    .filter(|summary| summary.room_id == room)
+            });
+        self.notified = None;
+        cx.emit(RoomOpened(room.clone()));
         self.selected = Some(room.clone());
         self.open = None;
         if let Some(index) = self

@@ -15,6 +15,9 @@ path = "src/main.rs"
 anyhow.workspace = true
 familychat-assets = { path = "../familychat-assets" }
 familychat-core = { path = "../familychat-core" }
+# The single-instance hand-off (ADR 0013): the window listens on the
+# profile's user-only socket or pipe, a second launch forwards to it.
+familychat-instance = { path = "../familychat-instance" }
 familychat-security = { path = "../familychat-security" }
 familychat-session = { path = "../familychat-session" }
 # The sign-in flows (ADR 0006) the sign-in screens drive. Never with its
@@ -31,6 +34,8 @@ familychat-ui = { path = "../familychat-ui" }
 # The background runtime's handle and the startup's oneshot answers.
 tokio.workspace = true
 tracing.workspace = true
+# Wiping a link read from standard input or the command line.
+zeroize.workspace = true
 
 [features]
 # The terminal UI, `familychat tui`. On by default, so every release has it.

@@ -1,0 +1,16 @@
+[package]
+name = "familychat-notify"
+version = "0.0.1"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+description = "Family Chat's notifications: what the OS shows for a new message, coalesced per room and capped"
+
+[dependencies]
+# The session's notifications and the account and room they name. No
+# GPUI, ratatui or matrix-sdk (PLAN.md, section 5.1).
+familychat-core = { path = "../familychat-core" }
+
+[lints]
+workspace = true

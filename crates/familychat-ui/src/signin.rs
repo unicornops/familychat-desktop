@@ -20,6 +20,11 @@
 //! Nothing here retries a sign-in, chooses a server or reads a link's
 //! parameters. A flow that ends `Finished` is reported to the shell with
 //! [`SigninEvent::Finished`].
+//!
+//! A link a second launch forwards while an account is signed in opens a
+//! sign-in that returns to the rooms ([`SigninView::returning_to_rooms`]):
+//! where it would go back to the welcome page (Cancel, Back, "Already
+//! signed in"), it reports [`SigninEvent::Closed`] instead.
 
 use std::{
     path::PathBuf,
@@ -81,6 +86,8 @@ pub(crate) enum Page {
 pub(crate) enum SigninEvent {
     /// A flow signed an account in.
     Finished(Finished),
+    /// A sign-in that returns to the rooms is done without a new account.
+    Closed,
 }
 
 /// The sign-in screens.
@@ -107,6 +114,9 @@ pub(crate) struct SigninView {
     flow_task: Task<()>,
     image_task: Task<()>,
     countdown_task: Task<()>,
+    /// Opened over the rooms (a forwarded link): ends by going back to
+    /// them rather than to the welcome page.
+    returns_to_rooms: bool,
     _subscriptions: Vec<Subscription>,
 }
 
@@ -189,8 +199,22 @@ impl SigninView {
             flow_task: Task::ready(()),
             image_task: Task::ready(()),
             countdown_task: Task::ready(()),
+            returns_to_rooms: false,
             _subscriptions: subscriptions,
         }
+    }
+
+    /// A sign-in opened over the rooms, which goes back to them instead of
+    /// the welcome page.
+    pub(crate) fn returning_to_rooms(mut self) -> Self {
+        self.returns_to_rooms = true;
+        self
+    }
+
+    /// Whether a code or a password is being used right now (a new link
+    /// must not interrupt it).
+    pub(crate) fn is_busy(&self) -> bool {
+        matches!(self.step, SigninStep::Working(_)) || self.reading_image
     }
 
     /// What the view shows.
@@ -239,6 +263,10 @@ impl SigninView {
     /// Back to the welcome page, ending any flow.
     pub(crate) fn show_welcome(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         self.end_flow(window, cx);
+        if self.returns_to_rooms {
+            cx.emit(SigninEvent::Closed);
+            return;
+        }
         self.page = Page::Welcome;
         self.code_problem = None;
         self.focus(window, cx);
@@ -958,9 +986,16 @@ impl SigninView {
                     .child(readable("signin-already-message", message.to_owned())),
             )
             .child(
-                Button::new("signin-already-ok", "Back to sign-in")
-                    .primary()
-                    .on_click(cx.listener(|this, _, window, cx| this.show_welcome(window, cx))),
+                Button::new(
+                    "signin-already-ok",
+                    if self.returns_to_rooms {
+                        "Back to your rooms"
+                    } else {
+                        "Back to sign-in"
+                    },
+                )
+                .primary()
+                .on_click(cx.listener(|this, _, window, cx| this.show_welcome(window, cx))),
             )
             .into_any_element()
     }

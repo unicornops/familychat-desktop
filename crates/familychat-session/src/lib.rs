@@ -11,7 +11,10 @@
 //!   the supervisor that keeps its sync going and reports its
 //!   [`SyncState`](familychat_core::sync::SyncState).
 //! - [`LiveSession`]: the [`SessionApi`](familychat_core::session::SessionApi)
-//!   both frontends consume.
+//!   both frontends consume, with each account's notifications (the SDK's
+//!   notification handler) and unread total.
+//! - [`LiveSettings`]: the [`SettingsApi`](familychat_core::settings::SettingsApi)
+//!   over the profile's preferences.
 //!
 //! The frontends never depend on this crate's Matrix half: they see
 //! `SessionApi` and the view models only
@@ -29,8 +32,10 @@ mod live;
 mod manager;
 mod mapping;
 mod media;
+mod notifications;
 mod room_list;
 mod runtime;
+mod settings;
 mod timeline;
 
 pub use account::{Account, OpenError, account_key};
@@ -39,3 +44,4 @@ pub use live::LiveSession;
 pub use manager::{AccountManager, AddAccountError, AnyHomeserver, PostLoginCheck, Restored};
 pub use media::{AuthenticatedMediaFetcher, DOWNLOAD_TIMEOUT, MAX_DOWNLOAD_BYTES};
 pub use runtime::BackgroundRuntime;
+pub use settings::LiveSettings;

@@ -7,29 +7,44 @@
 //! no server-side decorations, still gets one) and the window frame, keeps
 //! the theme in step with the OS appearance, and owns the command palette
 //! and the toasts.
+//!
+//! It also takes what reaches the window from outside (ADR 0013): a
+//! sign-in link a second launch forwarded (or macOS handed over) starts a
+//! sign-in, over the rooms when someone is signed in, which always shows
+//! its confirmation first; the session's notifications are posted to the
+//! OS for the rooms the person isn't looking at
+//! ([`notifications`](crate::notifications)); and the window's title
+//! carries the unread total.
 
 use std::sync::Arc;
 
 use familychat_core::{
-    AppBootstrap, ThemeAppearance,
+    AppBootstrap, OwnedRoomId, ThemeAppearance,
     commands::{COMMANDS, CommandScope},
     identity::APP_NAME,
-    session::AccountView,
+    notifications::IncomingNotification,
+    requests::AppRequest,
+    session::{AccountKey, AccountView},
+    settings::NotificationSettings,
+    signin::{SecretText, SigninStart},
     startup::{OpenState, Opened, StartupApi},
 };
+use familychat_notify::{RoomTarget, window_title};
 use gpui::{
     AnyElement, App, AppContext as _, Context, Entity, FocusHandle, Focusable, IntoElement, Render,
     Role, Subscription, Task, Window, div, prelude::*, px, rgb,
 };
 
 use crate::a11y::AccessibleExt;
-use crate::actions::ToggleCommandPalette;
+use crate::actions::{NotificationSettings as OpenNotificationSettings, ToggleCommandPalette};
 use crate::command_palette::{CommandPalette, CommandPaletteEvent, PALETTE_WIDTH, PaletteEntry};
 use crate::components::{
     ComponentTheme, IconButton, Modal, ModalState, TitleBar, Toast, ToastHost, ToastKind,
     window_frame,
 };
+use crate::notifications;
 use crate::profile_screens::{self, ProfileAction, ProfileScreen};
+use crate::rooms::RoomOpened;
 use crate::signed_in::{SignedInView, sync_indicator};
 use crate::signin::{SigninEvent, SigninView, brand_mark, primary_key};
 use crate::styles::{SPACE_2, TYPE_BODY_STRONG, TypeStyleExt, UiColors};
@@ -65,8 +80,25 @@ pub struct ShellView {
     toasts: Entity<ToastHost>,
     open_task: Task<()>,
     accounts_task: Task<()>,
+    /// The signed-in rooms, kept while a forwarded link's sign-in shows
+    /// over them.
+    parked: Option<Entity<SignedInView>>,
+    /// A forwarded link that arrived before the profile was open.
+    pending_link: Option<SecretText>,
+    /// The notification settings, as the profile has them.
+    notification_settings: NotificationSettings,
+    settings_modal: ModalState,
+    settings_problem: Option<String>,
+    requests_task: Task<()>,
+    notifications_task: Task<()>,
+    settings_task: Task<()>,
+    save_task: Task<()>,
+    unread_task: Task<()>,
     _subscriptions: Vec<Subscription>,
 }
+
+/// What the window says when a link arrives in the middle of a sign-in.
+pub(crate) const FINISH_SIGNING_IN: &str = "Finish signing in first, then open the link again.";
 
 impl ShellView {
     /// The window over `startup`, following the OS appearance unless the
@@ -85,8 +117,22 @@ impl ShellView {
             this.sync_theme(cx);
             cx.notify();
         });
+        // The room in front of the person counts as seen once the window
+        // has focus again.
+        let activation = cx.observe_window_activation(window, |this, window, cx| {
+            if window.is_window_active()
+                && let Some((account, room)) = this.focused_room(window, cx)
+            {
+                notifications::room_seen(&account, &room, cx);
+            }
+        });
+        notifications::init(cx);
         let focus_handle = cx.focus_handle();
         window.focus(&focus_handle, cx);
+        let requests = options
+            .requests
+            .as_ref()
+            .and_then(crate::RequestInbox::take_receiver);
         let mut view = Self {
             appearance: options
                 .appearance
@@ -103,9 +149,31 @@ impl ShellView {
             toasts: cx.new(|_| ToastHost::new()),
             open_task: Task::ready(()),
             accounts_task: Task::ready(()),
-            _subscriptions: vec![appearance_changes],
+            parked: None,
+            pending_link: None,
+            notification_settings: NotificationSettings::default(),
+            settings_modal: ModalState::new(cx),
+            settings_problem: None,
+            requests_task: Task::ready(()),
+            notifications_task: Task::ready(()),
+            settings_task: Task::ready(()),
+            save_task: Task::ready(()),
+            unread_task: Task::ready(()),
+            _subscriptions: vec![appearance_changes, activation],
         };
         view.sync_theme(cx);
+        if let Some(mut requests) = requests {
+            view.requests_task = cx.spawn_in(window, async move |this, cx| {
+                while let Some(request) = requests.recv().await {
+                    if this
+                        .update_in(cx, |this, window, cx| this.request(request, window, cx))
+                        .is_err()
+                    {
+                        break;
+                    }
+                }
+            });
+        }
         let receiver = view.startup.open();
         view.follow_open(receiver, window, cx);
         view
@@ -232,6 +300,7 @@ impl ShellView {
                     .update_in(cx, |this, window, cx| {
                         if let Some(account) = first
                             && this.signed_in().is_none()
+                            && this.parked.is_none()
                         {
                             this.show_account(account, window, cx);
                         }
@@ -242,19 +311,50 @@ impl ShellView {
                 }
             }
         });
+        self.follow_settings(window, cx);
+        self.follow_notifications(window, cx);
         if let Some(initial) = self.initial_view.take() {
             self.apply_initial_view(initial, window, cx);
+        }
+        if let Some(link) = self.pending_link.take() {
+            self.start_link(link, window, cx);
         }
     }
 
     fn show_signin(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        let Some(opened) = &self.opened else {
-            return;
-        };
+        if let Some(view) = self.new_signin(false, window, cx) {
+            self.screen = Screen::Signin(view);
+            cx.notify();
+        }
+    }
+
+    /// A sign-in view over the open profile's sign-in, followed for its
+    /// end; `returning` for one shown over the rooms.
+    fn new_signin(
+        &mut self,
+        returning: bool,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Option<Entity<SigninView>> {
+        let opened = self.opened.as_ref()?;
         let signin = opened.signin.clone();
-        let view = cx.new(|cx| SigninView::new(signin, window, cx));
+        let view = cx.new(|cx| {
+            let view = SigninView::new(signin, window, cx);
+            if returning {
+                view.returning_to_rooms()
+            } else {
+                view
+            }
+        });
         let subscription = cx.subscribe_in(&view, window, |this, _, event, window, cx| {
-            let SigninEvent::Finished(finished) = event;
+            let finished = match event {
+                SigninEvent::Finished(finished) => finished,
+                SigninEvent::Closed => {
+                    this.back_to_rooms(window, cx);
+                    return;
+                }
+            };
+            this.parked = None;
             let account = this.opened.as_ref().and_then(|opened| {
                 opened
                     .session
@@ -273,7 +373,17 @@ impl ShellView {
         });
         self._subscriptions.push(subscription);
         view.update(cx, |view, cx| view.focus(window, cx));
-        self.screen = Screen::Signin(view);
+        Some(view)
+    }
+
+    /// Back to the rooms a forwarded link's sign-in showed over.
+    fn back_to_rooms(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let Some(rooms) = self.parked.take() else {
+            return;
+        };
+        let focus = rooms.focus_handle(cx);
+        self.screen = Screen::SignedIn(rooms);
+        window.focus(&focus, cx);
         cx.notify();
     }
 
@@ -290,11 +400,337 @@ impl ShellView {
                 None
             }
         };
+        let unread = session.unread_total(&account.key);
         let view = cx.new(|cx| SignedInView::new(session, account, toasts, launch, window, cx));
+        let rooms = view.read(cx).rooms().clone();
+        let opened_rooms = cx.subscribe_in(&rooms, window, |this, rooms, event, window, cx| {
+            let RoomOpened(room) = event;
+            if window.is_window_active() && this.signed_in().is_some() {
+                let account = rooms.read(cx).account().key.clone();
+                notifications::room_seen(&account, room, cx);
+            }
+        });
+        self._subscriptions.push(opened_rooms);
         let focus = view.focus_handle(cx);
         self.screen = Screen::SignedIn(view);
+        self.parked = None;
+        window.focus(&focus, cx);
+        self.follow_unread(unread, window, cx);
+        cx.notify();
+    }
+
+    /// Keeps the window's title on the account's unread total.
+    fn follow_unread(
+        &mut self,
+        unread: Option<tokio::sync::watch::Receiver<u64>>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let Some(mut unread) = unread else {
+            window.set_window_title(&window_title(0));
+            self.unread_task = Task::ready(());
+            return;
+        };
+        window.set_window_title(&window_title(*unread.borrow_and_update()));
+        self.unread_task = cx.spawn_in(window, async move |this, cx| {
+            while unread.changed().await.is_ok() {
+                let total = *unread.borrow_and_update();
+                if this
+                    .update_in(cx, |_, window, _| {
+                        window.set_window_title(&window_title(total));
+                    })
+                    .is_err()
+                {
+                    break;
+                }
+            }
+        });
+    }
+
+    // -- Requests from outside the window -------------------------------------
+
+    /// A second launch's request, or a link macOS handed over: the window
+    /// comes forward, and a link starts a sign-in.
+    pub(crate) fn request(
+        &mut self,
+        request: AppRequest,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        cx.activate(true);
+        window.activate_window();
+        match request {
+            AppRequest::Activate => {}
+            AppRequest::OpenLink(link) => {
+                if self.opened.is_some() {
+                    self.start_link(link, window, cx);
+                } else {
+                    // The profile opens first; the newest link waits.
+                    self.pending_link = Some(link);
+                }
+            }
+        }
+    }
+
+    /// Starts a sign-in with a forwarded link: on the sign-in screen, or
+    /// over the rooms. The sign-in shows its confirmation before anything
+    /// is redeemed; a sign-in already using a code or a password is not
+    /// interrupted.
+    fn start_link(&mut self, link: SecretText, window: &mut Window, cx: &mut Context<Self>) {
+        if self.palette.is_some() {
+            self.close_palette(window, cx);
+        }
+        if self.settings_modal.is_open() {
+            self.close_notification_settings(window, cx);
+        }
+        let signin = match &self.screen {
+            Screen::Profile(_) => {
+                self.pending_link = Some(link);
+                return;
+            }
+            Screen::Signin(signin) => {
+                if signin.read(cx).is_busy() {
+                    self.toast(Toast::new(FINISH_SIGNING_IN).kind(ToastKind::Info), cx);
+                    return;
+                }
+                signin.clone()
+            }
+            Screen::SignedIn(rooms) => {
+                let rooms = rooms.clone();
+                let Some(signin) = self.new_signin(true, window, cx) else {
+                    return;
+                };
+                self.parked = Some(rooms);
+                self.screen = Screen::Signin(signin.clone());
+                signin
+            }
+        };
+        signin.update(cx, |signin, cx| {
+            signin.start(SigninStart::Link(link), window, cx);
+        });
+        cx.notify();
+    }
+
+    /// Whether a forwarded link's sign-in shows over the rooms.
+    #[cfg(test)]
+    pub(crate) fn over_rooms(&self) -> bool {
+        self.parked.is_some()
+    }
+
+    // -- Notifications --------------------------------------------------------
+
+    /// Posts the session's notifications, a burst at a time.
+    fn follow_notifications(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let Some(opened) = &self.opened else {
+            return;
+        };
+        let mut incoming = opened.session.notifications();
+        self.notifications_task = cx.spawn_in(window, async move |this, cx| {
+            while let Some(first) = incoming.recv().await {
+                cx.background_executor()
+                    .timer(notifications::BURST_WAIT)
+                    .await;
+                let mut batch: Vec<IncomingNotification> = vec![first];
+                while let Ok(more) = incoming.try_recv() {
+                    batch.push(more);
+                }
+                if this
+                    .update_in(cx, |this, window, cx| {
+                        let focused = this.focused_room(window, cx);
+                        notifications::post(
+                            batch,
+                            focused
+                                .as_ref()
+                                .map(|(account, room)| (account, room.as_ref())),
+                            cx,
+                        );
+                    })
+                    .is_err()
+                {
+                    break;
+                }
+            }
+        });
+    }
+
+    /// The room the person is looking at: the open room of the rooms on
+    /// screen, while the window has focus.
+    pub(crate) fn focused_room(
+        &self,
+        window: &Window,
+        cx: &App,
+    ) -> Option<(AccountKey, OwnedRoomId)> {
+        if !window.is_window_active() {
+            return None;
+        }
+        let rooms = self.signed_in()?.read(cx).rooms().read(cx);
+        let room = rooms.room_in_view(window)?.clone();
+        Some((rooms.account().key.clone(), room))
+    }
+
+    /// A notification was clicked: back to the rooms if a forwarded link's
+    /// sign-in showed over them (unless it is busy), and the room opened.
+    pub(crate) fn open_notified_room(
+        &mut self,
+        target: &RoomTarget,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if let Some(signin) = self.signin().cloned()
+            && self.parked.is_some()
+        {
+            if signin.read(cx).is_busy() {
+                return;
+            }
+            self.back_to_rooms(window, cx);
+        }
+        let Some(view) = self.signed_in().cloned() else {
+            return;
+        };
+        let rooms = view.read(cx).rooms().clone();
+        if rooms.read(cx).account().key != target.account {
+            return;
+        }
+        rooms.update(cx, |rooms, cx| {
+            rooms.open_notified_room(
+                target.room_id.clone(),
+                target.room_name.clone(),
+                target.is_direct,
+                target.is_invite,
+                window,
+                cx,
+            );
+        });
+        notifications::room_seen(&target.account, &target.room_id, cx);
+        let focus = rooms.focus_handle(cx);
         window.focus(&focus, cx);
         cx.notify();
+    }
+
+    // -- Notification settings -----------------------------------------------
+
+    /// Follows the profile's notification settings.
+    fn follow_settings(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let Some(opened) = &self.opened else {
+            return;
+        };
+        let mut settings = opened.settings.notification_settings();
+        let current = *settings.borrow_and_update();
+        self.apply_settings(current, cx);
+        self.settings_task = cx.spawn_in(window, async move |this, cx| {
+            while settings.changed().await.is_ok() {
+                let current = *settings.borrow_and_update();
+                if this
+                    .update(cx, |this, cx| this.apply_settings(current, cx))
+                    .is_err()
+                {
+                    break;
+                }
+            }
+        });
+    }
+
+    fn apply_settings(&mut self, settings: NotificationSettings, cx: &mut Context<Self>) {
+        self.notification_settings = settings;
+        notifications::set_show_content(settings.show_content, cx);
+        cx.notify();
+    }
+
+    /// The notification settings, and whether their dialog is open.
+    #[cfg(test)]
+    pub(crate) fn notification_settings(&self) -> (NotificationSettings, bool) {
+        (self.notification_settings, self.settings_modal.is_open())
+    }
+
+    fn open_notification_settings(
+        &mut self,
+        _: &OpenNotificationSettings,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.show_notification_settings(window, cx);
+    }
+
+    /// Opens the notification settings dialog (once the profile is open).
+    pub(crate) fn show_notification_settings(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if self.opened.is_none() || self.settings_modal.is_open() {
+            return;
+        }
+        if self.palette.is_some() {
+            self.close_palette(window, cx);
+        }
+        self.settings_problem = None;
+        self.settings_modal.open(window, cx);
+        cx.notify();
+    }
+
+    fn close_notification_settings(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.settings_modal.close(window, cx);
+        cx.notify();
+    }
+
+    /// Shows or hides the message's text in notifications, and saves it.
+    pub(crate) fn toggle_notification_content(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let Some(opened) = &self.opened else {
+            return;
+        };
+        let settings = NotificationSettings {
+            show_content: !self.notification_settings.show_content,
+        };
+        let saved = opened.settings.set_notification_settings(settings);
+        // Shown at once; the profile's answer follows.
+        self.apply_settings(settings, cx);
+        self.settings_problem = None;
+        self.save_task = cx.spawn_in(window, async move |this, cx| {
+            let result = saved
+                .await
+                .unwrap_or_else(|_| Err(format!("{APP_NAME} is closing.")));
+            let _ = this.update(cx, |this, cx| {
+                if let Err(problem) = result {
+                    this.settings_problem = Some(problem);
+                    let previous = NotificationSettings {
+                        show_content: !settings.show_content,
+                    };
+                    this.apply_settings(previous, cx);
+                }
+            });
+        });
+    }
+
+    fn render_notification_settings(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
+        if !self.settings_modal.is_open() {
+            return None;
+        }
+        let colors = ComponentTheme::get(cx).colors;
+        let shell = cx.entity().downgrade();
+        let close = {
+            let shell = shell.clone();
+            move |window: &mut Window, cx: &mut App| {
+                let _ = shell.update(cx, |shell, cx| {
+                    shell.close_notification_settings(window, cx)
+                });
+            }
+        };
+        Some(notifications::render_settings(
+            &self.settings_modal,
+            self.notification_settings.show_content,
+            self.settings_problem.as_deref(),
+            &colors,
+            move |_, window, cx| {
+                let _ = shell.update(cx, |shell, cx| {
+                    shell.toggle_notification_content(window, cx)
+                });
+            },
+            close,
+        ))
     }
 
     fn apply_initial_view(
@@ -303,12 +739,25 @@ impl ShellView {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        match initial {
+            InitialView::NotificationSettings => {
+                return self.show_notification_settings(window, cx);
+            }
+            InitialView::ForwardedLink(text) => {
+                return self.request(AppRequest::OpenLink(SecretText::new(text)), window, cx);
+            }
+            _ => {}
+        }
         let Some(signin) = self.signin().cloned() else {
             return;
         };
         let palette = initial == InitialView::CommandPalette;
         signin.update(cx, |signin, cx| match initial {
-            InitialView::Default | InitialView::CommandPalette | InitialView::Rooms(_) => {}
+            InitialView::Default
+            | InitialView::CommandPalette
+            | InitialView::Rooms(_)
+            | InitialView::NotificationSettings
+            | InitialView::ForwardedLink(_) => {}
             InitialView::CodeEntry => signin.show_code(None, window, cx),
             InitialView::CodeEntryNoQrCode => {
                 signin.show_image_problem(QrError::NoCode, window, cx);
@@ -487,6 +936,7 @@ impl Render for ShellView {
             .key_context(KEY_CONTEXT)
             .track_focus(&self.focus_handle)
             .on_action(cx.listener(Self::toggle_palette))
+            .on_action(cx.listener(Self::open_notification_settings))
             .accessible(Role::Application, APP_NAME)
             .size_full()
             .flex()
@@ -498,6 +948,7 @@ impl Render for ShellView {
             .child(self.render_title_bar(cx))
             .child(div().flex_1().min_h_0().child(body))
             .child(self.toasts.clone())
+            .children(self.render_notification_settings(cx))
             .children(self.render_palette(cx));
         window_frame(root, window, cx)
     }

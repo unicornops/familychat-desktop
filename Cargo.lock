@@ -2138,6 +2138,7 @@ dependencies = [
  "crossterm",
  "familychat-assets",
  "familychat-core",
+ "familychat-instance",
  "familychat-security",
  "familychat-session",
  "familychat-signin",
@@ -2150,6 +2151,7 @@ dependencies = [
  "tokio",
  "tracing",
  "winresource",
+ "zeroize",
 ]
 
 [[package]]
@@ -2170,6 +2172,29 @@ dependencies = [
  "tokio",
  "url",
  "zeroize",
+]
+
+[[package]]
+name = "familychat-instance"
+version = "0.0.1"
+dependencies = [
+ "familychat-core",
+ "getrandom 0.4.3",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "windows-sys 0.61.2",
+ "zeroize",
+]
+
+[[package]]
+name = "familychat-notify"
+version = "0.0.1"
+dependencies = [
+ "familychat-core",
 ]
 
 [[package]]
@@ -2303,6 +2328,7 @@ dependencies = [
  "anyhow",
  "familychat-assets",
  "familychat-core",
+ "familychat-notify",
  "familychat-session",
  "familychat-test-support",
  "familychat-theme",

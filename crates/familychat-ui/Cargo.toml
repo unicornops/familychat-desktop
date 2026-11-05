@@ -11,6 +11,8 @@ description = "Family Chat's GPUI desktop frontend"
 anyhow.workspace = true
 familychat-assets = { path = "../familychat-assets" }
 familychat-core = { path = "../familychat-core" }
+# What a notification says, coalesced per room and capped (ADR 0013).
+familychat-notify = { path = "../familychat-notify" }
 gpui.workspace = true
 gpui_platform.workspace = true
 # Decoding a pasted or dropped QR image locally (PLAN.md, sections 4 and

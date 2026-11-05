@@ -190,6 +190,8 @@ pub enum Preference {
     Theme,
     /// The text size.
     TextSize,
+    /// Whether notifications show the message's text: `show` or `hide`.
+    NotificationContent,
 }
 
 impl Preference {
@@ -197,6 +199,7 @@ impl Preference {
         match self {
             Self::Theme => "theme",
             Self::TextSize => "text-size",
+            Self::NotificationContent => "notification-content",
         }
     }
 }

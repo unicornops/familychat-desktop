@@ -7,7 +7,8 @@
   {
     "context": "Shell",
     "bindings": {
-      "secondary-k": "familychat::ToggleCommandPalette"
+      "secondary-k": "familychat::ToggleCommandPalette",
+      "secondary-alt-n": "familychat::NotificationSettings"
     }
   },
   {

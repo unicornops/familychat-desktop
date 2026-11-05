@@ -664,3 +664,97 @@ async fn messages_and_an_image_from_another_user_appear() -> Result<()> {
     }
     Ok(())
 }
+
+#[tokio::test]
+#[ignore = "needs the homeserver harness: scripts/homeserver-harness.sh up"]
+async fn another_users_message_is_a_notification_and_the_accounts_own_is_not() -> Result<()> {
+    use familychat_core::notifications::NotificationContent;
+
+    captured_logs();
+    let harness = harness()?;
+    let alice = harness.new_user("notify-alice").await?;
+    let bob = harness.new_user("notify-bob").await?;
+    let marker = HomeserverHarness::unique_localpart("notify");
+    let room: OwnedRoomId = harness
+        .create_room(
+            &bob.session,
+            &format!("Notify {marker}"),
+            &[alice.user_id.as_str()],
+        )
+        .await?
+        .try_into()?;
+    harness.join_room(&alice.session, room.as_str()).await?;
+
+    let test = TestProfile::new("live-notify");
+    let manager = Arc::new(test.manager(harness.client().clone())?);
+    let session = LiveSession::new(manager.clone(), tokio::runtime::Handle::current());
+    let mut notifications = session.notifications();
+    let id = manager
+        .add_account(session_for(&alice, harness.hs1_url()), &AnyHomeserver)
+        .await?;
+    running(&manager, id).await?;
+    room_appears(&session, id, &room).await?;
+
+    // Alice's own message (from another of her devices) never notifies;
+    // bob's does, with his name, the room and the text.
+    let own = format!("own {marker}");
+    harness
+        .send_text(&alice.session, room.as_str(), &own)
+        .await?
+        .ok("alice's message")?;
+    let text = format!("hello {marker}");
+    harness
+        .send_text(&bob.session, room.as_str(), &text)
+        .await?
+        .ok("bob's message")?;
+    let incoming = tokio::time::timeout(Duration::from_secs(30), async {
+        loop {
+            let Some(incoming) = notifications.recv().await else {
+                bail!("the notifications stopped");
+            };
+            if incoming.room_id == room {
+                return Ok(incoming);
+            }
+        }
+    })
+    .await
+    .context("no notification for bob's message")??;
+    ensure!(incoming.account == account_key(id));
+    ensure!(
+        incoming.content == NotificationContent::Text(text.clone()),
+        "the first notification was not bob's message: {:?}",
+        incoming.content
+    );
+    ensure!(
+        incoming.sender_name.contains("notify-bob"),
+        "the sender is bob, by name or id"
+    );
+    ensure!(incoming.room_name == format!("Notify {marker}"));
+    // Nothing more for that room (alice's message, or bob's again).
+    tokio::time::sleep(Duration::from_secs(3)).await;
+    while let Ok(more) = notifications.try_recv() {
+        ensure!(
+            more.room_id != room,
+            "a second notification: {:?}",
+            more.content
+        );
+    }
+
+    // The unread total counts bob's message.
+    let mut unread = session
+        .unread_total(&account_key(id))
+        .context("the account's unread total")?;
+    tokio::time::timeout(Duration::from_secs(30), async {
+        while *unread.borrow_and_update() == 0 {
+            unread.changed().await?;
+        }
+        Ok::<_, anyhow::Error>(())
+    })
+    .await
+    .context("the unread total stayed at 0")??;
+
+    manager.shutdown().await;
+    let log = log_text();
+    ensure!(!log.contains(&marker), "the log contains a message");
+    Ok(())
+}

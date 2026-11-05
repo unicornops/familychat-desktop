@@ -158,3 +158,34 @@ fn the_rooms_targets_hold_on_a_narrow_window(cx: &mut TestAppContext) {
     assert!(check_targets("narrow room", cx) >= 3);
     assert!(cx.debug_bounds("button-room-back").is_some(), "a way back");
 }
+
+#[gpui::test]
+fn the_notification_settings_and_a_forwarded_link_targets_are_at_least_24px(
+    cx: &mut TestAppContext,
+) {
+    for (screen, initial, at_least) in [
+        (
+            "notification settings",
+            InitialView::NotificationSettings,
+            3,
+        ),
+        (
+            "forwarded link",
+            InitialView::ForwardedLink(FIXTURE_LINK.to_owned()),
+            3,
+        ),
+    ] {
+        let session = FixtureSession::new();
+        session.add_account(&fixture_user(), SyncState::Running);
+        session.with_family();
+        let signin = FixtureSignin::new(session.clone());
+        let startup = FixtureStartup::with(session, signin, &[FixtureProfile::Ready]);
+        let (_view, cx) = super::open(cx, startup, initial);
+        super::wait_until(cx, "the dialog", |cx| {
+            cx.debug_bounds("button-notification-settings-done")
+                .is_some()
+                || cx.debug_bounds("button-signin-confirm-continue").is_some()
+        });
+        assert!(check_targets(screen, cx) >= at_least, "{screen}");
+    }
+}

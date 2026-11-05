@@ -32,7 +32,9 @@ use crate::signin::{Page, SigninView};
 use crate::{InitialView, LaunchOptions, ShellView, appearance_for, decorations_for};
 
 mod a11y;
+mod forwarded_links;
 mod hit_targets;
+mod notifications;
 mod perf;
 mod rooms;
 mod signin;
@@ -60,11 +62,17 @@ pub(super) fn bootstrap() -> AppBootstrap {
     }
 }
 
-/// The app's actions and keys, as `run` binds them.
+/// The app's actions and keys, as `run` binds them, and the identity
+/// notifications are posted under (GPUI's test platform records
+/// notifications only once there is one).
 fn init(cx: &mut TestAppContext) {
     cx.update(|cx| {
         crate::actions::register(cx);
         crate::keymap::bind_keymap(cx);
+        cx.set_app_identity(
+            familychat_core::identity::APP_ID,
+            familychat_core::identity::APP_NAME,
+        );
     });
 }
 
@@ -74,9 +82,26 @@ pub(super) fn open(
     startup: Arc<FixtureStartup>,
     initial_view: InitialView,
 ) -> (Entity<ShellView>, &mut VisualTestContext) {
+    let (view, cx, _requests) = open_with_requests(cx, startup, initial_view);
+    (view, cx)
+}
+
+/// The window over `startup`, opened on `initial_view`, with the sender
+/// second launches' requests arrive on (as the app's listener sends them).
+pub(super) fn open_with_requests(
+    cx: &mut TestAppContext,
+    startup: Arc<FixtureStartup>,
+    initial_view: InitialView,
+) -> (
+    Entity<ShellView>,
+    &mut VisualTestContext,
+    familychat_core::requests::RequestSender,
+) {
     // The fixture's flows answer from their own threads.
     cx.executor().allow_parking();
     init(cx);
+    let (sender, receiver) = familychat_core::requests::request_channel();
+    let inbox = crate::RequestInbox::new(sender.clone(), receiver);
     let (view, cx) = cx.add_window_view(move |window, cx| {
         ShellView::new(
             bootstrap(),
@@ -84,13 +109,14 @@ pub(super) fn open(
             LaunchOptions {
                 initial_view,
                 appearance: Some(ThemeAppearance::Dark),
+                requests: Some(inbox),
             },
             window,
             cx,
         )
     });
     cx.run_until_parked();
-    (view, cx)
+    (view, cx, sender)
 }
 
 /// The window on a ready profile with no account, on `initial_view`.

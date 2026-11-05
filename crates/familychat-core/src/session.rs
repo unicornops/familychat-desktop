@@ -28,6 +28,7 @@ use tokio::sync::{mpsc, oneshot, watch};
 use crate::{
     diff::ListDiff,
     media::{DecodedImage, MediaError, MediaInfo},
+    notifications::IncomingNotification,
     rooms::{RoomListCommand, RoomListFilter, RoomListLoading, RoomMember, RoomSummary},
     sync::AccountStatus,
     timeline::{TimelineCommand, TimelineUpdate},
@@ -276,6 +277,19 @@ pub trait SessionApi: Send + Sync {
     /// Asks a stopped or waiting sync to try again now (after "not
     /// supported", a sign-in problem, or to skip a backoff).
     fn retry_sync(&self, account: &AccountKey);
+
+    /// The notifications every account's sync reports from now on (push
+    /// rules applied, the account's own messages and ones from before the
+    /// session started left out). One frontend listens: a new call
+    /// replaces the previous receiver. The session drops notifications
+    /// while the receiver is full rather than queue them.
+    fn notifications(&self) -> mpsc::Receiver<IncomingNotification>;
+
+    /// How many unread messages call for the account's attention, as it
+    /// changes: the notifying unread messages of its joined rooms (the
+    /// room list's badges) plus one for each invitation. `None` for an
+    /// unknown account.
+    fn unread_total(&self, account: &AccountKey) -> Option<watch::Receiver<u64>>;
 }
 
 #[cfg(test)]

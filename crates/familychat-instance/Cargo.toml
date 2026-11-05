@@ -1,0 +1,53 @@
+[package]
+name = "familychat-instance"
+version = "0.0.1"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+description = "Family Chat's single-instance hand-off: the user-only local socket or named pipe a second launch forwards its sign-in link over"
+
+[dependencies]
+# The requests the hand-off carries (`AppRequest`, `SecretText`) and the
+# link shape check. No GPUI, ratatui or matrix-sdk.
+familychat-core = { path = "../familychat-core" }
+# The length-prefixed JSON messages (PLAN.md, section 5.5).
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+# The listener runs on the background runtime; a second launch connects
+# with a small runtime of its own. `net` is Tokio's Unix sockets and
+# Windows named pipes, already compiled for matrix-sdk's HTTP stack.
+tokio = { version = "1", features = ["io-util", "macros", "net", "rt", "sync", "time"] }
+tracing.workspace = true
+# Wiping the buffers a link passed through.
+zeroize.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+# The pipe's unguessable name (Windows has no per-user directory for
+# pipes, so the name is the profile's secret, written in the profile).
+getrandom.workspace = true
+# The named pipe's DACL (only the current user) and reading the user's
+# SID: the Win32 security calls, already in the graph (0.61, through
+# Tokio, GPUI and others). The only `unsafe` in the workspace lives in
+# `src/windows_security.rs`, each block justified.
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Security", "Win32_Security_Authorization", "Win32_System_Threading"] }
+
+[dev-dependencies]
+# The tests' window runs on a multi-thread runtime, as the app's does.
+tokio = { version = "1", features = ["rt-multi-thread"] }
+# Capturing the log lines of a hand-off, to check no token reaches them.
+tracing-subscriber.workspace = true
+
+# The workspace lints, except that `unsafe_code` is `deny` rather than
+# `forbid`, so `src/windows_security.rs` (Windows only) can allow it for
+# the Win32 security calls (PLAN.md, section 5.1). Every other module, and
+# the whole crate on Unix, forbids it.
+[lints.rust]
+missing_docs = "warn"
+unsafe_code = "deny"
+
+[lints.clippy]
+dbg_macro = "deny"
+todo = "deny"
+unwrap_used = "deny"
