@@ -56,14 +56,23 @@ anyhow.workspace = true
 familychat-signin = { path = ".", features = ["test-harness"] }
 familychat-store = { path = "../familychat-store" }
 familychat-test-support = { path = "../familychat-test-support", features = ["test-harness"] }
+# The other device in the live QR code tests (tests/live_oauth.rs): a phone
+# as a bare SDK client.
+matrix-sdk.workspace = true
 # Property tests for the link and server-name parsers (PLAN.md, section 9).
 # Already in the lock file through GPUI; only its default features.
 proptest = "1.12"
+# Reading the QR code the live tests' sign-in draws, as a phone's camera
+# would. Already in the graph through familychat-ui.
+rqrr = { version = "0.11", default-features = false }
 tracing-subscriber.workspace = true
 wiremock = "0.6.5"
 
 [[test]]
 name = "live_signin"
+
+[[test]]
+name = "live_oauth"
 
 [lints]
 workspace = true

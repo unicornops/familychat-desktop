@@ -693,10 +693,22 @@ async fn another_server_signs_in_with_a_password_on_synapse() -> Result<()> {
     ensure!(problem(&step)? == wording::NOT_FAMILY_CHAT, "{step:?}");
     family.flow.answer(SigninAnswer::Cancel);
 
-    // As another Matrix server, it signs in and syncs.
+    // As another Matrix server, it is found first (Phase 14), offers the
+    // password only, then signs in and syncs.
     let other = desktop.start(SigninStart::OtherServer);
     let step = other.settled().await?;
+    ensure!(matches!(step, SigninStep::Server(_)), "{step:?}");
+    let step = other
+        .answer(SigninAnswer::ChooseServer {
+            server: synapse.clone(),
+        })
+        .await?;
     ensure!(form(&step)?.kind == PasswordKind::OtherServer);
+    let methods = form(&step)?.methods.clone().context("the server's methods")?;
+    ensure!(
+        methods.password && methods.browser.is_none() && !methods.qr_code,
+        "{methods:?}"
+    );
     let key = finished(&other.submit(&synapse, &localpart, &user.password).await?)?;
     desktop.running(&key).await?;
     let account = desktop.manager.account_by_key(&key).context("open")?;

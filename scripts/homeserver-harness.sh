@@ -17,6 +17,9 @@ set -euo pipefail
 #                               the admin API and print it
 #   create-user LOCALPART PASS  create (or update) a Palpo user with the
 #                               admin API, as the control panel does
+#   create-mas-user LOCALPART PASS
+#                               create a user on MAS (Synapse with MAS) with
+#                               MAS's admin API
 #   stop-edge                   stop the TLS front end, so every harness
 #                               host is unreachable (the offline tests)
 #   start-edge                  start it again and wait until it answers
@@ -34,6 +37,10 @@ set -euo pipefail
 #   redirect.familychat.test  allowlisted, but its /login answers 307 to
 #                             evil.familychat.example
 #   synapse.test              Synapse
+#   synapse-mas.familychat.test
+#                             Synapse delegating sign-in to MAS (OAuth 2.0,
+#                             the device grant, the MSC4108 rendezvous)
+#   mas.familychat.test       MAS, its authorization server
 #
 # Palpo's own HTTP port is published on 127.0.0.1:${FAMILYCHAT_HARNESS_ADMIN_PORT:-18008}
 # for the admin API only, standing in for the control panel's port-forward,
@@ -94,7 +101,12 @@ CUSTOM_DOMAIN="smith.test"
 EVIL_HOST="evil.familychat.example"
 REDIRECT_HOST="redirect.familychat.test"
 SYNAPSE_HOST="synapse.test"
-HOSTS=("${SERVER_NAME}" "${CUSTOM_DOMAIN}" "${EVIL_HOST}" "${REDIRECT_HOST}" "${SYNAPSE_HOST}")
+SYNAPSE_MAS_HOST="synapse-mas.familychat.test"
+MAS_HOST="mas.familychat.test"
+HOSTS=("${SERVER_NAME}" "${CUSTOM_DOMAIN}" "${EVIL_HOST}" "${REDIRECT_HOST}" "${SYNAPSE_HOST}"
+  "${SYNAPSE_MAS_HOST}" "${MAS_HOST}")
+# MAS's admin client (a ULID; its secret is made on every `up`).
+MAS_ADMIN_CLIENT="01KADM1NC1ENT0000000000000"
 # family-chat's HOMESERVER_ADMIN_USER.
 ADMIN_LOCALPART="panel-admin"
 ADMIN_MXID="@${ADMIN_LOCALPART}:${SERVER_NAME}"
@@ -107,6 +119,7 @@ ENV_FILE="${STATE_DIR}/env"
 EDGE_LOG_DIR="${STATE_DIR}/edge-logs"
 ACCESS_LOG="${EDGE_LOG_DIR}/access.log"
 PALPO_TOML="${STATE_DIR}/palpo.toml"
+MAS_DIR="${STATE_DIR}/mas"
 
 log() {
   echo "homeserver-harness: $*" >&2
@@ -230,6 +243,116 @@ rc_message:
 YAML
 }
 
+# Synapse with MAS (Phase 14, ADR 0010): its own generated config, with
+# MAS's section (the shared secret `up` makes), the MSC4108 rendezvous and
+# the public base URL the rendezvous and the well-known are built from.
+generate_synapse_mas_config() {
+  local shared_secret="$1"
+  retry 3 5 compose run --rm --no-deps synapse-mas generate >/dev/null \
+    || die "could not generate Synapse with MAS's config"
+  compose run --rm --no-deps -T --entrypoint sh synapse-mas -c 'cat >> /data/homeserver.yaml' <<YAML \
+    || die "could not configure Synapse with MAS"
+
+# --- familychat homeserver harness (scripts/homeserver-harness.sh) ---
+public_baseurl: https://${SYNAPSE_MAS_HOST}/
+matrix_authentication_service:
+  enabled: true
+  endpoint: http://mas:8080/
+  secret: "${shared_secret}"
+experimental_features:
+  msc4108_enabled: true
+rc_message:
+  per_second: 100
+  burst_count: 1000
+YAML
+}
+
+# MAS's config, with fresh secrets and signing keys (files only the
+# harness reads). Rate limits are raised: every request comes from the
+# front end, and the tests sign in more than MAS's defaults allow. Access
+# tokens last a minute (MAS's least), so the live tests see the SDK
+# refresh them. The device code's address carries its code
+# (`verification_uri_complete`), as QR code sign-in uses it.
+render_mas_config() {
+  local shared_secret="$1" admin_secret="$2"
+  require openssl
+  rm -rf "${MAS_DIR}"
+  mkdir -p "${MAS_DIR}"
+  openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out "${MAS_DIR}/rsa.pem" 2>/dev/null
+  openssl genpkey -algorithm EC -pkeyopt ec_paramgen_curve:P-256 -out "${MAS_DIR}/ec.pem" 2>/dev/null
+  cat > "${MAS_DIR}/config.yaml" <<YAML
+# Rendered by scripts/homeserver-harness.sh; throwaway, made on every up.
+http:
+  listeners:
+    - name: web
+      resources:
+        - name: discovery
+        - name: human
+        - name: oauth
+        - name: compat
+        - name: graphql
+        - name: assets
+        - name: adminapi
+      binds:
+        - address: "0.0.0.0:8080"
+    - name: internal
+      resources:
+        - name: health
+      binds:
+        - address: "0.0.0.0:8081"
+  trusted_proxies:
+    - 172.16.0.0/12
+    - 192.168.0.0/16
+    - 10.0.0.0/8
+  public_base: https://${MAS_HOST}/
+  issuer: https://${MAS_HOST}/
+database:
+  uri: postgresql://mas@postgres:5432/mas
+email:
+  from: '"Authentication Service" <root@localhost>'
+  reply_to: '"Authentication Service" <root@localhost>'
+  transport: blackhole
+secrets:
+  encryption: $(openssl rand -hex 32)
+  keys:
+    - key_file: /etc/mas/rsa.pem
+    - key_file: /etc/mas/ec.pem
+passwords:
+  enabled: true
+  schemes:
+    - version: 1
+      algorithm: argon2id
+  minimum_complexity: 0
+matrix:
+  kind: synapse
+  homeserver: ${SYNAPSE_MAS_HOST}
+  secret: "${shared_secret}"
+  endpoint: http://synapse-mas:8008/
+clients:
+  - client_id: ${MAS_ADMIN_CLIENT}
+    client_auth_method: client_secret_basic
+    client_secret: "${admin_secret}"
+policy:
+  data:
+    admin_clients:
+      - ${MAS_ADMIN_CLIENT}
+oauth:
+  device_code_grant_enabled: true
+  device_code_user_code_auto_fill_enabled: true
+rate_limiting:
+  login:
+    per_ip: { burst: 1000, per_second: 100 }
+    per_account: { burst: 1000, per_second: 100 }
+  device_code_link: { burst: 1000, per_second: 100 }
+  registration: { burst: 1000, per_second: 100 }
+experimental:
+  access_token_ttl: 60
+YAML
+  # MAS runs as an unprivileged user in its container.
+  chmod 0755 "${MAS_DIR}"
+  chmod 0644 "${MAS_DIR}"/*
+}
+
 # --- Images ------------------------------------------------------------------
 
 docker_login() {
@@ -300,6 +423,17 @@ edge_ready() {
 
 synapse_ready() {
   edge_curl "${SYNAPSE_HOST}" /_matrix/client/versions --fail
+}
+
+synapse_mas_ready() {
+  edge_curl "${SYNAPSE_MAS_HOST}" /_matrix/client/versions --fail
+}
+
+# The homeserver names MAS as its authorization server (Synapse fetches
+# MAS's metadata, so this needs both).
+mas_ready() {
+  edge_curl "${MAS_HOST}" /.well-known/openid-configuration --fail \
+    && edge_curl "${SYNAPSE_MAS_HOST}" /_matrix/client/v1/auth_metadata --fail
 }
 
 synapse_admin_port_ready() {
@@ -388,7 +522,7 @@ urlencode() {
 }
 
 write_env() {
-  local admin_token="$1" registration_token="$2" synapse_admin_token="$3"
+  local admin_token="$1" registration_token="$2" synapse_admin_token="$3" mas_admin_secret="$4"
   (
     umask 077
     cat > "${ENV_FILE}" <<EOF
@@ -407,6 +541,10 @@ export FAMILYCHAT_HARNESS_ADMIN_TOKEN='${admin_token}'
 export FAMILYCHAT_HARNESS_REGISTRATION_TOKEN='${registration_token}'
 export FAMILYCHAT_HARNESS_SYNAPSE_ADMIN_URL='${SYNAPSE_ADMIN_URL}'
 export FAMILYCHAT_HARNESS_SYNAPSE_ADMIN_TOKEN='${synapse_admin_token}'
+export FAMILYCHAT_HARNESS_SYNAPSE_MAS_URL='https://${SYNAPSE_MAS_HOST}'
+export FAMILYCHAT_HARNESS_MAS_URL='https://${MAS_HOST}'
+export FAMILYCHAT_HARNESS_MAS_ADMIN_CLIENT='${MAS_ADMIN_CLIENT}'
+export FAMILYCHAT_HARNESS_MAS_ADMIN_SECRET='${mas_admin_secret}'
 EOF
   )
 }
@@ -422,25 +560,31 @@ up() {
   # nginx in the container writes the access log; the tests read it.
   chmod 0777 "${EDGE_LOG_DIR}"
   generate_tls
-  local registration_token admin_token synapse_admin_token
+  local registration_token admin_token synapse_admin_token mas_shared_secret mas_admin_secret
   registration_token="$(openssl rand -hex 32)"
+  mas_shared_secret="$(openssl rand -hex 32)"
+  mas_admin_secret="$(openssl rand -hex 32)"
   render_palpo_config "${registration_token}"
+  render_mas_config "${mas_shared_secret}" "${mas_admin_secret}"
   generate_synapse_config
+  generate_synapse_mas_config "${mas_shared_secret}"
   compose up --detach --remove-orphans \
     || { compose logs --no-color --tail 200 >&2 || true; die "could not start the harness"; }
   wait_for "Palpo on ${ADMIN_URL}" palpo_admin_port_ready
   wait_for "https://${SERVER_NAME} through the edge on ${EDGE_ADDR}" edge_ready
   wait_for "https://${SYNAPSE_HOST} through the edge" synapse_ready
   wait_for "Synapse on ${SYNAPSE_ADMIN_URL}" synapse_admin_port_ready
+  wait_for "https://${SYNAPSE_MAS_HOST} through the edge" synapse_mas_ready
+  wait_for "MAS at https://${MAS_HOST}, named by https://${SYNAPSE_MAS_HOST}" mas_ready
   admin_token="$(bootstrap_admin "${registration_token}")"
   synapse_admin_token="$(bootstrap_synapse_admin "$(openssl rand -hex 32)")"
-  write_env "${admin_token}" "${registration_token}" "${synapse_admin_token}"
-  log "up: ${HOSTS[*]} on ${EDGE_ADDR} (CA ${CA_PEM}); admin API ${ADMIN_URL} as ${ADMIN_MXID}; Synapse admin API ${SYNAPSE_ADMIN_URL}; settings in ${ENV_FILE}"
+  write_env "${admin_token}" "${registration_token}" "${synapse_admin_token}" "${mas_admin_secret}"
+  log "up: ${HOSTS[*]} on ${EDGE_ADDR} (CA ${CA_PEM}); admin API ${ADMIN_URL} as ${ADMIN_MXID}; Synapse admin API ${SYNAPSE_ADMIN_URL}; MAS's admin API at https://${MAS_HOST}/api/admin; settings in ${ENV_FILE}"
 }
 
 down() {
   compose down --volumes --remove-orphans --timeout 5 >/dev/null 2>&1 || true
-  rm -rf "${TLS_DIR}" "${CA_PEM}" "${ENV_FILE}" "${PALPO_TOML}"
+  rm -rf "${TLS_DIR}" "${CA_PEM}" "${ENV_FILE}" "${PALPO_TOML}" "${MAS_DIR}"
   # The access log is the container's (root's on most Docker hosts), in a
   # directory the script made; remove what can be removed.
   rm -rf "${EDGE_LOG_DIR}" 2>/dev/null || true
@@ -492,6 +636,34 @@ create_user() {
   echo "${mxid}"
 }
 
+# A MAS user with a password, through MAS's admin API (the tests use
+# HomeserverHarness::new_mas_user).
+create_mas_user() {
+  [[ $# -eq 2 ]] || die "usage: scripts/homeserver-harness.sh create-mas-user LOCALPART PASSWORD"
+  require curl jq
+  load_env
+  local token response status id
+  response="$(edge_curl "${MAS_HOST}" /oauth2/token \
+    --user "${FAMILYCHAT_HARNESS_MAS_ADMIN_CLIENT}:${FAMILYCHAT_HARNESS_MAS_ADMIN_SECRET}" \
+    --data grant_type=client_credentials --data scope=urn:mas:admin --write-out '\n%{http_code}')"
+  status="${response##*$'\n'}"
+  [[ "${status}" == 200 ]] || die "MAS refused the admin client (${status})"
+  token="$(jq -r '.access_token' <<<"${response%$'\n'*}")"
+  response="$(edge_curl "${MAS_HOST}" /api/admin/v1/users --header "Authorization: Bearer ${token}" \
+    --header 'Content-Type: application/json' --data "$(jq -nc --arg user "$1" '{username: $user}')" \
+    --write-out '\n%{http_code}')"
+  status="${response##*$'\n'}"
+  [[ "${status}" == 201 ]] || die "creating $1 on MAS failed (${status}): ${response%$'\n'*}"
+  id="$(jq -r '.data.id' <<<"${response%$'\n'*}")"
+  response="$(edge_curl "${MAS_HOST}" "/api/admin/v1/users/${id}/set-password" \
+    --header "Authorization: Bearer ${token}" --header 'Content-Type: application/json' \
+    --data "$(jq -nc --arg password "$2" '{password: $password, skip_password_check: true}')" \
+    --write-out '\n%{http_code}')"
+  status="${response##*$'\n'}"
+  [[ "${status}" == 204 ]] || die "setting $1's password on MAS failed (${status})"
+  echo "@$1:${SYNAPSE_MAS_HOST}"
+}
+
 # The front end alone, for the tests of what happens while the server
 # can't be reached: its access log carries on in the same file.
 stop_edge() {
@@ -513,12 +685,13 @@ case "${1:-}" in
   env) load_env && cat "${ENV_FILE}" ;;
   mint-token) shift && mint_token "$@" ;;
   create-user) shift && create_user "$@" ;;
+  create-mas-user) shift && create_mas_user "$@" ;;
   stop-edge) stop_edge ;;
   start-edge) start_edge ;;
   logs) compose logs --no-color --timestamps ;;
   ps) compose ps ;;
   *)
-    echo "usage: scripts/homeserver-harness.sh [up|down|reset|env|mint-token USER [TTL_MS]|create-user LOCALPART PASSWORD|stop-edge|start-edge|logs|ps]" >&2
+    echo "usage: scripts/homeserver-harness.sh [up|down|reset|env|mint-token USER [TTL_MS]|create-user LOCALPART PASSWORD|create-mas-user LOCALPART PASSWORD|stop-edge|start-edge|logs|ps]" >&2
     exit 1
     ;;
 esac

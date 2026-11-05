@@ -141,6 +141,8 @@ mod tests {
                     "FAMILYCHAT_HARNESS_EVIL_URL" => "https://evil.familychat.example",
                     "FAMILYCHAT_HARNESS_SYNAPSE_URL" => "https://synapse.test",
                     "FAMILYCHAT_HARNESS_REDIRECT_URL" => "https://redirect.familychat.test",
+                    "FAMILYCHAT_HARNESS_SYNAPSE_MAS_URL" => "https://synapse-mas.familychat.test",
+                    "FAMILYCHAT_HARNESS_MAS_URL" => "https://mas.familychat.test",
                     _ => "value",
                 }
                 .to_owned(),
