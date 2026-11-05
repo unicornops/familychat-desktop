@@ -51,7 +51,7 @@ jobs:
                     # the window, its theme and assets, the fixtures and the
                     # sentences the screens show.
                     case "$file" in
-                      crates/familychat-ui/*|crates/familychat-theme/*|crates/familychat-assets/*|themes/*|assets/icons/*|assets/fonts/*|crates/familychat-app/src/ui_fixture.rs|crates/familychat-test-support/src/fixtures.rs|crates/familychat-core/src/signin.rs|crates/familychat-core/src/startup.rs|crates/familychat-core/src/commands.rs|crates/familychat-core/src/sync.rs|crates/familychat-signin/src/wording.rs|scripts/capture-ui-screenshots.sh|.github/workflows/ci.yml)
+                      crates/familychat-ui/*|crates/familychat-theme/*|crates/familychat-assets/*|themes/*|assets/icons/*|assets/fonts/*|crates/familychat-app/src/ui_fixture.rs|crates/familychat-test-support/src/fixtures.rs|crates/familychat-test-support/src/fixtures/*|crates/familychat-core/src/signin.rs|crates/familychat-core/src/encryption.rs|crates/familychat-core/src/timeline.rs|crates/familychat-core/src/startup.rs|crates/familychat-core/src/commands.rs|crates/familychat-core/src/sync.rs|crates/familychat-signin/src/wording.rs|scripts/capture-ui-screenshots.sh|.github/workflows/ci.yml)
                         if [[ "$file" != *.md ]]; then
                           ui=true
                         fi
@@ -248,6 +248,16 @@ jobs:
             - name: Live messaging tests
               timeout-minutes: 15
               run: cargo test -p familychat-actions --test live_actions --locked -- --ignored --nocapture
+
+            # End-to-end encryption against the harness (ADR 0009): two
+            # devices verify by emoji and the new one reads the history;
+            # recovery set up on one device lets a new one read it; a
+            # code-only account makes its cross-signing identity on Palpo
+            # (the outcome is printed for family-chat #257); room keys
+            # exported and imported decrypt the history.
+            - name: Live encryption tests
+              timeout-minutes: 15
+              run: cargo test -p familychat-session --test live_encryption --locked -- --ignored --nocapture
 
             - name: Homeserver harness logs
               if: failure()

@@ -175,6 +175,8 @@ ignore-dev-dependencies = true
 #   hourglass, image, image-off, lock-open, mail-plus,
 #   message-circle-more, message-square-dashed, messages-square, pencil,
 #   shield-off and users from Lucide 1.68.0; in Phase 7 door-open
-#   and face-slightly-smiling-plus from Lucide 1.68.0. Embedded
+#   and face-slightly-smiling-plus from Lucide 1.68.0; in Phase 8
+#   file-key from Zmail's copy, and laptop, save, smartphone and upload
+#   from Lucide 1.68.0. Embedded
 #   in all builds; release archives ship the licence as
 #   licenses/Lucide-LICENSE.txt.

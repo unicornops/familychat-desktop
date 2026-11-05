@@ -22,11 +22,15 @@
 
 use std::{fmt, path::PathBuf, sync::Arc};
 
-use ruma::{OwnedRoomId, OwnedUserId, RoomId};
+use ruma::{OwnedRoomId, OwnedUserId, RoomId, UserId};
 use tokio::sync::{mpsc, oneshot, watch};
 
 use crate::{
     diff::ListDiff,
+    encryption::{
+        AuthOutcome, DeviceView, EncryptionStatus, IdentityWarning, KeyImport, SecretText,
+        VerificationFlow,
+    },
     media::{DecodedImage, MediaError, MediaInfo},
     messaging::{Draft, MediaLimits, NewRoom, RoomDone, RoomRequest, ServerDefaults},
     notifications::IncomingNotification,
@@ -96,6 +100,10 @@ impl fmt::Display for SessionError {
 }
 
 impl std::error::Error for SessionError {}
+
+/// A verification request another of an account's devices sent, with the
+/// account it is for.
+pub type IncomingVerification = (AccountKey, VerificationFlow);
 
 /// A one-off answer.
 pub type Reply<T> = oneshot::Receiver<Result<T, SessionError>>;
@@ -326,6 +334,83 @@ pub trait SessionApi: Send + Sync {
     /// room list's badges) plus one for each invitation. `None` for an
     /// unknown account.
     fn unread_total(&self, account: &AccountKey) -> Option<watch::Receiver<u64>>;
+
+    // -- End-to-end encryption (ADR 0009) ------------------------------------
+
+    /// The account's encryption (this device, its identity, recovery), as
+    /// it changes. `None` for an unknown account.
+    fn encryption(&self, account: &AccountKey) -> Option<watch::Receiver<EncryptionStatus>>;
+
+    /// Makes the account's cross-signing identity when it has none: first
+    /// without the server's user-interactive auth (MSC3967), then with
+    /// `password` when the server asks for it. The password is used for
+    /// this request only and wiped.
+    fn set_up_identity(
+        &self,
+        account: &AccountKey,
+        password: Option<SecretText>,
+    ) -> Reply<AuthOutcome>;
+
+    /// Asks the account's other devices to verify this one.
+    fn verify_this_device(&self, account: &AccountKey) -> Reply<VerificationFlow>;
+
+    /// Asks another of the account's devices to verify itself with this one.
+    fn verify_device(&self, account: &AccountKey, device_id: &str) -> Reply<VerificationFlow>;
+
+    /// The verification requests other devices send from now on, with the
+    /// account each is for. One frontend listens: a new call replaces the
+    /// previous receiver.
+    fn verification_requests(&self) -> mpsc::Receiver<IncomingVerification>;
+
+    /// Sets recovery up (the key backup and secret storage) and answers
+    /// with the new recovery key, which is shown once and kept nowhere.
+    fn enable_recovery(&self, account: &AccountKey) -> Reply<SecretText>;
+
+    /// Confirms this device with the recovery key: fetches the account's
+    /// secrets from the server and the backup's keys with them.
+    fn recover(&self, account: &AccountKey, recovery_key: SecretText) -> Reply<()>;
+
+    /// The account's devices, this one first.
+    fn devices(&self, account: &AccountKey) -> Reply<Vec<DeviceView>>;
+
+    /// Signs another of the account's devices out, answering the server's
+    /// user-interactive auth with `password` when it asks.
+    fn sign_out_device(
+        &self,
+        account: &AccountKey,
+        device_id: &str,
+        password: Option<SecretText>,
+    ) -> Reply<AuthOutcome>;
+
+    /// Writes every room key this device has to `path` (which the person
+    /// chose), encrypted with `passphrase`.
+    fn export_room_keys(
+        &self,
+        account: &AccountKey,
+        path: PathBuf,
+        passphrase: SecretText,
+    ) -> Reply<()>;
+
+    /// Reads room keys from a file `export_room_keys` (or another Matrix
+    /// client) wrote, with its passphrase.
+    fn import_room_keys(
+        &self,
+        account: &AccountKey,
+        path: PathBuf,
+        passphrase: SecretText,
+    ) -> Reply<KeyImport>;
+
+    /// The identity warnings a room shows (members whose identity changed),
+    /// as they change.
+    fn identity_warnings(
+        &self,
+        account: &AccountKey,
+        room: &RoomId,
+    ) -> Reply<watch::Receiver<Vec<IdentityWarning>>>;
+
+    /// Answers a warning about `user`: acknowledges the new identity, or
+    /// withdraws the verification of the old one.
+    fn acknowledge_identity(&self, account: &AccountKey, user: &UserId) -> Reply<()>;
 }
 
 #[cfg(test)]

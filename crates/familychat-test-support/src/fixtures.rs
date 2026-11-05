@@ -26,6 +26,10 @@ use std::{
 use familychat_core::{
     OwnedRoomId, OwnedUserId, UserId,
     diff::ListDiff,
+    encryption::{
+        AuthOutcome, DeviceView, EncryptionStatus, IdentityWarning, KeyImport, SecretText,
+        VerificationFlow, VerificationStep,
+    },
     media::{DecodedImage, MediaError, MediaInfo},
     messaging::{
         Draft, MediaLimits, MessageRef, NewRoom, OutgoingMessage, RoomDone, RoomRequest,
@@ -48,7 +52,7 @@ use familychat_core::{
     startup::{OpenState, Opened, StartupApi},
     sync::{AccountStatus, SyncState},
     timeline::{
-        MessageBody, MessageKind, PaginationState, Reaction, ReplyPreview, SendState,
+        MessageBody, MessageKind, PaginationState, Reaction, ReplyPreview, SendProblem, SendState,
         TimelineCommand, TimelineContent, TimelineEvent, TimelineItem, TimelineItemId,
         TimelineItemKind, TimelineUpdate,
     },
@@ -61,6 +65,7 @@ use familychat_store::{
 };
 use tokio::sync::{mpsc, oneshot, watch};
 
+pub mod encryption;
 pub mod rooms;
 
 /// The fixture family's server name.
@@ -121,6 +126,7 @@ pub struct FixtureSession {
     drafts: Mutex<BTreeMap<(AccountKey, OwnedRoomId), Draft>>,
     fail_requests: Mutex<Option<SessionError>>,
     sent: Mutex<usize>,
+    encryption: encryption::FixtureEncryption,
 }
 
 /// Family Chat's Palpo upload limit, which the fixture serves unless told
@@ -403,6 +409,11 @@ fn apply_request(
                 return RoomDone::Reaction(added);
             }
         }
+        RoomRequest::SendAnyway(target) => {
+            if let Some(event) = target_event(items, target) {
+                event.send_state = Some(SendState::Sent);
+            }
+        }
         RoomRequest::MarkRead
         | RoomRequest::Typing(_)
         | RoomRequest::Invite(_)
@@ -458,6 +469,7 @@ impl FixtureSession {
             .0,
         );
         drop(statuses);
+        self.encryption.add_account(&key);
         let server = user_id.server_name().to_string();
         self.accounts.send_modify(|accounts| {
             accounts.push(AccountView {
@@ -467,6 +479,69 @@ impl FixtureSession {
             });
         });
         key
+    }
+
+    /// Sets an account's encryption (every account starts settled:
+    /// confirmed, with an identity and recovery).
+    pub fn set_encryption(&self, account: &AccountKey, status: EncryptionStatus) {
+        self.encryption.set_status(account, status);
+    }
+
+    /// The step the next verification starts at (the screenshot matrix).
+    pub fn start_verification_at(&self, step: VerificationStep) {
+        self.encryption.set_first_step(Some(step));
+    }
+
+    /// Another of the account's devices asks to verify, as a to-device
+    /// request would arrive; `false` when no frontend listens.
+    pub fn request_verification(&self, account: &AccountKey) -> bool {
+        let Some(user) = self.own_user(account) else {
+            return false;
+        };
+        self.encryption.push_request(account, user)
+    }
+
+    /// The identity warnings `room` shows.
+    pub fn set_identity_warnings(&self, room: &str, warnings: Vec<IdentityWarning>) {
+        if let Ok(room) = OwnedRoomId::try_from(room) {
+            self.encryption.set_warnings(room, warnings);
+        }
+    }
+
+    /// Makes every encryption request fail with `error` (`None` puts it
+    /// back).
+    pub fn fail_encryption(&self, error: Option<SessionError>) {
+        self.encryption.fail(error);
+    }
+
+    /// What the window asked of the encryption, in order (never a secret).
+    pub fn encryption_asks(&self) -> Vec<encryption::EncryptionAsk> {
+        self.encryption.asks()
+    }
+
+    /// Marks the account's newest message in `room` as stopped by the
+    /// encryption with `problem`, as a send queue that refused it would.
+    pub fn stop_own_message(&self, room: &str, problem: SendProblem) {
+        let Ok(room) = OwnedRoomId::try_from(room) else {
+            return;
+        };
+        if let Some(timeline) = lock(&self.timelines).get(&room) {
+            timeline.send_modify(|items| {
+                if let Some(event) = items
+                    .iter_mut()
+                    .rev()
+                    .find_map(|item| match &mut item.kind {
+                        TimelineItemKind::Event(event) if event.is_own => Some(event),
+                        _ => None,
+                    })
+                {
+                    event.send_state = Some(SendState::Failed {
+                        recoverable: false,
+                        problem: Some(problem),
+                    });
+                }
+            });
+        }
     }
 
     /// Moves an account's sync to `sync`.
@@ -936,6 +1011,98 @@ impl SessionApi for FixtureSession {
                 .or_insert_with(|| watch::channel(0).0)
                 .subscribe(),
         )
+    }
+
+    fn encryption(&self, account: &AccountKey) -> Option<watch::Receiver<EncryptionStatus>> {
+        self.encryption.status(account)
+    }
+
+    fn set_up_identity(
+        &self,
+        account: &AccountKey,
+        password: Option<SecretText>,
+    ) -> Reply<AuthOutcome> {
+        answered(self.encryption.set_up_identity(account, password))
+    }
+
+    fn verify_this_device(&self, account: &AccountKey) -> Reply<VerificationFlow> {
+        let Some(user) = self.own_user(account) else {
+            return answered(Err(SessionError::UnknownAccount));
+        };
+        answered(self.encryption.verify_this_device(account, user))
+    }
+
+    fn verify_device(&self, account: &AccountKey, device_id: &str) -> Reply<VerificationFlow> {
+        let Some(user) = self.own_user(account) else {
+            return answered(Err(SessionError::UnknownAccount));
+        };
+        answered(self.encryption.verify_device(account, user, device_id))
+    }
+
+    fn verification_requests(
+        &self,
+    ) -> mpsc::Receiver<familychat_core::session::IncomingVerification> {
+        self.encryption.subscribe_requests()
+    }
+
+    fn enable_recovery(&self, account: &AccountKey) -> Reply<SecretText> {
+        answered(self.encryption.enable_recovery(account))
+    }
+
+    fn recover(&self, account: &AccountKey, recovery_key: SecretText) -> Reply<()> {
+        answered(self.encryption.recover(account, recovery_key))
+    }
+
+    fn devices(&self, account: &AccountKey) -> Reply<Vec<DeviceView>> {
+        answered(self.encryption.devices(account))
+    }
+
+    fn sign_out_device(
+        &self,
+        account: &AccountKey,
+        device_id: &str,
+        password: Option<SecretText>,
+    ) -> Reply<AuthOutcome> {
+        answered(
+            self.encryption
+                .sign_out_device(account, device_id, password),
+        )
+    }
+
+    fn export_room_keys(
+        &self,
+        account: &AccountKey,
+        path: PathBuf,
+        passphrase: SecretText,
+    ) -> Reply<()> {
+        answered(self.encryption.export(account, path, passphrase))
+    }
+
+    fn import_room_keys(
+        &self,
+        account: &AccountKey,
+        path: PathBuf,
+        passphrase: SecretText,
+    ) -> Reply<KeyImport> {
+        answered(self.encryption.import(account, path, passphrase))
+    }
+
+    fn identity_warnings(
+        &self,
+        account: &AccountKey,
+        room: &familychat_core::RoomId,
+    ) -> Reply<watch::Receiver<Vec<IdentityWarning>>> {
+        if !lock(&self.statuses).contains_key(account) {
+            return answered(Err(SessionError::UnknownAccount));
+        }
+        answered(Ok(self.encryption.warnings(&room.to_owned())))
+    }
+
+    fn acknowledge_identity(&self, account: &AccountKey, user: &UserId) -> Reply<()> {
+        if !lock(&self.statuses).contains_key(account) {
+            return answered(Err(SessionError::UnknownAccount));
+        }
+        answered(self.encryption.acknowledge(user))
     }
 }
 

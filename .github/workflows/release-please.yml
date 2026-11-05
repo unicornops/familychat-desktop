@@ -267,6 +267,8 @@ jobs:
       # gnome-keyring) and xdg-utils.
       - name: Install Linux build and packaging dependencies
         if: runner.os == 'Linux'
+        # A stalled mirror once held this step for hours; fail fast instead.
+        timeout-minutes: 15
         run: sudo apt-get update && sudo apt-get install -y pkg-config libdbus-1-dev libasound2-dev libxcb1-dev libxkbcommon-dev libxkbcommon-x11-dev libfontconfig1-dev libfreetype6-dev librsvg2-bin desktop-file-utils libvulkan1 libgl1 libegl1 libgl1-mesa-dri mesa-vulkan-drivers xvfb xdotool imagemagick dbus gnome-keyring xdg-utils
 
       - name: Read the pinned Rust toolchain and the version

@@ -30,18 +30,19 @@
 mod composer;
 mod media;
 mod members;
-mod rich_text;
+pub(crate) mod rich_text;
 mod timeline;
 
-use std::{path::PathBuf, sync::Arc};
+use std::{collections::HashSet, path::PathBuf, sync::Arc};
 
 use familychat_actions::{Action, ActionEvent, Actions, ComposerState, FileSource, Refusal};
 use familychat_core::{
     OwnedRoomId,
+    encryption::{IdentityWarning, IdentityWarningKind},
     links::{LinkAction, LinkPrompt, MatrixLink, classify},
     media::MediaInfo,
     rooms::{Encryption, RoomListFilter, RoomListLoading, RoomSummary},
-    session::{AccountView, RoomListControls, SessionApi},
+    session::{AccountView, RoomListControls, SessionApi, SessionError},
     sync::AccountStatus,
     timeline::time_label,
 };
@@ -109,6 +110,8 @@ pub struct RoomsLaunch {
     pub message_actions: bool,
     /// Ask about deleting the account's newest message.
     pub delete_prompt: bool,
+    /// An encryption screen or dialog to open (ADR 0009).
+    pub encryption: Option<crate::EncryptionLaunch>,
 }
 
 /// A composer state to open on (`familychat launch-ui-fixture`).
@@ -177,6 +180,12 @@ pub(crate) struct RoomsView {
     leave_modal: ModalState,
     /// When the open room was last marked read.
     last_read: Option<std::time::Instant>,
+    /// The open room's identity warnings (ADR 0009).
+    identity_warnings: Vec<IdentityWarning>,
+    warnings_task: Task<()>,
+    /// Rooms this window made encrypted whose `m.room.encryption` state
+    /// hasn't reached the list yet: no "Not encrypted" banner meanwhile.
+    made_encrypted: HashSet<OwnedRoomId>,
     _status_task: Task<()>,
     _list_task: Task<()>,
     _action_events: Task<()>,
@@ -320,6 +329,9 @@ impl RoomsView {
             leave_prompt: None,
             leave_modal: ModalState::new(cx),
             last_read: None,
+            identity_warnings: Vec::new(),
+            warnings_task: Task::ready(()),
+            made_encrypted: HashSet::new(),
             _status_task: status_task,
             _list_task: list_task,
             _action_events: action_events,
@@ -614,6 +626,7 @@ impl RoomsView {
         self.selected = Some(room.clone());
         self.open = None;
         self.last_read = None;
+        self.follow_identity_warnings(room.clone(), cx);
         if let Some(index) = self
             .rooms
             .iter()
@@ -841,8 +854,13 @@ impl RoomsView {
                 }
                 self.toast(Toast::new(format!("You left {name}.")), cx);
             }
-            ActionEvent::RoomCreated { room, .. } => {
+            ActionEvent::RoomCreated {
+                room, encrypted, ..
+            } => {
                 let room = room.clone();
+                if *encrypted {
+                    self.made_encrypted.insert(room.clone());
+                }
                 self.open_room(room, _window, cx);
             }
             ActionEvent::Done {
@@ -936,7 +954,108 @@ impl RoomsView {
                 self.mark_read(window, cx);
                 self.apply_pending_launch(window, cx);
             }
+            TimelineViewEvent::SendAnyway(target) => {
+                if let Some(room) = self.selected.clone() {
+                    cx.background_spawn(self.actions.send_anyway(&room, target))
+                        .detach();
+                }
+            }
         }
+    }
+
+    /// Follows the identity warnings of `room` while it is open.
+    fn follow_identity_warnings(&mut self, room: OwnedRoomId, cx: &mut Context<Self>) {
+        self.identity_warnings.clear();
+        let reply = self.session.identity_warnings(&self.account.key, &room);
+        self.warnings_task = cx.spawn(async move |this, cx| {
+            let Ok(Ok(mut warnings)) = reply.await else {
+                return;
+            };
+            loop {
+                let current = warnings.borrow_and_update().clone();
+                let showing = this
+                    .update(cx, |this, cx| {
+                        if this.selected.as_ref() != Some(&room) {
+                            return false;
+                        }
+                        this.identity_warnings = current;
+                        cx.notify();
+                        true
+                    })
+                    .unwrap_or(false);
+                if !showing || warnings.changed().await.is_err() {
+                    break;
+                }
+            }
+        });
+    }
+
+    /// The open room's identity warnings.
+    #[cfg_attr(not(test), allow(dead_code))]
+    pub(crate) fn identity_warnings(&self) -> &[IdentityWarning] {
+        &self.identity_warnings
+    }
+
+    /// Answers an identity warning (acknowledges the new identity, or
+    /// withdraws the old verification).
+    fn acknowledge_identity(&mut self, warning: IdentityWarning, cx: &mut Context<Self>) {
+        let reply = self
+            .session
+            .acknowledge_identity(&self.account.key, &warning.user_id);
+        self.action_task = cx.spawn(async move |this, cx| {
+            let result = reply.await.unwrap_or(Err(SessionError::ShutDown));
+            let _ = this.update(cx, |this, cx| match result {
+                Ok(()) => {
+                    this.identity_warnings
+                        .retain(|shown| shown.user_id != warning.user_id);
+                    cx.notify();
+                }
+                Err(error) => {
+                    this.toast(Toast::new(error.to_string()).kind(ToastKind::Error), cx);
+                }
+            });
+        });
+    }
+
+    fn render_identity_warnings(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
+        if self.identity_warnings.is_empty() {
+            return None;
+        }
+        Some(
+            div()
+                .flex()
+                .flex_col()
+                .gap(px(SPACE_2))
+                .px(px(SPACE_4))
+                .pt(px(SPACE_3))
+                .children(
+                    self.identity_warnings
+                        .iter()
+                        .enumerate()
+                        .map(|(index, warning)| {
+                            let tone = match warning.kind {
+                                IdentityWarningKind::Changed => BannerTone::Caution,
+                                IdentityWarningKind::VerificationLost => BannerTone::Danger,
+                            };
+                            let answered = warning.clone();
+                            Banner::new(("room-identity-warning", index as u64), warning.message())
+                                .tone(tone)
+                                .title("Identity changed")
+                                .action(
+                                    Button::new(
+                                        ("room-identity-acknowledge", index as u64),
+                                        warning.action_label(),
+                                    )
+                                    .on_click(cx.listener(
+                                        move |this, _, _, cx| {
+                                            this.acknowledge_identity(answered.clone(), cx);
+                                        },
+                                    )),
+                                )
+                        }),
+                )
+                .into_any_element(),
+        )
     }
 
     /// The open room is read to its newest message: the read receipt and
@@ -2107,15 +2226,20 @@ impl RoomsView {
                     .min_w_0()
                     .h_full()
                     .child(header)
-                    .when_some(encryption_notice(&room), |this, notice| {
-                        this.child(
-                            div().px(px(SPACE_4)).pt(px(SPACE_3)).child(
-                                Banner::new("room-not-encrypted", notice)
-                                    .tone(BannerTone::Caution)
-                                    .title("Not encrypted"),
-                            ),
-                        )
-                    })
+                    .children(self.render_identity_warnings(cx))
+                    .when_some(
+                        encryption_notice(&room)
+                            .filter(|_| !self.made_encrypted.contains(&room.room_id)),
+                        |this, notice| {
+                            this.child(
+                                div().px(px(SPACE_4)).pt(px(SPACE_3)).child(
+                                    Banner::new("room-not-encrypted", notice)
+                                        .tone(BannerTone::Caution)
+                                        .title("Not encrypted"),
+                                ),
+                            )
+                        },
+                    )
                     .child(if members_overlay {
                         self.render_members_pane(true, colors, cx)
                     } else {

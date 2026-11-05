@@ -19,6 +19,7 @@ use std::{
 };
 
 use familychat_core::{
+    encryption::EncryptionStatus,
     session::{AccountKey, AccountView},
     sync::{AccountProblem, AccountStatus, SyncState},
 };
@@ -34,7 +35,9 @@ use matrix_sdk::{
     ruma::{OwnedDeviceId, OwnedUserId},
     sliding_sync::VersionBuilder,
 };
-use matrix_sdk_ui::{room_list_service, sync_service::SyncService};
+use matrix_sdk_ui::{
+    room_list_service, sync_service::SyncService, unable_to_decrypt_hook::UtdHookManager,
+};
 use tokio::{
     sync::{Notify, broadcast, watch},
     task::JoinHandle,
@@ -44,6 +47,7 @@ use tracing::{info, warn};
 use crate::{
     PostLoginCheck, SessionConfig,
     backoff::Backoff,
+    encryption::{self, EncryptionShared, VerificationFeed},
     failure::Failure,
     media::AuthenticatedMediaFetcher,
     messaging::OpenTimelines,
@@ -94,6 +98,8 @@ pub(crate) struct Ready {
     pub(crate) client: Client,
     pub(crate) sync: Arc<SyncService>,
     pub(crate) timelines: OpenTimelines,
+    /// Every timeline's unable-to-decrypt hook (ADR 0009).
+    pub(crate) utd_hook: Arc<UtdHookManager>,
 }
 
 /// An account and its supervisor. Dropping it stops the supervisor.
@@ -110,6 +116,8 @@ struct Shared {
     status: watch::Sender<AccountStatus>,
     /// The unread total (`notifications::unread_total`).
     unread: watch::Sender<u64>,
+    /// The account's encryption (ADR 0009).
+    encryption: Arc<EncryptionShared>,
     retry: Notify,
 }
 
@@ -153,6 +161,7 @@ pub(crate) struct OpenParams {
     pub(crate) config: SessionConfig,
     pub(crate) keychain: Arc<dyn Keychain>,
     pub(crate) notifications: NotificationFeed,
+    pub(crate) verifications: VerificationFeed,
 }
 
 impl Account {
@@ -164,9 +173,14 @@ impl Account {
     /// an error. A restored account whose server has no native sliding
     /// sync opens in [`SyncState::NotSupported`] instead, and opens its
     /// client when asked to retry.
+    ///
+    /// `password` is a password sign-in's, for the server's user-interactive
+    /// auth when the account's cross-signing identity is made (ADR 0009);
+    /// it is wiped once that is done.
     pub(crate) async fn open(
         params: OpenParams,
         check: Option<&dyn PostLoginCheck>,
+        password: Option<Secret<String>>,
     ) -> Result<Self, OpenError> {
         let id = params.id;
         let user_id = OwnedUserId::try_from(params.session.user_id.clone())
@@ -184,6 +198,7 @@ impl Account {
             ready: OnceLock::new(),
             status,
             unread: watch::channel(0).0,
+            encryption: Arc::new(EncryptionShared::default()),
             retry: Notify::new(),
         });
         let supervisor = match open_client(&params, &shared, check).await {
@@ -194,7 +209,7 @@ impl Account {
                     });
                 }
                 let _ = shared.ready.set(ready.clone());
-                tokio::spawn(supervise(id, ready, shared.clone()))
+                tokio::spawn(supervise(id, ready, shared.clone(), password))
             }
             Err(OpenError::NotSupported) if check.is_none() => {
                 info!(account = %id, "the homeserver has no native sliding sync");
@@ -229,6 +244,15 @@ impl Account {
     /// Its unread total, as it changes.
     pub fn unread(&self) -> watch::Receiver<u64> {
         self.shared.unread.subscribe()
+    }
+
+    /// Its encryption, as it changes.
+    pub fn encryption(&self) -> watch::Receiver<EncryptionStatus> {
+        self.shared.encryption.status.subscribe()
+    }
+
+    pub(crate) fn encryption_shared(&self) -> Arc<EncryptionShared> {
+        self.shared.encryption.clone()
     }
 
     /// The account's Matrix client.
@@ -355,6 +379,11 @@ async fn open_client(
     }
 
     // Before the first sync, so nothing it reports is missed.
+    encryption::register_incoming(
+        &client,
+        account_key(params.id),
+        params.verifications.clone(),
+    );
     notifications::register(
         &client,
         account_key(params.id),
@@ -368,6 +397,7 @@ async fn open_client(
         .map_err(|error| OpenError::Client(error.to_string()))?;
     Ok((
         Ready {
+            utd_hook: encryption::utd_hook(&client).await,
             client,
             sync: Arc::new(sync),
             timelines: OpenTimelines::default(),
@@ -391,6 +421,11 @@ async fn build_client(
             params.config.http.clone(),
         )))
         .respect_login_well_known(false)
+        // ADR 0009: Element X's encryption defaults at the pinned SDK.
+        .with_encryption_settings(encryption::encryption_settings())
+        .with_room_key_recipient_strategy(encryption::room_key_recipients())
+        .with_decryption_settings(encryption::decryption_settings())
+        .with_enable_share_history_on_invite(encryption::SHARE_HISTORY_ON_INVITE)
         .handle_refresh_tokens()
         .sliding_sync_version_builder(version)
         .build()
@@ -466,7 +501,7 @@ async fn reopen(params: OpenParams, shared: Arc<Shared>) {
         match open_client(&params, &shared, None).await {
             Ok((ready, _offline)) => {
                 let _ = shared.ready.set(ready.clone());
-                return supervise(params.id, ready, shared).await;
+                return supervise(params.id, ready, shared, None).await;
             }
             Err(OpenError::NotSupported) => {
                 shared.set_sync(SyncState::NotSupported);
@@ -567,7 +602,20 @@ fn retry_sending_after(client: &Client, wait: Duration) {
 /// while the sync keeps running. A send refused with `M_USER_SUSPENDED`
 /// is the account's pause showing on a send (a server that lets a paused
 /// account read): the account goes to `Suspended` like a refused sync.
-async fn supervise(id: AccountId, ready: Ready, shared: Arc<Shared>) {
+///
+/// It also runs the account's encryption follower (`encryption::follow`)
+/// for as long as it runs, handing it a password sign-in's password.
+async fn supervise(
+    id: AccountId,
+    ready: Ready,
+    shared: Arc<Shared>,
+    password: Option<Secret<String>>,
+) {
+    let _encryption = AbortOnDrop(tokio::spawn(encryption::follow(
+        ready.client.clone(),
+        shared.encryption.clone(),
+        password,
+    )));
     let mut offline = Backoff::new(OFFLINE_BACKOFF.0, OFFLINE_BACKOFF.1);
     let mut suspended = Backoff::new(SUSPENDED_BACKOFF.0, SUSPENDED_BACKOFF.1);
     let mut errors = Backoff::new(ERROR_BACKOFF.0, ERROR_BACKOFF.1);
@@ -662,6 +710,15 @@ async fn supervise(id: AccountId, ready: Ready, shared: Arc<Shared>) {
             }
             None => shared.retry.notified().await,
         }
+    }
+}
+
+/// Aborts a task when dropped: the supervisor's own tasks end with it.
+struct AbortOnDrop(JoinHandle<()>);
+
+impl Drop for AbortOnDrop {
+    fn drop(&mut self) {
+        self.0.abort();
     }
 }
 

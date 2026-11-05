@@ -27,7 +27,7 @@ use familychat_core::{
     },
     timeline::{
         MembershipChange, MessageBody, MessageKind, Reaction, ReplyPreview, SendState, StateChange,
-        TimelineContent, TimelineEvent, TimelineItem, TimelineItemId, TimelineItemKind,
+        TimelineContent, TimelineEvent, TimelineItem, TimelineItemId, TimelineItemKind, UtdReason,
     },
 };
 use familychat_security::matrix_html::message_text;
@@ -792,8 +792,27 @@ fn secrets_timeline(now: u64) -> Vec<TimelineItem> {
     let at = now - 3 * DAY - 2 * HOUR;
     b.day(at);
     b.state("dad", at, StateChange::Encryption, "m.room.encryption");
-    b.event("mum", at + MINUTE, TimelineContent::UnableToDecrypt);
-    b.event("mum", at + 2 * MINUTE, TimelineContent::UnableToDecrypt);
+    // One of each reason this device can't read a message (ADR 0009).
+    b.event(
+        "mum",
+        at + MINUTE,
+        TimelineContent::UnableToDecrypt(UtdReason::Waiting),
+    );
+    b.event(
+        "mum",
+        at + 2 * MINUTE,
+        TimelineContent::UnableToDecrypt(UtdReason::ConfirmForHistory),
+    );
+    b.event(
+        "grandad",
+        at + 3 * MINUTE,
+        TimelineContent::UnableToDecrypt(UtdReason::SentBeforeJoined),
+    );
+    b.event(
+        "ben",
+        at + 4 * MINUTE,
+        TimelineContent::UnableToDecrypt(UtdReason::WithheldBySender),
+    );
     b.text("dad", at + HOUR, "Cake is ordered. Chocolate, obviously.");
     if let TimelineContent::Message { edited, .. } = &mut b
         .text(

@@ -33,6 +33,7 @@ use crate::{InitialView, LaunchOptions, ShellView, appearance_for, decorations_f
 
 mod a11y;
 mod composer;
+mod encryption;
 mod forwarded_links;
 mod hit_targets;
 mod notifications;
@@ -191,6 +192,18 @@ pub(super) fn click(selector: &'static str, cx: &mut VisualTestContext) {
         .unwrap_or_else(|| panic!("{selector} is drawn"));
     cx.simulate_click(bounds.center(), Modifiers::none());
     cx.run_until_parked();
+}
+
+/// The pointer targets drawn now whose selectors start with `prefix`.
+pub(super) fn targets_named(cx: &mut VisualTestContext, prefix: &str) -> Vec<&'static str> {
+    crate::components::hit_target::recorded::take();
+    cx.update(|window, _| window.refresh());
+    cx.run_until_parked();
+    crate::components::hit_target::recorded::take()
+        .into_iter()
+        .filter(|selector| selector.starts_with(prefix))
+        .map(|selector| &*Box::leak(selector.into_boxed_str()))
+        .collect()
 }
 
 /// Presses `keystrokes`.

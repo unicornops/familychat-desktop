@@ -48,11 +48,12 @@ use matrix_sdk::{
         },
     },
 };
+use matrix_sdk_base::{crypto::LocalTrust, store::QueueWedgeError};
 use matrix_sdk_ui::{
     Timeline,
-    timeline::{RoomExt as _, TimelineEventItemId},
+    timeline::{EventSendState, RoomExt as _, TimelineEventItemId},
 };
-use tracing::info;
+use tracing::{info, warn};
 
 use crate::failure::Failure;
 
@@ -254,7 +255,77 @@ pub(crate) async fn room_action(
                 info!(%error, "leaving a room failed");
                 session_error(&error, "Family Chat couldn't leave the room. Try again.")
             }),
+        RoomRequest::SendAnyway(target) => {
+            let timeline = timelines.for_room(&room).await?;
+            send_anyway(&room, &timeline, &target).await
+        }
     }
+}
+
+/// Sends a message the encryption stopped (ADR 0009), as Element X's
+/// "Send anyway" does: a verified person's unconfirmed devices get the
+/// room key too (their local trust is set to "ignored"), or the changed
+/// identity's old verification is withdrawn; then the message is put back
+/// in the queue.
+async fn send_anyway(
+    room: &Room,
+    timeline: &Timeline,
+    target: &MessageRef,
+) -> Result<RoomDone, SessionError> {
+    let not_there =
+        || SessionError::Failed("That message isn't waiting to be sent any more.".to_owned());
+    let items = timeline.items().await;
+    let event = items
+        .iter()
+        .find(|item| item.unique_id().0 == target.item.0)
+        .and_then(|item| item.as_event().cloned())
+        .ok_or_else(not_there)?;
+    let Some(EventSendState::SendingFailed { error, .. }) = event.send_state() else {
+        return Err(not_there());
+    };
+    let failed =
+        || SessionError::Failed("The message couldn't be sent anyway. Try again.".to_owned());
+    let encryption = room.client().encryption();
+    match QueueWedgeError::from(error.as_ref()) {
+        QueueWedgeError::InsecureDevices { user_device_map } => {
+            for (user_id, devices) in user_device_map {
+                for device_id in devices {
+                    if let Ok(Some(device)) = encryption.get_device(&user_id, &device_id).await {
+                        device
+                            .set_local_trust(LocalTrust::Ignored)
+                            .await
+                            .map_err(|error| {
+                                warn!(%error, "a device's trust couldn't be set");
+                                failed()
+                            })?;
+                    }
+                }
+            }
+        }
+        QueueWedgeError::IdentityViolations { users } => {
+            for user_id in users {
+                if let Ok(Some(identity)) = encryption.get_user_identity(&user_id).await {
+                    let result = if identity.has_verification_violation() {
+                        identity.withdraw_verification().await
+                    } else {
+                        identity.pin().await
+                    };
+                    result.map_err(|error| {
+                        warn!(%error, "an identity change couldn't be acknowledged");
+                        failed()
+                    })?;
+                }
+            }
+        }
+        _ => return Err(failed()),
+    }
+    let handle = event.local_echo_send_handle().ok_or_else(not_there)?;
+    handle.unwedge().await.map_err(|error| {
+        info!(%error, "putting the message back in the queue failed");
+        failed()
+    })?;
+    info!("sending a stopped message anyway");
+    Ok(RoomDone::Done)
 }
 
 /// Queues a file: the send queue uploads it and then sends its event,

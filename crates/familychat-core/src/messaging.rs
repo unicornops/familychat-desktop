@@ -143,6 +143,10 @@ pub enum RoomRequest {
     AnswerInvite(bool),
     /// Leave the room.
     Leave,
+    /// Send a message the encryption stopped (a `SendProblem` that "Send
+    /// anyway" resolves): its unconfirmed devices get the key too, or the
+    /// changed identity's old verification is withdrawn, and it goes.
+    SendAnyway(MessageRef),
 }
 
 /// How a [`RoomRequest`] went, when it went well.

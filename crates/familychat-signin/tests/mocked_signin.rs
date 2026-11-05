@@ -98,6 +98,7 @@ async fn the_post_login_recheck_signs_out_a_homeserver_outside_the_allowlist() -
         .add(
             session,
             Box::new(FamilyChatCheck::new(Allowlist::production(), user.clone())),
+            None,
         )
         .await;
     ensure!(

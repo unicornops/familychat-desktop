@@ -4633,6 +4633,7 @@ dependencies = [
  "itertools 0.15.0",
  "js_option",
  "matrix-sdk-common",
+ "matrix-sdk-qrcode",
  "pbkdf2 0.13.0",
  "rand 0.10.3",
  "rmp-serde",
@@ -4683,6 +4684,19 @@ dependencies = [
  "wasm-bindgen",
  "web-sys",
  "zeroize",
+]
+
+[[package]]
+name = "matrix-sdk-qrcode"
+version = "0.19.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2a806faaba375c3da09d9e7a97d99a6c9b11c5cbcfd4992694acba7a3f682262"
+dependencies = [
+ "byteorder",
+ "qrcode",
+ "ruma",
+ "thiserror 2.0.21",
+ "vodozemac",
 ]
 
 [[package]]
@@ -6110,6 +6124,12 @@ checksum = "7f6d64c71eb498fe9eae14ce4ec935c555749aef511cca85b5568910d6e48001"
 dependencies = [
  "bytemuck",
 ]
+
+[[package]]
+name = "qrcode"
+version = "0.14.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d68782463e408eb1e668cf6152704bd856c78c5b6417adaee3203d8f4c1fc9ec"
 
 [[package]]
 name = "quick-error"

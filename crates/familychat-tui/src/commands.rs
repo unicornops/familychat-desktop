@@ -134,6 +134,13 @@ pub const LATER: &[(&str, &str)] = &[
     ("ReactToMessage", "Phase 11"),
     ("DeleteMessage", "Phase 11"),
     ("LeaveRoom", "Phase 11"),
+    // The window's encryption screens and dialogs (ADR 0009); the terminal
+    // gets emoji verification and the recovery key with Phase 11.
+    ("ConfirmIdentity", "Phase 11"),
+    ("SetUpRecovery", "Phase 11"),
+    ("ManageDevices", "Phase 11"),
+    ("ExportRoomKeys", "Phase 11"),
+    ("ImportRoomKeys", "Phase 11"),
 ];
 
 /// The terminal's own commands: the key the bar shows, the bar's label

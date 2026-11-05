@@ -33,6 +33,7 @@ use std::{
 use familychat_core::{
     OwnedEventId,
     diff::apply_all,
+    encryption::wording,
     media::{MediaError, MediaInfo},
     messaging::MessageRef,
     rich_text::RichText,
@@ -41,8 +42,8 @@ use familychat_core::{
     timeline::{
         MessageKind, PaginationState, Reaction, ReplyPreview, SendState, TimelineContent,
         TimelineEvent, TimelineItem, TimelineItemId, TimelineItemKind, TimelineRow, TimelineUpdate,
-        changed_rows, day_label, describe, placeholder, row_fingerprint, rows, summary_label,
-        time_label,
+        UtdReason, changed_rows, day_label, describe, placeholder, row_fingerprint, rows,
+        summary_label, time_label,
     },
 };
 use gpui::{
@@ -104,6 +105,9 @@ pub(crate) enum TimelineViewEvent {
     Delete(MessageChoice),
     /// The newest message is on screen: the room is read.
     ReadToEnd,
+    /// Send one of the account's messages the encryption stopped, anyway
+    /// (ADR 0009).
+    SendAnyway(MessageRef),
 }
 
 /// A message an action is about, with what its previews show.
@@ -908,10 +912,61 @@ impl TimelineView {
                     )
                     .child(body)
                     .children(meta_line(event, colors))
+                    .children(self.render_send_problem(row, id, event, colors, cx))
                     .children(reactions_row),
             )
             .children(toolbar)
             .into_any_element()
+    }
+
+    /// Why the encryption stopped one of the account's messages, with
+    /// "Send anyway" when that resolves it (ADR 0009).
+    fn render_send_problem(
+        &self,
+        row: usize,
+        id: &TimelineItemId,
+        event: &TimelineEvent,
+        colors: &UiColors,
+        cx: &mut Context<Self>,
+    ) -> Option<AnyElement> {
+        let Some(SendState::Failed {
+            problem: Some(problem),
+            ..
+        }) = event.send_state
+        else {
+            return None;
+        };
+        let target = MessageRef {
+            item: id.clone(),
+            event_id: event.event_id.clone(),
+        };
+        Some(
+            div()
+                .flex()
+                .flex_wrap()
+                .items_center()
+                .gap(px(SPACE_2))
+                .child(
+                    div()
+                        .type_style(TYPE_CAPTION)
+                        .text_color(rgb(colors.danger))
+                        .child(readable(
+                            ("timeline-send-problem", row as u64),
+                            problem.message(),
+                        )),
+                )
+                .when(problem.can_send_anyway(), |this| {
+                    this.child(
+                        Button::new(("timeline-send-anyway", row as u64), wording::SEND_ANYWAY)
+                            .size(ButtonSize::Small)
+                            .icon("send")
+                            .on_click(cx.listener(move |_, _, _, cx| {
+                                cx.emit(TimelineViewEvent::SendAnyway(target.clone()));
+                            })),
+                    )
+                })
+                .into_any_element(),
+        )
     }
 
     /// A message's actions: shown while it is hovered, selected, or its
@@ -1282,7 +1337,13 @@ impl TimelineView {
             content => {
                 let (icon_name, text) = match content {
                     TimelineContent::Redacted => ("trash-2", placeholder(content)),
-                    TimelineContent::UnableToDecrypt => ("hourglass", placeholder(content)),
+                    TimelineContent::UnableToDecrypt(reason) => (
+                        match reason {
+                            UtdReason::Waiting => "hourglass",
+                            _ => "lock",
+                        },
+                        placeholder(content),
+                    ),
                     _ => ("message-square-dashed", placeholder(content)),
                 };
                 div()
@@ -1548,6 +1609,10 @@ fn meta_line(event: &TimelineEvent, colors: &UiColors) -> Option<AnyElement> {
     let edited = matches!(event.content, TimelineContent::Message { edited: true, .. });
     let (text, color) = match event.send_state {
         Some(SendState::Sending) => ("Sending…", colors.muted),
+        // The encryption's reason shows on its own line instead.
+        Some(SendState::Failed {
+            problem: Some(_), ..
+        }) => return None,
         Some(SendState::Failed { .. }) => ("Not sent", colors.danger),
         _ if edited => ("Edited", colors.muted),
         _ => return None,

@@ -19,6 +19,7 @@
 //! | `profile_screens` | opening the profile, the keychain and lost-key screens |
 //! | `signin` | `SigninView`: welcome, the code page (link, pasted or dropped QR image), the confirmation, the password forms, the rate-limit countdown |
 //! | `signed_in` | `SignedInView`: the sync banner over the rooms, and the sync-state indicator |
+//! | `encryption` | `EncryptionView`: "Confirm it's you", the password page, the encryption banners, and the verification, recovery, devices and room key dialogs (ADR 0009) |
 //! | `notifications` | posting `familychat-notify`'s notifications as system notifications, a click opening the room; the notification settings dialog |
 //! | `rooms` | `RoomsView`: the room list, the room header, the member list, the timeline (`TimelineView`), rich text, the image cache and the link dialog (ADR 0007) |
 //! | `qr` | reading a sign-in QR code from an image, locally, with `rqrr` |
@@ -54,6 +55,7 @@ mod a11y;
 mod actions;
 mod command_palette;
 mod components;
+mod encryption;
 mod fonts;
 mod keymap;
 mod menus;
@@ -71,6 +73,7 @@ mod widgets;
 #[cfg(test)]
 mod view_tests;
 
+pub use encryption::EncryptionLaunch;
 pub use rooms::{ComposerLaunch, RoomsLaunch};
 pub use shell::ShellView;
 

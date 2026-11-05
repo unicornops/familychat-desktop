@@ -524,7 +524,13 @@ async fn offline_sends_go_out_when_the_server_is_back() -> Result<()> {
                     event.event_id.is_none()
                         && matches!(
                             event.send_state,
-                            Some(SendState::Sending | SendState::Failed { recoverable: true })
+                            Some(
+                                SendState::Sending
+                                    | SendState::Failed {
+                                        recoverable: true,
+                                        ..
+                                    }
+                            )
                         )
                 })
             })
@@ -792,7 +798,10 @@ async fn new_direct_chats_are_encrypted() -> Result<()> {
     let bob_id = OwnedUserId::try_from(bob_user.user_id.as_str())?;
     alice.actions.create_direct_chat(bob_id).await;
     let created = alice.event().await?;
-    let ActionEvent::RoomCreated { room, direct: true } = created else {
+    let ActionEvent::RoomCreated {
+        room, direct: true, ..
+    } = created
+    else {
         bail!("no direct chat: {created:?}");
     };
     // The room list can show the new room before its encryption state has
