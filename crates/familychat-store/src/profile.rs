@@ -221,6 +221,17 @@ impl KeychainUnavailable {
 /// what to do next, and that there is no plaintext fallback. Public so a
 /// screenshot fixture shows the same sentence without a keychain.
 pub fn keychain_unavailable_message(error: &KeychainError) -> String {
+    keychain_unavailable_message_with_hint(error, KEYCHAIN_HINT)
+}
+
+/// [`keychain_unavailable_message`] with Linux's hint, whatever the build
+/// targets: the fixtures draw the Linux "no Secret Service" case, and their
+/// snapshots must read the same on every OS.
+pub fn linux_keychain_unavailable_message(error: &KeychainError) -> String {
+    keychain_unavailable_message_with_hint(error, LINUX_KEYCHAIN_HINT)
+}
+
+fn keychain_unavailable_message_with_hint(error: &KeychainError, hint: &str) -> String {
     let what = match error {
         KeychainError::Locked(_) => format!(
             "{APP_NAME} can't open its data because the keychain is locked. Unlock it and try \
@@ -228,7 +239,7 @@ pub fn keychain_unavailable_message(error: &KeychainError) -> String {
         ),
         _ => format!(
             "{APP_NAME} can't reach the keychain, where it keeps the key to its data.\
-             {KEYCHAIN_HINT} Try again once it is available."
+             {hint} Try again once it is available."
         ),
     };
     format!("{what} {APP_NAME} never keeps its data without encryption. ({error})")
@@ -258,10 +269,12 @@ pub fn unreadable_message(reason: UnreadableReason) -> String {
     )
 }
 
+/// Where to look on Linux when the keychain can't be reached.
+const LINUX_KEYCHAIN_HINT: &str = " On Linux it needs a Secret Service, such as GNOME Keyring \
+                                   or KWallet, running in your session.";
 /// Where to look when the keychain can't be reached.
 #[cfg(all(unix, not(target_os = "macos")))]
-const KEYCHAIN_HINT: &str = " On Linux it needs a Secret Service, such as GNOME Keyring or \
-                             KWallet, running in your session.";
+const KEYCHAIN_HINT: &str = LINUX_KEYCHAIN_HINT;
 #[cfg(not(all(unix, not(target_os = "macos"))))]
 const KEYCHAIN_HINT: &str = "";
 

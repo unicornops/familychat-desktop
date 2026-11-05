@@ -44,7 +44,10 @@ use familychat_core::{
 };
 use familychat_security::KeychainError;
 use familychat_signin::wording;
-use familychat_store::{UnreadableReason, keychain_unavailable_message, unreadable_message};
+use familychat_store::{
+    UnreadableReason, keychain_unavailable_message, linux_keychain_unavailable_message,
+    unreadable_message,
+};
 use tokio::sync::{mpsc, oneshot, watch};
 
 pub mod rooms;
@@ -1023,7 +1026,7 @@ impl FixtureStartup {
                 ))
             }
             FixtureProfile::KeychainUnreachable => OpenState::KeychainUnavailable(
-                keychain_unavailable_message(&KeychainError::Unavailable(
+                linux_keychain_unavailable_message(&KeychainError::Unavailable(
                     "no Secret Service is running in this session".to_owned(),
                 )),
             ),
