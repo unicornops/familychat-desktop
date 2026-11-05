@@ -26,6 +26,7 @@ mod timeline;
 
 use std::{path::PathBuf, sync::Arc};
 
+use familychat_actions::{Action, ActionEvent, Actions};
 use familychat_core::{
     OwnedRoomId,
     links::{LinkAction, LinkPrompt, MatrixLink, classify},
@@ -126,7 +127,9 @@ pub(crate) struct RoomsView {
     /// A room a notification opened that the list doesn't hold.
     notified: Option<RoomSummary>,
     answering: Vec<OwnedRoomId>,
+    actions: Actions,
     _list_task: Task<()>,
+    _action_events: Task<()>,
     _loading_task: Task<()>,
     members_task: Task<()>,
     action_task: Task<()>,
@@ -149,6 +152,23 @@ impl RoomsView {
             .map(|launch| launch.filter)
             .unwrap_or_default();
         let images = cx.new(|_| ImageCache::new(session.clone(), account.key.clone()));
+        let (actions, mut action_events) = Actions::channel(session.clone(), account.key.clone());
+        let action_events = cx.spawn_in(window, async move |this, cx| {
+            while let Some(first) = action_events.recv().await {
+                let mut events = vec![first];
+                while let Ok(more) = action_events.try_recv() {
+                    events.push(more);
+                }
+                if this
+                    .update_in(cx, |this, window, cx| {
+                        this.action_events(events, window, cx)
+                    })
+                    .is_err()
+                {
+                    break;
+                }
+            }
+        });
         let reply = session.room_list(&account.key, filter);
         let list_task = cx.spawn_in(window, async move |this, cx| {
             let subscription = match reply.await {
@@ -223,7 +243,9 @@ impl RoomsView {
             launch,
             notified: None,
             answering: Vec::new(),
+            actions,
             _list_task: list_task,
+            _action_events: action_events,
             _loading_task: Task::ready(()),
             members_task: Task::ready(()),
             action_task: Task::ready(()),
@@ -482,31 +504,82 @@ impl RoomsView {
             return;
         }
         self.answering.push(room.clone());
-        let name = self
-            .rooms
-            .iter()
-            .find(|summary| summary.room_id == room)
-            .map(|summary| summary.name.clone())
-            .unwrap_or_default();
-        let reply = self.session.answer_invite(&self.account.key, &room, accept);
-        self.action_task = cx.spawn(async move |this, cx| {
-            let result = reply
-                .await
-                .unwrap_or(Err(familychat_core::session::SessionError::ShutDown));
-            let _ = this.update(cx, |this, cx| {
-                this.answering.retain(|answering| answering != &room);
-                let toast = match result {
-                    Ok(()) if accept => {
-                        Toast::new(format!("You joined {name}.")).kind(ToastKind::Success)
-                    }
-                    Ok(()) => Toast::new(format!("You declined the invitation to {name}.")),
-                    Err(error) => Toast::new(error.to_string()).kind(ToastKind::Error),
-                };
-                this.toast(toast, cx);
-                cx.notify();
-            });
-        });
+        cx.background_spawn(self.actions.answer_invite(&room, accept))
+            .detach();
         cx.notify();
+    }
+
+    /// What the actions reported, a burst at a time.
+    fn action_events(
+        &mut self,
+        events: Vec<ActionEvent>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        for event in events {
+            self.action_event(event, window, cx);
+        }
+        cx.notify();
+    }
+
+    fn room_name(&self, room: &OwnedRoomId) -> String {
+        self.rooms
+            .iter()
+            .find(|summary| &summary.room_id == room)
+            .map(|summary| summary.name.clone())
+            .unwrap_or_default()
+    }
+
+    fn action_event(&mut self, event: ActionEvent, _window: &mut Window, cx: &mut Context<Self>) {
+        let answered = match &event {
+            ActionEvent::Done {
+                room: Some(room),
+                action,
+            }
+            | ActionEvent::Failed {
+                room: Some(room),
+                action,
+                ..
+            }
+            | ActionEvent::Refused {
+                room: Some(room),
+                action,
+                ..
+            } if matches!(action, Action::AcceptInvite | Action::DeclineInvite) => {
+                Some(room.clone())
+            }
+            _ => None,
+        };
+        if let Some(room) = &answered {
+            self.answering.retain(|answering| answering != room);
+        }
+        match &event {
+            ActionEvent::Done {
+                room: Some(room),
+                action: Action::AcceptInvite,
+            } => {
+                let name = self.room_name(room);
+                self.toast(
+                    Toast::new(format!("You joined {name}.")).kind(ToastKind::Success),
+                    cx,
+                );
+            }
+            ActionEvent::Done {
+                room: Some(room),
+                action: Action::DeclineInvite,
+            } => {
+                let name = self.room_name(room);
+                self.toast(
+                    Toast::new(format!("You declined the invitation to {name}.")),
+                    cx,
+                );
+            }
+            other => {
+                if let Some(message) = other.message() {
+                    self.toast(Toast::new(message).kind(ToastKind::Error), cx);
+                }
+            }
+        }
     }
 
     // -- Members ------------------------------------------------------------

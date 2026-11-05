@@ -2342,6 +2342,7 @@ name = "familychat-ui"
 version = "0.0.1"
 dependencies = [
  "anyhow",
+ "familychat-actions",
  "familychat-assets",
  "familychat-core",
  "familychat-notify",
