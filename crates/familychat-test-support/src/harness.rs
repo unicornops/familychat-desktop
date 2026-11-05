@@ -156,21 +156,21 @@ pub struct AccessLogLine {
 }
 
 impl AccessLogLine {
-    /// Parses one `host method path status` line.
+    /// Parses one `host method path status` line. nginx's `$uri` is
+    /// decoded, so the path may hold spaces: it is everything between the
+    /// method and the status.
     pub fn parse(line: &str) -> Option<Self> {
-        let mut parts = line.split(' ');
-        let host = parts.next()?.to_owned();
-        let method = parts.next()?.to_owned();
-        let path = parts.next()?.to_owned();
-        let status = parts.next()?.parse().ok()?;
-        if parts.next().is_some() {
+        let (host, rest) = line.split_once(' ')?;
+        let (method, rest) = rest.split_once(' ')?;
+        let (path, status) = rest.rsplit_once(' ')?;
+        if host.is_empty() || method.is_empty() || !path.starts_with('/') {
             return None;
         }
         Some(Self {
-            host,
-            method,
-            path,
-            status,
+            host: host.to_owned(),
+            method: method.to_owned(),
+            path: path.to_owned(),
+            status: status.parse().ok()?,
         })
     }
 
@@ -734,6 +734,8 @@ mod tests {
         assert_eq!(line.status, 403);
         assert!(AccessLogLine::parse("a GET /x").is_none());
         assert!(AccessLogLine::parse("a GET /x 200 extra").is_none());
+        let spaced = AccessLogLine::parse("a GET /x y 404").expect("a decoded space");
+        assert_eq!(spaced.path, "/x y");
         let versions = AccessLogLine::parse("hs1.familychat.test GET /_matrix/client/versions 200")
             .expect("parses");
         assert!(!versions.is_login_to("hs1.familychat.test"));
