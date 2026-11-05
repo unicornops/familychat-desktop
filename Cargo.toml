@@ -4,6 +4,7 @@ members = [
     "crates/familychat-assets",
     "crates/familychat-core",
     "crates/familychat-session",
+    "crates/familychat-test-support",
     "crates/familychat-theme",
     "crates/familychat-tui",
     "crates/familychat-ui",
@@ -31,6 +32,10 @@ gpui_platform = { git = "https://github.com/zed-industries/zed", tag = "v1.27.0"
 # The terminal UI's drawing, on its crossterm backend; no optional widgets
 # or macros.
 ratatui = { version = "0.30.2", default-features = false, features = ["crossterm_0_29"] }
+# HTTP for the live homeserver harness's test client
+# (familychat-test-support); the line matrix-sdk 0.19 uses, on rustls with
+# its default aws-lc-rs provider. No system proxy, cookies or native TLS.
+reqwest = { version = "0.13.5", default-features = false, features = ["http2", "json", "rustls"] }
 rust-embed = { version = "8", features = ["interpolate-folder-path"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

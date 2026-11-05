@@ -180,6 +180,12 @@ jobs:
           key: cargo-git-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
           restore-keys: cargo-git-${{ runner.os }}-
 
+      # The test harness's CA trust must never ship (ADR 0004); the check
+      # covers every target, so it runs once.
+      - name: Release builds never enable the test harness
+        if: runner.os == 'Linux'
+        run: scripts/check-release-features.sh
+
       - name: Build release binary
         run: cargo build -p familychat-app --release --locked
 

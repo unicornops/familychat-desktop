@@ -55,8 +55,13 @@ jobs:
                           workspace_checks=true
                         fi
                         ;;
-                      about.toml|about.hbs|deny.toml)
+                      about.toml|about.hbs|deny.toml|scripts/homeserver-harness.sh|scripts/check-release-features.sh)
                         workspace_checks=true
+                        ;;
+                      docker/homeserver-harness/*)
+                        if [[ "$file" != *.md ]]; then
+                          workspace_checks=true
+                        fi
                         ;;
                     esac
                   done < <(git diff --name-only "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}")
@@ -133,6 +138,49 @@ jobs:
 
             - name: Workspace tests
               run: cargo test --workspace --locked
+
+            # familychat-test-support's `test-harness` feature trusts the
+            # homeserver harness's throwaway CA (ADR 0004): no release build
+            # of the app may reach it, on any target.
+            - name: Release builds never enable the test harness
+              run: scripts/check-release-features.sh
+
+            - name: Lint the harness scripts
+              run: shellcheck scripts/homeserver-harness.sh scripts/check-release-features.sh
+
+            # The live homeserver harness (ADR 0004): Palpo at Family Chat's
+            # image with its Postgres sidecar, Synapse, and the TLS front end.
+            # DOCKERHUB_* are optional: the script logs in when they are
+            # configured, so the Docker Hub pulls use a personal quota
+            # instead of the runner pool's shared anonymous one.
+            - name: Start the homeserver harness
+              timeout-minutes: 15
+              env:
+                  DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+                  DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+              run: scripts/homeserver-harness.sh up
+
+            # The script's other commands, as a developer uses them. The
+            # harness tokens are throwaway, but stay out of the log anyway.
+            - name: Homeserver harness commands
+              run: |
+                  scripts/homeserver-harness.sh env | sed -E "s/(TOKEN=).*/\1'<redacted>'/"
+                  scripts/homeserver-harness.sh create-user ci-smoke ci-smoke-password
+                  scripts/homeserver-harness.sh mint-token ci-smoke 60000 >/dev/null
+                  echo "mint-token: minted a login token for @ci-smoke"
+                  scripts/homeserver-harness.sh ps
+
+            - name: Live homeserver harness tests
+              timeout-minutes: 10
+              run: cargo test -p familychat-test-support --test live_homeserver_harness --locked -- --ignored --nocapture
+
+            - name: Homeserver harness logs
+              if: failure()
+              run: scripts/homeserver-harness.sh logs
+
+            - name: Stop the homeserver harness
+              if: always()
+              run: scripts/homeserver-harness.sh down
 
     build:
         name: Build (${{ matrix.os }})
