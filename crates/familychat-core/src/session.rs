@@ -29,10 +29,10 @@ use crate::{
     diff::ListDiff,
     encryption::{
         AuthOutcome, DeviceView, EncryptionStatus, IdentityWarning, KeyImport, SecretText,
-        VerificationFlow,
+        StoppedMessage, VerificationFlow,
     },
     media::{DecodedImage, MediaError, MediaInfo},
-    messaging::{Draft, MediaLimits, NewRoom, RoomDone, RoomRequest, ServerDefaults},
+    messaging::{Draft, MediaLimits, MessageRef, NewRoom, RoomDone, RoomRequest, ServerDefaults},
     notifications::IncomingNotification,
     rooms::{RoomListCommand, RoomListFilter, RoomListLoading, RoomMember, RoomSummary},
     sync::AccountStatus,
@@ -60,6 +60,50 @@ pub struct AccountView {
     pub user_id: OwnedUserId,
     /// The homeserver's client-server API base URL.
     pub homeserver_url: String,
+}
+
+/// What Settings shows about an account (ADR 0015).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AccountDetails {
+    /// The Matrix user id.
+    pub user_id: OwnedUserId,
+    /// The account's display name, when it has one.
+    pub display_name: Option<String>,
+    /// The homeserver's client-server API base URL.
+    pub homeserver_url: String,
+    /// This device's id.
+    pub device_id: String,
+    /// This device's name on the server, when it has one.
+    pub device_name: Option<String>,
+    /// A Family Chat account (its homeserver passed the Family Chat
+    /// allowlist, which only the sign-in decides): its password, its
+    /// sign-in codes and its deactivation are a parent's, in the panel.
+    pub family_chat: bool,
+}
+
+/// How signing out went: the account is gone from this computer either
+/// way; this says whether the server heard.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SignedOut {
+    /// The server signed the device out too.
+    Everywhere,
+    /// The server couldn't be reached (or refused): the device stays in
+    /// the account's device list until it is signed out from another
+    /// device.
+    OnlyHere,
+}
+
+impl SignedOut {
+    /// What to say about it.
+    pub fn message(self) -> &'static str {
+        match self {
+            Self::Everywhere => "Signed out. The account was removed from this computer.",
+            Self::OnlyHere => {
+                "The account was removed from this computer, but the server couldn't be told. \
+                 Sign this device out from another device's list of sessions."
+            }
+        }
+    }
 }
 
 /// Why the session could not do what a frontend asked.
@@ -411,6 +455,41 @@ pub trait SessionApi: Send + Sync {
     /// Answers a warning about `user`: acknowledges the new identity, or
     /// withdraws the verification of the old one.
     fn acknowledge_identity(&self, account: &AccountKey, user: &UserId) -> Reply<()>;
+
+    /// Why a message the encryption stopped is waiting, with the devices
+    /// or people it waits on (the review before Send anyway).
+    fn stopped_message(
+        &self,
+        account: &AccountKey,
+        room: &RoomId,
+        message: MessageRef,
+    ) -> Reply<StoppedMessage>;
+
+    /// Makes a new recovery key in place of the old one, which stops
+    /// working; the new key is shown once and kept nowhere.
+    fn reset_recovery_key(&self, account: &AccountKey) -> Reply<SecretText>;
+
+    /// Resets the account's cross-signing identity and its key backup,
+    /// answering the server's user-interactive auth with `password` when
+    /// it asks. For an account with no confirmed device and no recovery
+    /// key left.
+    fn reset_identity(
+        &self,
+        account: &AccountKey,
+        password: Option<SecretText>,
+    ) -> Reply<AuthOutcome>;
+
+    // -- The account (ADR 0015) ----------------------------------------------
+
+    /// What Settings shows about the account.
+    fn account_details(&self, account: &AccountKey) -> Reply<AccountDetails>;
+
+    /// Signs the account out and removes it from this computer: the
+    /// server is told (best effort: a server that can't be reached does
+    /// not stop the rest), then its keychain entries, its stores and
+    /// caches, its drafts and its registry row are removed, and it leaves
+    /// [`Self::accounts`].
+    fn sign_out(&self, account: &AccountKey) -> Reply<SignedOut>;
 }
 
 #[cfg(test)]

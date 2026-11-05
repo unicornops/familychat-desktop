@@ -25,7 +25,7 @@ use familychat_core::{
     notifications::IncomingNotification,
     requests::AppRequest,
     session::{AccountKey, AccountView},
-    settings::NotificationSettings,
+    settings::{AppearanceSettings, ContrastChoice, NotificationSettings, ThemeChoice},
     signin::{SecretText, SigninStart},
     startup::{OpenState, Opened, StartupApi},
 };
@@ -36,7 +36,9 @@ use gpui::{
 };
 
 use crate::a11y::AccessibleExt;
-use crate::actions::{NotificationSettings as OpenNotificationSettings, ToggleCommandPalette};
+use crate::actions::{
+    NotificationSettings as OpenNotificationSettings, OpenSettings, ToggleCommandPalette,
+};
 use crate::command_palette::{CommandPalette, CommandPaletteEvent, PALETTE_WIDTH, PaletteEntry};
 use crate::components::{
     ComponentTheme, IconButton, Modal, ModalState, TitleBar, Toast, ToastHost, ToastKind,
@@ -45,9 +47,12 @@ use crate::components::{
 use crate::notifications;
 use crate::profile_screens::{self, ProfileAction, ProfileScreen};
 use crate::rooms::RoomOpened;
+use crate::settings::{self, SettingsHost, SettingsSection};
 use crate::signed_in::{SignedInView, sync_indicator};
 use crate::signin::{SigninEvent, SigninView, brand_mark, primary_key};
-use crate::styles::{SPACE_2, TYPE_BODY_STRONG, TypeStyleExt, UiColors};
+use crate::styles::TextScale;
+use crate::styles::high_contrast::ContrastSetting;
+use crate::styles::{SPACE_1, SPACE_2, TYPE_BODY_STRONG, TypeStyleExt, UiColors};
 use crate::{InitialView, LaunchOptions, appearance_for, qr::QrError};
 
 /// Key context of the window root.
@@ -87,12 +92,15 @@ pub struct ShellView {
     pending_link: Option<SecretText>,
     /// The notification settings, as the profile has them.
     notification_settings: NotificationSettings,
-    settings_modal: ModalState,
-    settings_problem: Option<String>,
+    /// The appearance settings, as the profile has them (ADR 0015).
+    appearance_settings: AppearanceSettings,
+    /// The OS appearance (the fixture's, when it pins one): what "Match
+    /// system" draws.
+    system_appearance: ThemeAppearance,
     requests_task: Task<()>,
     notifications_task: Task<()>,
     settings_task: Task<()>,
-    save_task: Task<()>,
+    appearance_task: Task<()>,
     unread_task: Task<()>,
     _subscriptions: Vec<Subscription>,
 }
@@ -111,9 +119,10 @@ impl ShellView {
         cx: &mut Context<Self>,
     ) -> Self {
         let appearance_changes = cx.observe_window_appearance(window, |this, window, cx| {
-            this.appearance = this
+            this.system_appearance = this
                 .pinned_appearance
                 .unwrap_or_else(|| appearance_for(window.appearance()));
+            this.appearance = this.chosen_appearance();
             this.sync_theme(cx);
             cx.notify();
         });
@@ -133,10 +142,13 @@ impl ShellView {
             .requests
             .as_ref()
             .and_then(crate::RequestInbox::take_receiver);
+        let system_appearance = options
+            .appearance
+            .unwrap_or_else(|| appearance_for(window.appearance()));
         let mut view = Self {
-            appearance: options
-                .appearance
-                .unwrap_or_else(|| appearance_for(window.appearance())),
+            appearance: system_appearance,
+            system_appearance,
+            appearance_settings: AppearanceSettings::default(),
             pinned_appearance: options.appearance,
             bootstrap,
             startup,
@@ -152,12 +164,10 @@ impl ShellView {
             parked: None,
             pending_link: None,
             notification_settings: NotificationSettings::default(),
-            settings_modal: ModalState::new(cx),
-            settings_problem: None,
             requests_task: Task::ready(()),
             notifications_task: Task::ready(()),
             settings_task: Task::ready(()),
-            save_task: Task::ready(()),
+            appearance_task: Task::ready(()),
             unread_task: Task::ready(()),
             _subscriptions: vec![appearance_changes, activation],
         };
@@ -286,24 +296,29 @@ impl ShellView {
         }
         let mut accounts = opened.session.accounts();
         let first = accounts.borrow_and_update().first().cloned();
+        if let Some(handle) = window.window_handle().downcast::<ShellView>() {
+            SettingsHost::install(
+                opened.session.clone(),
+                opened.settings.clone(),
+                self.bootstrap.clone(),
+                handle,
+                cx,
+            );
+        }
         self.opened = Some(opened);
         match first {
             Some(account) => self.show_account(account, window, cx),
             None => self.show_signin(window, cx),
         }
         // A sign-in in another flow, or an account restored late, shows
-        // when it arrives.
+        // when it arrives; an account signed out (Settings) goes back to
+        // the sign-in.
         self.accounts_task = cx.spawn_in(window, async move |this, cx| {
             while accounts.changed().await.is_ok() {
-                let first = accounts.borrow_and_update().first().cloned();
+                let current = accounts.borrow_and_update().clone();
                 let keep_going = this
                     .update_in(cx, |this, window, cx| {
-                        if let Some(account) = first
-                            && this.signed_in().is_none()
-                            && this.parked.is_none()
-                        {
-                            this.show_account(account, window, cx);
-                        }
+                        this.accounts_changed(current, window, cx);
                     })
                     .is_ok();
                 if !keep_going {
@@ -318,6 +333,47 @@ impl ShellView {
         }
         if let Some(link) = self.pending_link.take() {
             self.start_link(link, window, cx);
+        }
+    }
+
+    /// The signed-in accounts changed: a new one shows when nobody is shown,
+    /// and the one shown, once gone (signed out), gives way to the next or
+    /// to the sign-in.
+    fn accounts_changed(
+        &mut self,
+        accounts: Vec<AccountView>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let shown = self
+            .signed_in()
+            .or(self.parked.as_ref())
+            .map(|view| view.read(cx).account().key.clone());
+        match shown {
+            Some(key) if !accounts.iter().any(|account| account.key == key) => {
+                self.parked = None;
+                match accounts.first().cloned() {
+                    Some(account) => self.show_account(account, window, cx),
+                    None => {
+                        settings::set_account(None, cx);
+                        window.set_window_title(&window_title(0));
+                        self.unread_task = Task::ready(());
+                        self.show_signin(window, cx);
+                    }
+                }
+            }
+            Some(_) => {}
+            None => {
+                if let Some(account) = accounts.first().cloned()
+                    && self.signed_in().is_none()
+                    && self.parked.is_none()
+                    && !self
+                        .signin()
+                        .is_some_and(|signin| signin.read(cx).is_busy())
+                {
+                    self.show_account(account, window, cx);
+                }
+            }
         }
     }
 
@@ -401,7 +457,9 @@ impl ShellView {
             }
         };
         let unread = session.unread_total(&account.key);
-        let view = cx.new(|cx| SignedInView::new(session, account, toasts, launch, window, cx));
+        let privacy = opened.settings.privacy_settings();
+        let view =
+            cx.new(|cx| SignedInView::new(session, account, privacy, toasts, launch, window, cx));
         let rooms = view.read(cx).rooms().clone();
         let opened_rooms = cx.subscribe_in(&rooms, window, |this, rooms, event, window, cx| {
             let RoomOpened(room) = event;
@@ -412,6 +470,7 @@ impl ShellView {
         });
         self._subscriptions.push(opened_rooms);
         let focus = view.focus_handle(cx);
+        settings::set_account(Some(view.read(cx).account().clone()), cx);
         self.screen = Screen::SignedIn(view);
         self.parked = None;
         window.focus(&focus, cx);
@@ -479,9 +538,6 @@ impl ShellView {
     fn start_link(&mut self, link: SecretText, window: &mut Window, cx: &mut Context<Self>) {
         if self.palette.is_some() {
             self.close_palette(window, cx);
-        }
-        if self.settings_modal.is_open() {
-            self.close_notification_settings(window, cx);
         }
         let signin = match &self.screen {
             Screen::Profile(_) => {
@@ -607,21 +663,38 @@ impl ShellView {
         cx.notify();
     }
 
-    // -- Notification settings -----------------------------------------------
+    // -- Settings (ADR 0015) ---------------------------------------------------
 
-    /// Follows the profile's notification settings.
+    /// Follows the profile's notification and appearance settings, which
+    /// the Settings window saves.
     fn follow_settings(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let Some(opened) = &self.opened else {
             return;
         };
-        let mut settings = opened.settings.notification_settings();
-        let current = *settings.borrow_and_update();
+        let mut notifications = opened.settings.notification_settings();
+        let mut appearance = opened.settings.appearance_settings();
+        let current = *notifications.borrow_and_update();
         self.apply_settings(current, cx);
+        let current = *appearance.borrow_and_update();
+        self.apply_appearance(current, window, cx);
         self.settings_task = cx.spawn_in(window, async move |this, cx| {
-            while settings.changed().await.is_ok() {
-                let current = *settings.borrow_and_update();
+            while notifications.changed().await.is_ok() {
+                let current = *notifications.borrow_and_update();
                 if this
                     .update(cx, |this, cx| this.apply_settings(current, cx))
+                    .is_err()
+                {
+                    break;
+                }
+            }
+        });
+        self.appearance_task = cx.spawn_in(window, async move |this, cx| {
+            while appearance.changed().await.is_ok() {
+                let current = *appearance.borrow_and_update();
+                if this
+                    .update_in(cx, |this, window, cx| {
+                        this.apply_appearance(current, window, cx);
+                    })
                     .is_err()
                 {
                     break;
@@ -633,13 +706,51 @@ impl ShellView {
     fn apply_settings(&mut self, settings: NotificationSettings, cx: &mut Context<Self>) {
         self.notification_settings = settings;
         notifications::set_show_content(settings.show_content, cx);
+        notifications::set_enabled(settings.enabled, cx);
         cx.notify();
     }
 
-    /// The notification settings, and whether their dialog is open.
+    /// The light or dark theme the choice and the system make.
+    fn chosen_appearance(&self) -> ThemeAppearance {
+        match self.appearance_settings.theme {
+            ThemeChoice::System => self.system_appearance,
+            ThemeChoice::Light => ThemeAppearance::Light,
+            ThemeChoice::Dark => ThemeAppearance::Dark,
+        }
+    }
+
+    /// Applies the appearance settings to every window: the theme, the
+    /// text size (the rem size `window_frame` sets), motion and contrast.
+    fn apply_appearance(
+        &mut self,
+        settings: AppearanceSettings,
+        _window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.appearance_settings = settings;
+        self.appearance = self.chosen_appearance();
+        cx.set_global(TextScale::from_percent(settings.text_size));
+        crate::motion::apply(settings.motion.into(), cx);
+        ContrastSetting::set_prefer_increased(settings.contrast == ContrastChoice::Increased, cx);
+        self.sync_theme(cx);
+        cx.refresh_windows();
+        cx.notify();
+    }
+
+    /// The notification settings, as the window applies them.
     #[cfg(test)]
-    pub(crate) fn notification_settings(&self) -> (NotificationSettings, bool) {
-        (self.notification_settings, self.settings_modal.is_open())
+    pub(crate) fn notification_settings(&self) -> NotificationSettings {
+        self.notification_settings
+    }
+
+    /// The appearance settings, as the window applies them.
+    #[cfg(test)]
+    pub(crate) fn appearance_settings(&self) -> AppearanceSettings {
+        self.appearance_settings
+    }
+
+    fn open_settings(&mut self, _: &OpenSettings, window: &mut Window, cx: &mut Context<Self>) {
+        self.show_settings(None, window, cx);
     }
 
     fn open_notification_settings(
@@ -648,89 +759,30 @@ impl ShellView {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        self.show_notification_settings(window, cx);
+        self.show_settings(Some(SettingsSection::Notifications), window, cx);
     }
 
-    /// Opens the notification settings dialog (once the profile is open).
-    pub(crate) fn show_notification_settings(
+    /// Opens the Settings window (once the profile is open).
+    pub(crate) fn show_settings(
         &mut self,
+        section: Option<SettingsSection>,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        if self.opened.is_none() || self.settings_modal.is_open() {
+        if self.opened.is_none() {
             return;
         }
         if self.palette.is_some() {
             self.close_palette(window, cx);
         }
-        self.settings_problem = None;
-        self.settings_modal.open(window, cx);
-        cx.notify();
+        // After this update, so the window can read the host.
+        window.defer(cx, move |_, cx| settings::open(section, cx));
     }
 
-    fn close_notification_settings(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        self.settings_modal.close(window, cx);
-        cx.notify();
-    }
-
-    /// Shows or hides the message's text in notifications, and saves it.
-    pub(crate) fn toggle_notification_content(
-        &mut self,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        let Some(opened) = &self.opened else {
-            return;
-        };
-        let settings = NotificationSettings {
-            show_content: !self.notification_settings.show_content,
-        };
-        let saved = opened.settings.set_notification_settings(settings);
-        // Shown at once; the profile's answer follows.
-        self.apply_settings(settings, cx);
-        self.settings_problem = None;
-        self.save_task = cx.spawn_in(window, async move |this, cx| {
-            let result = saved
-                .await
-                .unwrap_or_else(|_| Err(format!("{APP_NAME} is closing.")));
-            let _ = this.update(cx, |this, cx| {
-                if let Err(problem) = result {
-                    this.settings_problem = Some(problem);
-                    let previous = NotificationSettings {
-                        show_content: !settings.show_content,
-                    };
-                    this.apply_settings(previous, cx);
-                }
-            });
-        });
-    }
-
-    fn render_notification_settings(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
-        if !self.settings_modal.is_open() {
-            return None;
-        }
-        let colors = ComponentTheme::get(cx).colors;
-        let shell = cx.entity().downgrade();
-        let close = {
-            let shell = shell.clone();
-            move |window: &mut Window, cx: &mut App| {
-                let _ = shell.update(cx, |shell, cx| {
-                    shell.close_notification_settings(window, cx)
-                });
-            }
-        };
-        Some(notifications::render_settings(
-            &self.settings_modal,
-            self.notification_settings.show_content,
-            self.settings_problem.as_deref(),
-            &colors,
-            move |_, window, cx| {
-                let _ = shell.update(cx, |shell, cx| {
-                    shell.toggle_notification_content(window, cx)
-                });
-            },
-            close,
-        ))
+    /// Shows a toast in the main window (Settings' sign-out says how it
+    /// went here).
+    pub(crate) fn show_toast(&mut self, toast: Toast, cx: &mut Context<Self>) {
+        self.toast(toast, cx);
     }
 
     fn apply_initial_view(
@@ -741,7 +793,11 @@ impl ShellView {
     ) {
         match initial {
             InitialView::NotificationSettings => {
-                return self.show_notification_settings(window, cx);
+                return self.show_settings(Some(SettingsSection::Notifications), window, cx);
+            }
+            InitialView::Settings(launch) => {
+                window.defer(cx, move |_, cx| settings::open_launch(launch, cx));
+                return;
             }
             InitialView::ForwardedLink(text) => {
                 return self.request(AppRequest::OpenLink(SecretText::new(text)), window, cx);
@@ -757,6 +813,7 @@ impl ShellView {
             | InitialView::CommandPalette
             | InitialView::Rooms(_)
             | InitialView::NotificationSettings
+            | InitialView::Settings(_)
             | InitialView::ForwardedLink(_) => {}
             InitialView::CodeEntry => signin.show_code(None, window, cx),
             InitialView::CodeEntryNoQrCode => {
@@ -899,13 +956,27 @@ impl ShellView {
                 this.child(div().pr(px(SPACE_2)).child(sync_indicator(&sync, &colors)))
             })
             .trailing(
-                div().pr(px(SPACE_2)).child(
-                    IconButton::new("title-bar-palette", "search", "Command palette")
-                        .shortcut(primary_key("ToggleCommandPalette"))
-                        .on_click(cx.listener(|this, _, window, cx| {
-                            this.toggle_palette(&ToggleCommandPalette, window, cx);
-                        })),
-                ),
+                div()
+                    .flex()
+                    .items_center()
+                    .gap(px(SPACE_1))
+                    .pr(px(SPACE_2))
+                    .when(self.opened.is_some(), |this| {
+                        this.child(
+                            IconButton::new("title-bar-settings", "settings", "Settings")
+                                .shortcut(primary_key("OpenSettings"))
+                                .on_click(cx.listener(|this, _, window, cx| {
+                                    this.show_settings(None, window, cx);
+                                })),
+                        )
+                    })
+                    .child(
+                        IconButton::new("title-bar-palette", "search", "Command palette")
+                            .shortcut(primary_key("ToggleCommandPalette"))
+                            .on_click(cx.listener(|this, _, window, cx| {
+                                this.toggle_palette(&ToggleCommandPalette, window, cx);
+                            })),
+                    ),
             )
     }
 }
@@ -937,6 +1008,7 @@ impl Render for ShellView {
             .track_focus(&self.focus_handle)
             .on_action(cx.listener(Self::toggle_palette))
             .on_action(cx.listener(Self::open_notification_settings))
+            .on_action(cx.listener(Self::open_settings))
             .accessible(Role::Application, APP_NAME)
             .size_full()
             .flex()
@@ -948,7 +1020,6 @@ impl Render for ShellView {
             .child(self.render_title_bar(cx))
             .child(div().flex_1().min_h_0().child(body))
             .child(self.toasts.clone())
-            .children(self.render_notification_settings(cx))
             .children(self.render_palette(cx));
         window_frame(root, window, cx)
     }

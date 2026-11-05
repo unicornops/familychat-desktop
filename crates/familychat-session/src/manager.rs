@@ -7,7 +7,7 @@ use std::{
     sync::{Arc, Mutex, MutexGuard, PoisonError, RwLock},
 };
 
-use familychat_core::session::{AccountKey, AccountView};
+use familychat_core::session::{AccountKey, AccountView, SignedOut};
 use familychat_security::{
     AccountId, AccountSession, Keychain, Secret,
     keychain::{load_session, save_session},
@@ -29,6 +29,12 @@ use crate::{
 const FORGET_ATTEMPTS: u32 = 20;
 /// The wait between those tries.
 const FORGET_RETRY_DELAY: std::time::Duration = std::time::Duration::from_millis(100);
+/// How long signing out waits for the server before going on without it.
+const LOGOUT_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
+/// How many times signing out tries to delete the account's directory
+/// (the SDK's stores close as the client's last tasks end, and Windows
+/// refuses to delete an open file).
+const SIGN_OUT_FILE_ATTEMPTS: u32 = 50;
 
 /// The check every new sign-in passes before its account syncs (PLAN.md,
 /// section 6.6): the client's homeserver and user, after the session is
@@ -62,6 +68,18 @@ pub enum AddAccountError {
     /// is kept.
     #[error(transparent)]
     Open(#[from] OpenError),
+}
+
+/// Why signing out could not finish.
+#[derive(Debug, thiserror::Error)]
+pub enum SignOutError {
+    /// No open account has this id.
+    #[error("no open account has this id")]
+    Unknown,
+    /// The keychain entries or the registry row could not be removed; the
+    /// account is still registered (it opens again next time).
+    #[error(transparent)]
+    Remove(#[from] familychat_store::RemoveAccountError),
 }
 
 /// How restoring one account went.
@@ -121,6 +139,12 @@ impl AccountManager {
     /// session is gone from the keychain, its server does not support
     /// native sliding sync) does not stop the others.
     pub async fn restore_all(&self) -> Result<Vec<Restored>, familychat_store::StoreError> {
+        // What a sign-out couldn't delete at the time (its key is gone).
+        match self.profile().remove_orphaned_account_dirs() {
+            Ok(0) => {}
+            Ok(removed) => info!(removed, "removed the files of signed-out accounts"),
+            Err(error) => warn!(%error, "the signed-out accounts' files could not be checked"),
+        }
         let registered = self.profile().accounts()?;
         let mut restored = Vec::with_capacity(registered.len());
         for summary in registered {
@@ -239,6 +263,68 @@ impl AccountManager {
             }
             tokio::time::sleep(FORGET_RETRY_DELAY).await;
         }
+    }
+
+    /// Signs an open account out and removes it from this computer (PLAN.md,
+    /// section 5.4; ADR 0015): it leaves [`Self::accounts`] at once, its
+    /// sync stops, the server is told (best effort, within
+    /// [`LOGOUT_TIMEOUT`]: a server that can't be reached, or refuses, does
+    /// not keep the account here), then its keychain entries, its registry
+    /// row and drafts, and its directory (the SDK's stores, the event and
+    /// media caches) go. Files still open are retried for a few seconds
+    /// and otherwise left to [`Self::restore_all`]'s sweep: their key is
+    /// already gone.
+    pub async fn sign_out(&self, id: AccountId) -> Result<SignedOut, SignOutError> {
+        let account = {
+            let mut accounts = self
+                .accounts
+                .write()
+                .unwrap_or_else(PoisonError::into_inner);
+            let account = accounts.remove(&id).ok_or(SignOutError::Unknown)?;
+            self.views.send_replace(
+                accounts
+                    .values()
+                    .map(|account| account.view().clone())
+                    .collect(),
+            );
+            account
+        };
+        account.shutdown().await;
+        let told = match account.client().cloned() {
+            Some(client) => match tokio::time::timeout(LOGOUT_TIMEOUT, client.logout()).await {
+                Ok(Ok(())) => SignedOut::Everywhere,
+                Ok(Err(error)) => {
+                    info!(account = %id, %error, "the server didn't sign the device out");
+                    SignedOut::OnlyHere
+                }
+                Err(_) => {
+                    info!(account = %id, "the server didn't answer the sign-out in time");
+                    SignedOut::OnlyHere
+                }
+            },
+            None => SignedOut::OnlyHere,
+        };
+        drop(account);
+        // The secrets and the row first; the files may still be open.
+        let removed = self.profile().remove_account(id);
+        match removed {
+            Ok(_) => {}
+            Err(familychat_store::RemoveAccountError::Files(_)) => {
+                for attempt in 1..=SIGN_OUT_FILE_ATTEMPTS {
+                    tokio::time::sleep(FORGET_RETRY_DELAY).await;
+                    match self.profile().remove_account_dir(id) {
+                        Ok(()) => break,
+                        Err(error) if attempt == SIGN_OUT_FILE_ATTEMPTS => {
+                            warn!(account = %id, %error, "the account's files are left for the next start");
+                        }
+                        Err(_) => {}
+                    }
+                }
+            }
+            Err(error) => return Err(error.into()),
+        }
+        info!(account = %id, ?told, "signed the account out and removed it");
+        Ok(told)
     }
 
     fn insert(&self, account: Account) -> Arc<Account> {

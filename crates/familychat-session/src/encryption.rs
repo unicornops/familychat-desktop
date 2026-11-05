@@ -34,7 +34,7 @@ use futures_util::StreamExt as _;
 use matrix_sdk::{
     Client, Room,
     encryption::{
-        BackupDownloadStrategy, EncryptionSettings, VerificationState,
+        BackupDownloadStrategy, CrossSigningResetAuthType, EncryptionSettings, VerificationState,
         recovery::{RecoveryError, RecoveryState},
         verification::{
             QrVerification, QrVerificationState, SasState, SasVerification, VerificationRequest,
@@ -436,6 +436,82 @@ pub(crate) async fn enable_recovery(client: &Client) -> Result<SecretText, Sessi
             Err(SessionError::Failed(
                 "Recovery couldn't be set up. Check your connection and try again.".to_owned(),
             ))
+        }
+    }
+}
+
+/// Makes a new recovery key in place of the old one (which stops working)
+/// and answers with it; recovery is set up first when it isn't yet.
+pub(crate) async fn reset_recovery_key(client: &Client) -> Result<SecretText, SessionError> {
+    let recovery = client.encryption().recovery();
+    if recovery.state() != RecoveryState::Enabled {
+        return enable_recovery(client).await;
+    }
+    match recovery.reset_key().await {
+        Ok(key) => {
+            info!("made a new recovery key");
+            Ok(SecretText::new(key))
+        }
+        Err(error) => {
+            warn!(%error, "making a new recovery key failed");
+            Err(SessionError::Failed(
+                "A new recovery key couldn't be made. Check your connection and try again."
+                    .to_owned(),
+            ))
+        }
+    }
+}
+
+/// Resets the account's cross-signing identity and its key backup (for an
+/// account with no confirmed device and no recovery key), answering the
+/// server's user-interactive auth with `password` when it asks. The
+/// password is dropped (wiped) when this returns. OAuth approval in a
+/// browser is Phase 14's.
+pub(crate) async fn reset_identity(
+    client: &Client,
+    password: Option<Secret<String>>,
+) -> Result<AuthOutcome, SessionError> {
+    let user_id = client.user_id().ok_or(SessionError::NotReady)?.to_owned();
+    let failed = || {
+        SessionError::Failed(
+            "Your identity couldn't be reset. Check your connection and try again.".to_owned(),
+        )
+    };
+    let handle = match client.encryption().recovery().reset_identity().await {
+        Ok(None) => {
+            info!("reset the account's identity with no further auth");
+            return Ok(AuthOutcome::Done);
+        }
+        Ok(Some(handle)) => handle,
+        Err(error) => {
+            warn!(%error, "resetting the identity failed");
+            return Err(failed());
+        }
+    };
+    let session = match handle.auth_type() {
+        CrossSigningResetAuthType::Uiaa(uiaa) => uiaa.session.clone(),
+        CrossSigningResetAuthType::OAuth(_) => {
+            return Err(SessionError::Failed(
+                wording::RESET_NEEDS_BROWSER.to_owned(),
+            ));
+        }
+    };
+    let Some(password) = password else {
+        return Ok(AuthOutcome::PasswordNeeded);
+    };
+    let auth = password_auth(&user_id, &password, session);
+    drop(password);
+    match handle.reset(Some(auth)).await {
+        Ok(()) => {
+            info!("reset the account's identity with the password");
+            Ok(AuthOutcome::Done)
+        }
+        Err(RecoveryError::Sdk(error)) if error.as_uiaa_response().is_some() => {
+            Ok(AuthOutcome::WrongPassword)
+        }
+        Err(error) => {
+            warn!(%error, "resetting the identity with the password failed");
+            Err(failed())
         }
     }
 }

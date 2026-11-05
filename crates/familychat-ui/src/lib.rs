@@ -20,7 +20,8 @@
 //! | `signin` | `SigninView`: welcome, the code page (link, pasted or dropped QR image), the confirmation, the password forms, the rate-limit countdown |
 //! | `signed_in` | `SignedInView`: the sync banner over the rooms, and the sync-state indicator |
 //! | `encryption` | `EncryptionView`: "Confirm it's you", the password page, the encryption banners, and the verification, recovery, devices and room key dialogs (ADR 0009) |
-//! | `notifications` | posting `familychat-notify`'s notifications as system notifications, a click opening the room; the notification settings dialog |
+//! | `notifications` | posting `familychat-notify`'s notifications as system notifications, a click opening the room |
+//! | `settings` | the Settings window: account and sign-out, sessions, security and privacy, appearance, notifications, diagnostics (ADR 0015) |
 //! | `rooms` | `RoomsView`: the room list, the room header, the member list, the timeline (`TimelineView`), rich text, the image cache and the link dialog (ADR 0007) |
 //! | `qr` | reading a sign-in QR code from an image, locally, with `rqrr` |
 //! | `command_palette` | `CommandPalette`: Secondary+K's search over the commands table |
@@ -64,6 +65,7 @@ mod notifications;
 mod profile_screens;
 mod qr;
 mod rooms;
+mod settings;
 mod shell;
 mod signed_in;
 mod signin;
@@ -75,6 +77,7 @@ mod view_tests;
 
 pub use encryption::EncryptionLaunch;
 pub use rooms::{ComposerLaunch, RoomsLaunch};
+pub use settings::{SettingsLaunch, SettingsOpen, SettingsSection};
 pub use shell::ShellView;
 
 use crate::components::title_bar::TRAFFIC_LIGHT_POSITION;
@@ -111,8 +114,11 @@ pub enum InitialView {
     CommandPalette,
     /// The signed-in account's rooms, opened as described.
     Rooms(RoomsLaunch),
-    /// The signed-in account's rooms with the notification settings open.
+    /// The signed-in account's rooms with Settings open at Notifications.
     NotificationSettings,
+    /// The signed-in account's rooms with Settings open as described
+    /// (ADR 0015).
+    Settings(SettingsLaunch),
     /// The signed-in account's rooms, then this link forwarded by a second
     /// launch (the sign-in's confirmation over the rooms).
     ForwardedLink(String),

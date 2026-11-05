@@ -146,6 +146,41 @@ pub enum EncryptionAsk {
     Import(PathBuf),
     /// `acknowledge_identity`.
     Acknowledge(OwnedUserId),
+    /// `reset_recovery_key`.
+    ResetRecoveryKey,
+    /// `reset_identity`, with or without a password.
+    ResetIdentity {
+        /// A password was given.
+        with_password: bool,
+    },
+    /// `stopped_message`.
+    StoppedMessage,
+}
+
+/// The new recovery key a reset gives (not the first one).
+pub const FIXTURE_NEW_RECOVERY_KEY: &str =
+    "EsU7 Xq2d Lm4P 9vRt Hc8B wN3y Ka6F Jp5D Zs1G Tb4M Qe7V Rx2H";
+
+/// Who an unconfirmed-devices stop waits on: Ana's own old tablet, and
+/// Dad's new phone.
+pub fn fixture_stopped_devices() -> Vec<familychat_core::encryption::UnconfirmedDevice> {
+    use familychat_core::encryption::UnconfirmedDevice;
+    vec![
+        UnconfirmedDevice {
+            user_id: OwnedUserId::try_from("@ana:smith.safechat.family").expect("an id"),
+            user_name: Some("Ana".to_owned()),
+            device_id: "OLDTABLET".to_owned(),
+            device_name: Some("Old tablet".to_owned()),
+            own: true,
+        },
+        UnconfirmedDevice {
+            user_id: OwnedUserId::try_from("@dad:smith.safechat.family").expect("an id"),
+            user_name: Some("Dad".to_owned()),
+            device_id: "DADPHONE2".to_owned(),
+            device_name: Some("Dad's new phone".to_owned()),
+            own: false,
+        },
+    ]
 }
 
 /// The fixture session's encryption.
@@ -426,6 +461,45 @@ impl FixtureEncryption {
             status.recovery = RecoveryState::Enabled;
         });
         Ok(())
+    }
+
+    pub(crate) fn reset_recovery_key(
+        &self,
+        account: &AccountKey,
+    ) -> Result<SecretText, SessionError> {
+        self.known(account)?;
+        self.ask(EncryptionAsk::ResetRecoveryKey)?;
+        self.update(account, |status| status.recovery = RecoveryState::Enabled);
+        Ok(SecretText::from(FIXTURE_NEW_RECOVERY_KEY))
+    }
+
+    pub(crate) fn reset_identity(
+        &self,
+        account: &AccountKey,
+        password: Option<SecretText>,
+    ) -> Result<AuthOutcome, SessionError> {
+        self.known(account)?;
+        self.ask(EncryptionAsk::ResetIdentity {
+            with_password: password.is_some(),
+        })?;
+        Ok(match password {
+            None => AuthOutcome::PasswordNeeded,
+            Some(password) if password.expose() == FIXTURE_PASSWORD => {
+                // A new identity: this device made it, so it is confirmed,
+                // and the backup went with the old one.
+                self.update(account, |status| {
+                    status.device = DeviceTrust::Verified;
+                    status.recovery = RecoveryState::Disabled;
+                });
+                AuthOutcome::Done
+            }
+            Some(_) => AuthOutcome::WrongPassword,
+        })
+    }
+
+    pub(crate) fn stopped(&self, account: &AccountKey) -> Result<(), SessionError> {
+        self.known(account)?;
+        self.ask(EncryptionAsk::StoppedMessage)
     }
 
     fn device_list(&self) -> Vec<DeviceView> {

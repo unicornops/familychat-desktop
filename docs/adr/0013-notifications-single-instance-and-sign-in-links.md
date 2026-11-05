@@ -128,7 +128,8 @@ the window has one dialog for it: **Notification settings**, a command in
 the commands table (Secondary+Alt+N, in the palette and the macOS app menu;
 the terminal UI keeps `ctrl-o` for it and lists it under `LATER` until
 Phase 13) with a checkbox and what each choice
-means.
+means. (Phase 13 replaced the dialog with Settings → Notifications, which
+also turns notifications off; ADR 0015.)
 
 ### Single instance: the lock, plus a user-only socket or pipe
 

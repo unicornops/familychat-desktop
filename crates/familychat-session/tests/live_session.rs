@@ -758,3 +758,72 @@ async fn another_users_message_is_a_notification_and_the_accounts_own_is_not() -
     ensure!(!log.contains(&marker), "the log contains a message");
     Ok(())
 }
+
+/// Signing out (ADR 0015): the server forgets the device (its token is
+/// refused afterwards) and nothing of the account is left in the
+/// keychain, the registry or the profile's `accounts/`.
+#[tokio::test]
+#[ignore = "needs the homeserver harness: scripts/homeserver-harness.sh up"]
+async fn signing_out_ends_the_session_on_the_server_and_removes_everything() -> Result<()> {
+    let harness = harness()?;
+    let user = harness.new_user("session-sign-out").await?;
+    let test = TestProfile::new("live-sign-out");
+    let manager = Arc::new(test.manager(harness.client().clone())?);
+    let id = manager
+        .add_account(session_for(&user, harness.hs1_url()), &AnyHomeserver)
+        .await?;
+    running(&manager, id).await?;
+    let session = LiveSession::new(manager.clone(), tokio::runtime::Handle::current());
+    let before = harness
+        .client_api(
+            reqwest::Method::GET,
+            &["v3", "account", "whoami"],
+            Some(&user.session),
+            None,
+        )
+        .await?;
+    ensure!(before.status == 200, "whoami before: {}", before.status);
+
+    let signed_out =
+        tokio::time::timeout(Duration::from_secs(60), session.sign_out(&account_key(id)))
+            .await
+            .context("in time")?
+            .context("answered")??;
+    ensure!(
+        signed_out == familychat_core::session::SignedOut::Everywhere,
+        "{signed_out:?}"
+    );
+    // The token the account signed in with is gone from the server, and
+    // waiting for that is not needed: the logout answered first.
+    let after = harness
+        .client_api(
+            reqwest::Method::GET,
+            &["v3", "account", "whoami"],
+            Some(&user.session),
+            None,
+        )
+        .await?;
+    ensure!(
+        after.status == 401,
+        "whoami after the sign-out answered {}: {}",
+        after.status,
+        after.body
+    );
+    ensure!(
+        test.keychain.entry_names() == ["app-store"],
+        "keychain entries left: {:?}",
+        test.keychain.entry_names()
+    );
+    ensure!(load_session(test.keychain.as_ref(), id)?.is_none());
+    ensure!(
+        manager
+            .with_profile(|profile| profile.accounts())?
+            .is_empty()
+    );
+    ensure!(
+        !test.dir().account_dir(id).exists(),
+        "the account's directory is gone"
+    );
+    ensure!(session.accounts().borrow().is_empty());
+    Ok(())
+}

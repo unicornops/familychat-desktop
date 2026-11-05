@@ -84,6 +84,12 @@ pub enum EncryptionLaunch {
     Export,
     /// Importing room keys, with a file chosen.
     Import,
+    /// Changing the recovery key, before it is made (Settings).
+    ResetRecoveryKey,
+    /// Resetting the identity, before it is done (Settings).
+    ResetIdentity,
+    /// Resetting the identity, asking for the password the server wants.
+    ResetIdentityPassword,
 }
 
 /// A page of "Confirm it's you".
@@ -116,6 +122,10 @@ pub(crate) enum Dialog {
     Export,
     /// Importing room keys.
     Import,
+    /// "Change your recovery key?"
+    ResetRecoveryKey,
+    /// "Reset your identity?"
+    ResetIdentity,
 }
 
 /// The encryption screens and dialogs of one account.
@@ -146,6 +156,11 @@ pub(crate) struct EncryptionView {
     /// The server asked for the password to sign a device out.
     sign_out_needs_password: bool,
     import_file: Option<PathBuf>,
+    /// Drawn in Settings (ADR 0015): the devices are listed in the page,
+    /// not in a dialog, so a device's sign-out returns to the page.
+    inline: bool,
+    /// The reset asked for the password.
+    reset_needs_password: bool,
     password_input: Entity<TextInput>,
     key_input: Entity<TextInput>,
     passphrase_input: Entity<TextInput>,
@@ -206,6 +221,7 @@ impl EncryptionView {
                 if *event == TextInputEvent::Submitted {
                     match this.dialog {
                         Dialog::SignOut(_) => this.sign_out(window, cx),
+                        Dialog::ResetIdentity => this.reset_identity(window, cx),
                         _ => this.submit_password(window, cx),
                     }
                 }
@@ -246,6 +262,8 @@ impl EncryptionView {
             devices: None,
             sign_out_needs_password: false,
             import_file: None,
+            inline: false,
+            reset_needs_password: false,
             password_input,
             key_input,
             passphrase_input,
@@ -255,6 +273,22 @@ impl EncryptionView {
             work_task: Task::ready(()),
             _subscriptions: subscriptions,
         }
+    }
+
+    /// Drawn in Settings: the devices live in the page (ADR 0015).
+    pub(crate) fn inline(mut self) -> Self {
+        self.inline = true;
+        self
+    }
+
+    /// Whether one of its dialogs is open.
+    pub(crate) fn dialog_open(&self) -> bool {
+        self.modal.is_open()
+    }
+
+    /// The account's encryption, as last heard.
+    pub(crate) fn status(&self) -> &EncryptionStatus {
+        &self.status
     }
 
     // -- State ---------------------------------------------------------------
@@ -361,6 +395,7 @@ impl EncryptionView {
         self.key_kept = false;
         self.import_file = None;
         self.sign_out_needs_password = false;
+        self.reset_needs_password = false;
         for input in [
             &self.password_input,
             &self.passphrase_input,
@@ -458,6 +493,12 @@ impl EncryptionView {
             EncryptionLaunch::Import => {
                 self.import_keys(window, cx);
                 self.import_file = Some(PathBuf::from("family-chat-room-keys.txt"));
+            }
+            EncryptionLaunch::ResetRecoveryKey => self.ask_to_reset_recovery_key(window, cx),
+            EncryptionLaunch::ResetIdentity => self.ask_to_reset_identity(window, cx),
+            EncryptionLaunch::ResetIdentityPassword => {
+                self.ask_to_reset_identity(window, cx);
+                self.reset_identity(window, cx);
             }
         }
     }
@@ -693,6 +734,97 @@ impl EncryptionView {
         cx.notify();
     }
 
+    /// "Change your recovery key?"
+    pub(crate) fn ask_to_reset_recovery_key(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.open_dialog(Dialog::ResetRecoveryKey, window, cx);
+    }
+
+    /// Makes a new recovery key; the old one stops working. Shown once,
+    /// like the first.
+    pub(crate) fn reset_recovery_key(&mut self, cx: &mut Context<Self>) {
+        if self.working {
+            return;
+        }
+        self.working = true;
+        self.problem = None;
+        let reply = self.session.reset_recovery_key(&self.account);
+        self.work_task = cx.spawn(async move |this, cx| {
+            let result = reply.await.unwrap_or(Err(SessionError::ShutDown));
+            let _ = this.update(cx, |this, cx| {
+                this.working = false;
+                match result {
+                    Ok(key) => {
+                        this.recovery_key = Some(key);
+                        this.key_kept = false;
+                        this.dialog = Dialog::RecoveryKey;
+                    }
+                    Err(error) => this.problem = Some(error.to_string()),
+                }
+                cx.notify();
+            });
+        });
+        cx.notify();
+    }
+
+    /// "Reset your identity?"
+    pub(crate) fn ask_to_reset_identity(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.reset_needs_password = false;
+        self.open_dialog(Dialog::ResetIdentity, window, cx);
+    }
+
+    /// Resets the identity, with the password when the server asked for it.
+    pub(crate) fn reset_identity(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if self.dialog != Dialog::ResetIdentity || self.working {
+            return;
+        }
+        let password = if self.reset_needs_password {
+            let typed = self
+                .password_input
+                .update(cx, |input, cx| input.take_secret(cx));
+            if typed.is_empty() {
+                self.problem = Some(wording::NO_PASSWORD.to_owned());
+                cx.notify();
+                return;
+            }
+            Some(SecretText::new(typed))
+        } else {
+            None
+        };
+        self.working = true;
+        self.problem = None;
+        let reply = self.session.reset_identity(&self.account, password);
+        self.work_task = cx.spawn_in(window, async move |this, cx| {
+            let result = reply.await.unwrap_or(Err(SessionError::ShutDown));
+            let _ = this.update_in(cx, |this, window, cx| {
+                this.working = false;
+                match result {
+                    Ok(AuthOutcome::Done) => {
+                        this.toast(
+                            Toast::new(wording::IDENTITY_RESET).kind(ToastKind::Success),
+                            cx,
+                        );
+                        this.close_dialog(window, cx);
+                    }
+                    Ok(AuthOutcome::PasswordNeeded) => {
+                        this.reset_needs_password = true;
+                        let field = this.password_input.read(cx).focus_handle(cx);
+                        window.focus(&field, cx);
+                    }
+                    Ok(AuthOutcome::WrongPassword) => {
+                        this.problem = Some(wording::WRONG_PASSWORD.to_owned());
+                    }
+                    Err(error) => this.problem = Some(error.to_string()),
+                }
+                cx.notify();
+            });
+        });
+        cx.notify();
+    }
+
     /// Copies the recovery key.
     pub(crate) fn copy_recovery_key(&mut self, cx: &mut Context<Self>) {
         let Some(key) = &self.recovery_key else {
@@ -762,6 +894,11 @@ impl EncryptionView {
 
     // -- Devices -------------------------------------------------------------
 
+    /// Lists the devices again (Settings, Sessions).
+    pub(crate) fn refresh_devices(&mut self, cx: &mut Context<Self>) {
+        self.load_devices(cx);
+    }
+
     fn load_devices(&mut self, cx: &mut Context<Self>) {
         let reply = self.session.devices(&self.account);
         self.work_task = cx.spawn(async move |this, cx| {
@@ -820,7 +957,11 @@ impl EncryptionView {
                             cx,
                         );
                         this.sign_out_needs_password = false;
-                        this.dialog = Dialog::Devices;
+                        if this.inline {
+                            this.close_dialog(window, cx);
+                        } else {
+                            this.dialog = Dialog::Devices;
+                        }
                         this.load_devices(cx);
                     }
                     Ok(AuthOutcome::PasswordNeeded) => {
@@ -1232,6 +1373,8 @@ impl EncryptionView {
             Dialog::SignOut(device) => self.sign_out_dialog(device, &colors, cx),
             Dialog::Export => self.export_dialog(&colors, cx),
             Dialog::Import => self.import_dialog(&colors, cx),
+            Dialog::ResetRecoveryKey => self.reset_key_dialog(&colors, cx),
+            Dialog::ResetIdentity => self.reset_identity_dialog(&colors, cx),
         };
         let persistent = matches!(self.dialog, Dialog::RecoveryKey);
         Some(
@@ -1479,16 +1622,28 @@ impl EncryptionView {
             )
     }
 
-    fn devices_dialog(&self, colors: &UiColors, cx: &mut Context<Self>) -> Modal {
+    fn devices_dialog(&self, _colors: &UiColors, cx: &mut Context<Self>) -> Modal {
         let modal = Modal::new("encryption-devices", self.modal.focus_handle())
             .title(wording::DEVICES_TITLE)
             .description("Every device signed in to your account. Verify the ones you use, and sign out the ones you don't.")
             .width(px(560.0));
-        let body = match &self.devices {
+        let body = self.render_device_list(cx);
+        modal.child(body).footer(
+            Button::new("encryption-devices-done", "Done")
+                .primary()
+                .on_click(cx.listener(|this, _, window, cx| this.close_dialog(window, cx))),
+        )
+    }
+
+    /// The devices, as a list with Verify and Sign out on each other
+    /// device: the devices dialog's body, and Settings' Sessions page.
+    pub(crate) fn render_device_list(&self, cx: &mut Context<Self>) -> AnyElement {
+        let colors = ComponentTheme::get(cx).colors;
+        match &self.devices {
             None => working_line(
                 "encryption-devices-loading",
                 "Listing your devices…",
-                colors,
+                &colors,
             ),
             Some(Err(message)) => problem_banner("encryption-devices-problem", Some(message))
                 .unwrap_or_else(|| div().into_any_element()),
@@ -1502,16 +1657,79 @@ impl EncryptionView {
                     .flex_col()
                     .gap(px(SPACE_2))
                     .children(devices.iter().enumerate().map(|(index, device)| {
-                        self.device_row(index, device, this_confirmed, colors, cx)
+                        self.device_row(index, device, this_confirmed, &colors, cx)
                     }))
                     .into_any_element()
             }
-        };
-        modal.child(body).footer(
-            Button::new("encryption-devices-done", "Done")
-                .primary()
-                .on_click(cx.listener(|this, _, window, cx| this.close_dialog(window, cx))),
-        )
+        }
+    }
+
+    fn reset_key_dialog(&self, colors: &UiColors, cx: &mut Context<Self>) -> Modal {
+        Modal::new("encryption-reset-key", self.modal.focus_handle())
+            .title(wording::RESET_KEY_TITLE)
+            .description(wording::RESET_KEY_DETAIL)
+            .width(px(480.0))
+            .children(problem_banner(
+                "encryption-reset-key-problem",
+                self.problem.as_deref(),
+            ))
+            .when(self.working, |this| {
+                this.child(working_line(
+                    "encryption-reset-key-working",
+                    "Making your new recovery key…",
+                    colors,
+                ))
+            })
+            .footer(
+                Button::new("encryption-reset-key-cancel", "Cancel")
+                    .on_click(cx.listener(|this, _, window, cx| this.close_dialog(window, cx))),
+            )
+            .footer(
+                Button::new("encryption-reset-key-confirm", "Make a new key")
+                    .primary()
+                    .icon("key-round")
+                    .disabled(self.working)
+                    .on_click(cx.listener(|this, _, _, cx| this.reset_recovery_key(cx))),
+            )
+    }
+
+    fn reset_identity_dialog(&self, colors: &UiColors, cx: &mut Context<Self>) -> Modal {
+        Modal::new("encryption-reset-identity", self.modal.focus_handle())
+            .title(wording::RESET_IDENTITY_TITLE)
+            .description(wording::RESET_IDENTITY_DETAIL)
+            .width(px(500.0))
+            .when(self.reset_needs_password, |this| {
+                this.child(
+                    Banner::new(
+                        "encryption-reset-identity-password",
+                        "Your server asks for your password to reset your identity.",
+                    )
+                    .tone(BannerTone::Info),
+                )
+                .child(field("Password", &self.password_input, colors))
+            })
+            .children(problem_banner(
+                "encryption-reset-identity-problem",
+                self.problem.as_deref(),
+            ))
+            .when(self.working, |this| {
+                this.child(working_line(
+                    "encryption-reset-identity-working",
+                    "Resetting your identity…",
+                    colors,
+                ))
+            })
+            .footer(
+                Button::new("encryption-reset-identity-cancel", "Cancel")
+                    .on_click(cx.listener(|this, _, window, cx| this.close_dialog(window, cx))),
+            )
+            .footer(
+                Button::new("encryption-reset-identity-confirm", "Reset identity")
+                    .danger()
+                    .icon("triangle-alert")
+                    .disabled(self.working)
+                    .on_click(cx.listener(|this, _, window, cx| this.reset_identity(window, cx))),
+            )
     }
 
     fn device_row(
@@ -1645,8 +1863,11 @@ impl EncryptionView {
                         this.sign_out_needs_password = false;
                         this.password_input
                             .update(cx, |input, cx| drop(input.take_secret(cx)));
-                        this.dialog = Dialog::Devices;
-                        let _ = window;
+                        if this.inline {
+                            this.close_dialog(window, cx);
+                        } else {
+                            this.dialog = Dialog::Devices;
+                        }
                         cx.notify();
                     },
                 )),

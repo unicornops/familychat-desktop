@@ -61,6 +61,7 @@ impl SignedInView {
     pub(crate) fn new(
         session: Arc<dyn SessionApi>,
         account: AccountView,
+        privacy: watch::Receiver<familychat_core::settings::PrivacySettings>,
         toasts: Entity<ToastHost>,
         mut launch: Option<RoomsLaunch>,
         window: &mut Window,
@@ -85,7 +86,7 @@ impl SignedInView {
         let rooms = {
             let session = session.clone();
             let account = account.clone();
-            cx.new(|cx| RoomsView::new(session, account, toasts, launch, window, cx))
+            cx.new(|cx| RoomsView::new(session, account, privacy, toasts, launch, window, cx))
         };
         let encryption_changes =
             cx.observe_in(&encryption, window, |this, encryption, window, cx| {
@@ -125,6 +126,11 @@ impl SignedInView {
     #[cfg_attr(not(test), allow(dead_code))]
     pub(crate) fn encryption(&self) -> &Entity<EncryptionView> {
         &self.encryption
+    }
+
+    /// The account.
+    pub(crate) fn account(&self) -> &AccountView {
+        &self.account
     }
 
     /// Its latest status.

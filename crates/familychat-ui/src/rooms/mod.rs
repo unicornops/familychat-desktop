@@ -38,13 +38,15 @@ use std::{collections::HashSet, path::PathBuf, sync::Arc};
 use familychat_actions::{Action, ActionEvent, Actions, ComposerState, FileSource, Refusal};
 use familychat_core::{
     OwnedRoomId,
-    encryption::{IdentityWarning, IdentityWarningKind},
+    encryption::{IdentityWarning, IdentityWarningKind, StoppedMessage, wording},
     links::{LinkAction, LinkPrompt, MatrixLink, classify},
     media::MediaInfo,
+    messaging::MessageRef,
     rooms::{Encryption, RoomListFilter, RoomListLoading, RoomSummary},
     session::{AccountView, RoomListControls, SessionApi, SessionError},
+    settings::PrivacySettings,
     sync::AccountStatus,
-    timeline::time_label,
+    timeline::{SendProblem, time_label},
 };
 use gpui::{
     AnyElement, App, ClipboardItem, Context, Entity, EventEmitter, FocusHandle, Focusable,
@@ -75,7 +77,7 @@ use crate::components::{
 use crate::signin::{primary_key, spinner};
 use crate::styles::{
     ICON_SIZE_SM, RADIUS_FULL, RADIUS_LG, RADIUS_MD, SPACE_1, SPACE_2, SPACE_3, SPACE_4, SPACE_6,
-    TYPE_BODY, TYPE_BODY_STRONG, TYPE_CAPTION, TYPE_HEADLINE, TypeStyleExt, UiColors,
+    TYPE_BODY, TYPE_BODY_STRONG, TYPE_CAPTION, TYPE_HEADLINE, TextScale, TypeStyleExt, UiColors,
 };
 use crate::widgets::{empty_state, icon};
 
@@ -112,6 +114,9 @@ pub struct RoomsLaunch {
     pub delete_prompt: bool,
     /// An encryption screen or dialog to open (ADR 0009).
     pub encryption: Option<crate::EncryptionLaunch>,
+    /// Review the account's newest message the encryption stopped, before
+    /// Send anyway (ADR 0015).
+    pub review_stopped: bool,
 }
 
 /// A composer state to open on (`familychat launch-ui-fixture`).
@@ -129,6 +134,14 @@ pub enum ComposerLaunch {
     Attachment,
     /// A file over the server's limit was refused.
     TooLarge,
+}
+
+/// A message the encryption stopped, under review before Send anyway.
+pub(crate) struct StoppedReview {
+    room: OwnedRoomId,
+    target: MessageRef,
+    /// `None` while the session is asked.
+    answer: Option<Result<StoppedMessage, String>>,
 }
 
 /// A room came in front of the person (the shell marks its
@@ -178,6 +191,11 @@ pub(crate) struct RoomsView {
     delete_modal: ModalState,
     leave_prompt: Option<RoomSummary>,
     leave_modal: ModalState,
+    /// The stopped message under review before Send anyway, and what the
+    /// session says it waits on once it answers.
+    review: Option<StoppedReview>,
+    review_modal: ModalState,
+    review_task: Task<()>,
     /// When the open room was last marked read.
     last_read: Option<std::time::Instant>,
     /// The open room's identity warnings (ADR 0009).
@@ -201,6 +219,7 @@ impl RoomsView {
     pub(crate) fn new(
         session: Arc<dyn SessionApi>,
         account: AccountView,
+        privacy: tokio::sync::watch::Receiver<PrivacySettings>,
         toasts: Entity<ToastHost>,
         launch: Option<RoomsLaunch>,
         window: &mut Window,
@@ -212,6 +231,8 @@ impl RoomsView {
             .unwrap_or_default();
         let images = cx.new(|_| ImageCache::new(session.clone(), account.key.clone()));
         let (actions, mut action_events) = Actions::channel(session.clone(), account.key.clone());
+        // Read receipts and typing notices follow Settings (ADR 0015).
+        let actions = actions.with_privacy(privacy);
         let action_events = cx.spawn_in(window, async move |this, cx| {
             while let Some(first) = action_events.recv().await {
                 let mut events = vec![first];
@@ -328,6 +349,9 @@ impl RoomsView {
             delete_modal: ModalState::new(cx),
             leave_prompt: None,
             leave_modal: ModalState::new(cx),
+            review: None,
+            review_modal: ModalState::new(cx),
+            review_task: Task::ready(()),
             last_read: None,
             identity_warnings: Vec::new(),
             warnings_task: Task::ready(()),
@@ -531,6 +555,7 @@ impl RoomsView {
             Some(ComposerLaunch::Reply | ComposerLaunch::Edit)
         ) || launch.message_actions
             || launch.delete_prompt
+            || launch.review_stopped
         {
             self.pending_launch = Some(launch);
         }
@@ -567,6 +592,11 @@ impl RoomsView {
             && let Some(choice) = timeline.read(cx).chosen(|own, _| own)
         {
             self.ask_to_delete(choice, window, cx);
+        }
+        if launch.review_stopped
+            && let Some(choice) = timeline.read(cx).chosen(|own, _| own)
+        {
+            self.review_stopped(choice.target, window, cx);
         }
     }
 
@@ -954,12 +984,7 @@ impl RoomsView {
                 self.mark_read(window, cx);
                 self.apply_pending_launch(window, cx);
             }
-            TimelineViewEvent::SendAnyway(target) => {
-                if let Some(room) = self.selected.clone() {
-                    cx.background_spawn(self.actions.send_anyway(&room, target))
-                        .detach();
-                }
-            }
+            TimelineViewEvent::SendAnyway(target) => self.review_stopped(target, window, cx),
         }
     }
 
@@ -1138,6 +1163,167 @@ impl RoomsView {
                 .detach();
         }
         self.close_delete_prompt(window, cx);
+    }
+
+    /// Opens the review of a stopped message (ADR 0015): who it would go to
+    /// before it is sent anyway.
+    pub(crate) fn review_stopped(
+        &mut self,
+        target: MessageRef,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let Some(room) = self.selected.clone() else {
+            return;
+        };
+        let reply = self
+            .session
+            .stopped_message(&self.account.key, &room, target.clone());
+        self.review = Some(StoppedReview {
+            room,
+            target,
+            answer: None,
+        });
+        self.review_modal.open(window, cx);
+        self.review_task = cx.spawn(async move |this, cx| {
+            let answer = reply
+                .await
+                .unwrap_or(Err(SessionError::ShutDown))
+                .map_err(|error| error.to_string());
+            let _ = this.update(cx, |this, cx| {
+                if let Some(review) = &mut this.review {
+                    review.answer = Some(answer);
+                }
+                cx.notify();
+            });
+        });
+        cx.notify();
+    }
+
+    /// The review showing, if any.
+    #[cfg_attr(not(test), allow(dead_code))]
+    pub(crate) fn stopped_review(&self) -> Option<&Option<Result<StoppedMessage, String>>> {
+        self.review.as_ref().map(|review| &review.answer)
+    }
+
+    fn close_review(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.review = None;
+        self.review_task = Task::ready(());
+        self.review_modal.close(window, cx);
+        window.focus(&self.focus_handle, cx);
+        cx.notify();
+    }
+
+    /// Sends the reviewed message anyway, through the actions.
+    fn confirm_send_anyway(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if let Some(review) = self.review.take() {
+            cx.background_spawn(self.actions.send_anyway(&review.room, review.target))
+                .detach();
+        }
+        self.close_review(window, cx);
+    }
+
+    fn render_review(&self, colors: &UiColors, cx: &mut Context<Self>) -> Option<AnyElement> {
+        let review = self.review.as_ref()?;
+        let (title, description, body, can_send): (&str, &str, AnyElement, bool) =
+            match &review.answer {
+                None => (
+                    wording::REVIEW_TITLE,
+                    wording::REVIEW_DEVICES,
+                    div()
+                        .id("review-loading")
+                        .flex()
+                        .items_center()
+                        .gap(px(SPACE_2))
+                        .child(spinner("review-spinner", ICON_SIZE_SM, colors.muted))
+                        .child(readable(
+                            "review-loading-text",
+                            "Checking who it would go to…",
+                        ))
+                        .into_any_element(),
+                    false,
+                ),
+                Some(Err(problem)) => (
+                    wording::REVIEW_TITLE,
+                    wording::REVIEW_DEVICES,
+                    Banner::new("review-problem", problem.clone())
+                        .tone(BannerTone::Danger)
+                        .into_any_element(),
+                    false,
+                ),
+                Some(Ok(stopped)) => match stopped.problem {
+                    SendProblem::IdentityChanged => (
+                        wording::REVIEW_PEOPLE_TITLE,
+                        wording::REVIEW_PEOPLE,
+                        div()
+                            .id("review-people")
+                            .accessible(Role::List, "People with a new identity")
+                            .flex()
+                            .flex_col()
+                            .gap(px(SPACE_2))
+                            .children(stopped.people.iter().enumerate().map(|(index, person)| {
+                                review_row(
+                                    ("review-person", index as u64),
+                                    "user",
+                                    person.label(),
+                                    person.user_id.to_string(),
+                                    colors,
+                                )
+                            }))
+                            .into_any_element(),
+                        true,
+                    ),
+                    SendProblem::UnconfirmedDevices => (
+                        wording::REVIEW_TITLE,
+                        wording::REVIEW_DEVICES,
+                        div()
+                            .id("review-devices")
+                            .accessible(Role::List, "Unconfirmed devices")
+                            .flex()
+                            .flex_col()
+                            .gap(px(SPACE_2))
+                            .children(stopped.devices.iter().enumerate().map(|(index, device)| {
+                                review_row(
+                                    ("review-device", index as u64),
+                                    "smartphone",
+                                    format!("{}: {}", device.owner_label(), device.device_label()),
+                                    device.device_id.clone(),
+                                    colors,
+                                )
+                            }))
+                            .into_any_element(),
+                        true,
+                    ),
+                    SendProblem::ConfirmThisDevice => (
+                        wording::REVIEW_TITLE,
+                        wording::CONFIRM_THIS_DEVICE_NOT_SENT,
+                        div().into_any_element(),
+                        false,
+                    ),
+                },
+            };
+        Some(
+            Modal::new("review-stopped", self.review_modal.focus_handle())
+                .title(title)
+                .description(description)
+                .width(px(480.0))
+                .child(body)
+                .footer(
+                    Button::new("review-cancel", "Cancel")
+                        .on_click(cx.listener(|this, _, window, cx| this.close_review(window, cx))),
+                )
+                .footer(
+                    Button::new("review-send-anyway", wording::SEND_ANYWAY)
+                        .icon("send")
+                        .danger()
+                        .disabled(!can_send)
+                        .on_click(
+                            cx.listener(|this, _, window, cx| this.confirm_send_anyway(window, cx)),
+                        ),
+                )
+                .on_dismiss(cx.listener(|this, _, window, cx| this.close_review(window, cx)))
+                .into_any_element(),
+        )
     }
 
     fn close_leave_prompt(&mut self, window: &mut Window, cx: &mut Context<Self>) {
@@ -1530,7 +1716,7 @@ impl RoomsView {
             .accessible(Role::ListBoxOption, room.accessible_label())
             .aria_selected(selected)
             .w_full()
-            .h(px(ROOM_ROW_HEIGHT))
+            .h(room_row_height(cx))
             .px(px(SPACE_2))
             .flex()
             .items_center()
@@ -1865,7 +2051,8 @@ impl RoomsView {
             .flex_none()
             .items_center()
             .gap(px(SPACE_3))
-            .h(px(60.0))
+            .min_h(two_line_height(60.0, cx))
+            .py(px(SPACE_1))
             .px(px(SPACE_4))
             .border_b_1()
             .border_color(rgb(colors.border))
@@ -1917,7 +2104,7 @@ impl RoomsView {
                     .flex_none()
                     .items_center()
                     .gap(px(SPACE_1))
-                    .h(px(26.0))
+                    .h(TextScale::get(cx).fit(26.0, TYPE_CAPTION))
                     .px(px(SPACE_2))
                     .rounded(px(RADIUS_FULL))
                     .bg(rgb(lock_fill))
@@ -2135,7 +2322,7 @@ impl RoomsView {
                     .flex_none()
                     .items_center()
                     .gap(px(SPACE_2))
-                    .h(px(60.0))
+                    .min_h(two_line_height(60.0, cx))
                     .px(px(SPACE_4))
                     .border_b_1()
                     .border_color(rgb(colors.border))
@@ -2264,75 +2451,118 @@ impl RoomsView {
 
     fn render_link_prompt(&self, colors: &UiColors, cx: &mut Context<Self>) -> Option<AnyElement> {
         let prompt = self.link_prompt()?;
-        let target = prompt.target.clone();
-        let warning = prompt.warning().map(|(title, sentence)| {
+        let room = cx.entity().downgrade();
+        let close = {
+            let room = room.clone();
+            move |window: &mut Window, cx: &mut App| {
+                let _ = room.update(cx, |this, cx| this.close_link_prompt(window, cx));
+            }
+        };
+        Some(link_prompt_dialog(
+            prompt,
+            &self.link_modal,
+            colors,
+            close,
+            move |window, cx| {
+                let _ = room.update(cx, |this, cx| this.open_prompted_link(window, cx));
+            },
+        ))
+    }
+}
+
+/// The dialog that asks before a link leaves the app (ADR 0007): the whole
+/// address, the look-alike warning, Copy Link, Cancel and Open. The rooms'
+/// links use it, and so does Settings for the panel's address.
+pub(crate) fn link_prompt_dialog(
+    prompt: &LinkPrompt,
+    modal: &ModalState,
+    colors: &UiColors,
+    on_cancel: impl Fn(&mut Window, &mut App) + Clone + 'static,
+    on_open: impl Fn(&mut Window, &mut App) + 'static,
+) -> AnyElement {
+    let target = prompt.target.clone();
+    let warning = prompt.warning().map(|(title, sentence)| {
+        div()
+            .id("link-warning")
+            .accessible(Role::Alert, format!("{title}. {sentence}"))
+            .flex()
+            .items_start()
+            .gap(px(SPACE_2))
+            .p(px(SPACE_3))
+            .rounded(px(RADIUS_MD))
+            .border_1()
+            .border_color(rgb(colors.warning))
+            .bg(rgb(colors.warning_background))
+            .child(icon("shield-alert", ICON_SIZE_SM, colors.warning))
+            .child(
+                div()
+                    .flex_1()
+                    .min_w_0()
+                    .flex()
+                    .flex_col()
+                    .gap(px(SPACE_1))
+                    .type_style(TYPE_CAPTION)
+                    .child(div().font_weight(FontWeight::SEMIBOLD).child(title))
+                    .child(sentence),
+            )
+    });
+    let open = Button::new("link-open", prompt.open_label())
+        .on_click(move |_, window, cx| on_open(window, cx));
+    // A mismatched link makes Cancel the main button.
+    let (open, cancel) = if prompt.is_mismatched() {
+        (
+            open.danger(),
+            Button::new("link-cancel", "Cancel").primary(),
+        )
+    } else {
+        (open.primary(), Button::new("link-cancel", "Cancel"))
+    };
+    let dismiss = on_cancel.clone();
+    Modal::new("link-prompt", modal.focus_handle())
+        .title(prompt.title())
+        .description(prompt.description())
+        .width(px(520.0))
+        .children(warning)
+        .child(
             div()
-                .id("link-warning")
-                .accessible(Role::Alert, format!("{title}. {sentence}"))
-                .flex()
-                .items_start()
-                .gap(px(SPACE_2))
+                .id("link-target-box")
                 .p(px(SPACE_3))
                 .rounded(px(RADIUS_MD))
+                .bg(rgb(colors.surface))
                 .border_1()
-                .border_color(rgb(colors.warning))
-                .bg(rgb(colors.warning_background))
-                .child(icon("shield-alert", ICON_SIZE_SM, colors.warning))
-                .child(
-                    div()
-                        .flex_1()
-                        .min_w_0()
-                        .flex()
-                        .flex_col()
-                        .gap(px(SPACE_1))
-                        .type_style(TYPE_CAPTION)
-                        .child(div().font_weight(FontWeight::SEMIBOLD).child(title))
-                        .child(sentence),
-                )
-        });
-        let open = Button::new("link-open", prompt.open_label())
-            .on_click(cx.listener(|this, _, window, cx| this.open_prompted_link(window, cx)));
-        // A mismatched link makes Cancel the main button.
-        let (open, cancel) = if prompt.is_mismatched() {
-            (
-                open.danger(),
-                Button::new("link-cancel", "Cancel").primary(),
-            )
-        } else {
-            (open.primary(), Button::new("link-cancel", "Cancel"))
-        };
-        Some(
-            Modal::new("link-prompt", self.link_modal.focus_handle())
-                .title(prompt.title())
-                .description(prompt.description())
-                .width(px(520.0))
-                .children(warning)
-                .child(
-                    div()
-                        .id("link-target-box")
-                        .p(px(SPACE_3))
-                        .rounded(px(RADIUS_MD))
-                        .bg(rgb(colors.surface))
-                        .border_1()
-                        .border_color(rgb(colors.border))
-                        .font_family(rich_text::MONO_FONT)
-                        .text_sm()
-                        // The whole address, read out before the choice.
-                        .child(readable("link-target", prompt.target.clone())),
-                )
-                .footer(Button::new("link-copy", "Copy Link").icon("copy").on_click(
-                    move |_, _, cx| {
-                        cx.write_to_clipboard(ClipboardItem::new_string(target.clone()));
-                    },
-                ))
-                .footer(cancel.on_click(
-                    cx.listener(|this, _, window, cx| this.close_link_prompt(window, cx)),
-                ))
-                .footer(open)
-                .on_dismiss(cx.listener(|this, _, window, cx| this.close_link_prompt(window, cx)))
-                .into_any_element(),
+                .border_color(rgb(colors.border))
+                .font_family(rich_text::MONO_FONT)
+                .text_sm()
+                // The whole address, read out before the choice.
+                .child(readable("link-target", prompt.target.clone())),
         )
-    }
+        .footer(
+            Button::new("link-copy", "Copy Link")
+                .icon("copy")
+                .on_click(move |_, _, cx| {
+                    cx.write_to_clipboard(ClipboardItem::new_string(target.clone()));
+                }),
+        )
+        .footer(cancel.on_click(move |_, window, cx| on_cancel(window, cx)))
+        .footer(open)
+        .on_dismiss(move |_, window, cx| dismiss(window, cx))
+        .into_any_element()
+}
+
+/// A room list row's height: 64 px at the default text size, growing by
+/// as much as its two lines (the name and the preview) do, so larger text
+/// is never cut off (ADR 0015).
+fn room_row_height(cx: &App) -> gpui::Pixels {
+    two_line_height(ROOM_ROW_HEIGHT, cx)
+}
+
+/// `pixels` at the default text size, grown by a name's and a caption's
+/// lines at the current text size.
+fn two_line_height(pixels: f32, cx: &App) -> gpui::Pixels {
+    let scale = TextScale::get(cx).0;
+    let lines = TYPE_BODY_STRONG.line_height_px(crate::styles::BASE_REM_PX)
+        + TYPE_CAPTION.line_height_px(crate::styles::BASE_REM_PX);
+    px(pixels + lines * (scale - 1.0))
 }
 
 /// The time the list shows for a room's latest activity: the time today,
@@ -2438,7 +2668,44 @@ impl Render for RoomsView {
             .children(self.render_link_prompt(&colors, cx))
             .children(self.render_delete_prompt(cx))
             .children(self.render_leave_prompt(cx))
+            .children(self.render_review(&colors, cx))
     }
+}
+
+/// One device or person in the review of a stopped message.
+fn review_row(
+    id: impl Into<gpui::ElementId>,
+    icon_name: &'static str,
+    label: String,
+    detail: String,
+    colors: &UiColors,
+) -> AnyElement {
+    div()
+        .id(id)
+        .accessible(Role::ListItem, format!("{label}, {detail}"))
+        .flex()
+        .items_center()
+        .gap(px(SPACE_3))
+        .p(px(SPACE_3))
+        .rounded(px(RADIUS_LG))
+        .border_1()
+        .border_color(rgb(colors.border))
+        .child(icon(icon_name, ICON_SIZE_SM, colors.warning))
+        .child(
+            div()
+                .flex()
+                .flex_col()
+                .min_w_0()
+                .child(div().type_style(TYPE_BODY_STRONG).truncate().child(label))
+                .child(
+                    div()
+                        .type_style(TYPE_CAPTION)
+                        .text_color(rgb(colors.muted))
+                        .truncate()
+                        .child(detail),
+                ),
+        )
+        .into_any_element()
 }
 
 #[cfg(test)]

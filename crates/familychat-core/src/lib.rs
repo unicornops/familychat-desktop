@@ -142,6 +142,9 @@ pub struct AppBootstrap {
     pub light_theme: ThemeSummary,
     /// Upstream provenance.
     pub upstream: UpstreamPins,
+    /// Where the local log files are (the profile's `logs/`), for Settings
+    /// → Diagnostics; `None` when there is no profile (a fixture).
+    pub log_dir: Option<std::path::PathBuf>,
 }
 
 impl AppBootstrap {

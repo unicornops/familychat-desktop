@@ -19,9 +19,10 @@
 //! | `Modal`, `Menu` | an open dialog or menu (the components' own keys) |
 //! | `TextInput` | any text field (owned by the text input component) |
 //!
-//! Quit, Hide, Hide Others and Minimize have no context: [`register`]
-//! handles them app-wide, so they work from the macOS menu bar even when
-//! no Family Chat element has focus.
+//! Quit, Settings, Hide, Hide Others and Minimize have no context:
+//! [`register`] handles them app-wide, so they work from the Settings
+//! window and from the macOS menu bar even when no Family Chat element has
+//! focus.
 
 use gpui::{App, actions};
 
@@ -62,7 +63,9 @@ actions!(
         ShowPeople,
         /// List the invitations.
         ShowInvites,
-        /// Open the notification settings.
+        /// Open Settings.
+        OpenSettings,
+        /// Open Settings at Notifications.
         NotificationSettings,
         /// "Confirm it's you": verify this device (ADR 0009).
         ConfirmIdentity,
@@ -115,6 +118,13 @@ pub(crate) const PLATFORM_ACTIONS: &[(&str, &str)] = &[
 /// Handles the app-wide actions. Call it once, before the first window.
 pub(crate) fn register(cx: &mut App) {
     cx.on_action(|_: &Quit, cx| cx.quit());
+    // Settings opens from any window, and from the macOS menu bar with
+    // no window focused (the main window's own handler closes its palette
+    // first).
+    cx.on_action(|_: &OpenSettings, cx| crate::settings::open(None, cx));
+    cx.on_action(|_: &NotificationSettings, cx| {
+        crate::settings::open(Some(crate::settings::SettingsSection::Notifications), cx);
+    });
     cx.on_action(|_: &Hide, cx| cx.hide());
     cx.on_action(|_: &HideOthers, cx| cx.hide_other_apps());
     cx.on_action(|_: &Minimize, cx| {

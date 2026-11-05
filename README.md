@@ -84,7 +84,7 @@ Phase 8, end-to-end encryption ([#9](https://github.com/unicornops/familychat-de
 
 Phase 9, notifications, single instance and sign-in links ([#10](https://github.com/unicornops/familychat-desktop/issues/10), [ADR 0013](./docs/adr/0013-notifications-single-instance-and-sign-in-links.md)):
 
-- your computer's own notifications for new messages while Family Chat is open, for the rooms you aren't looking at: who wrote, where and what (or just "New message" if you turn the text off in Notification settings, Ctrl+Alt+N or Cmd+Option+N), one per room however many arrive, and never more than six a minute; clicking one opens the room
+- your computer's own notifications for new messages while Family Chat is open, for the rooms you aren't looking at: who wrote, where and what (or just "New message" if you turn the text off in Settings → Notifications, Ctrl+Alt+N or Cmd+Option+N), one per room however many arrive, and never more than six a minute; clicking one opens the room
 - the number of unread messages in the window's title
 - one Family Chat per profile, now with a hand-off: opening a sign-in link while Family Chat is open (`familychat open-link`, which reads the link so it never sits in your shell history, or `familychat LINK`) brings the open window forward with "Sign in as …?", over your rooms if you're signed in, and nothing is used until you say Continue
 - the link travels only over a socket or pipe your user alone can open, and never reaches a log
@@ -98,6 +98,14 @@ Phase 10, the terminal UI: sign-in and reading ([#11](https://github.com/unicorn
 - every link and file numbered: links show their whole address and ask before your browser opens them, files are saved where you type
 - the mouse (click, scroll, drag to select and copy, as in Zellij), new messages in the status line with an optional bell (`--bell`), `NO_COLOR` and ASCII drawing (`--ascii`)
 - every name, message and file name from a server is filtered for escape sequences before it reaches your terminal
+
+Phase 13, settings, accessibility and hardening ([#14](https://github.com/unicornops/familychat-desktop/issues/14), [ADR 0015](./docs/adr/0015-settings-accessibility-and-hardening.md)):
+
+- a Settings window (Ctrl+, or Cmd+,): your account and this device; for a Family Chat account, where a parent resets your password, gives you a new sign-in code or deactivates the account (the Family Chat panel, opened only after the usual "Open this link?"); your sessions; recovery (and a new recovery key), room keys, and resetting your identity when nothing else is left; read receipts and typing notices you can turn off; theme, text size up to 200%, reduced motion and increased contrast; notifications on or off, with or without the text; and diagnostics: the version, where the logs are and a button to open their folder (nothing is ever uploaded)
+- sign out: your server is told when it can be, then the account's keys, stored messages and pictures, drafts and settings are removed from this computer
+- Send anyway shows which devices or people a stopped message would go to before it is sent
+- the accessibility checklist ([`docs/accessibility.md`](./docs/accessibility.md)): names and roles for every control, the keyboard, announcements, 24 px targets, contrast, text size and motion, with the screen-reader check to run on each OS
+- the hardening checklist ([`docs/hardening.md`](./docs/hardening.md)), and in CI: the performance budgets in a release build, an egress test that fails the build if the live tests reach any host but the test homeservers, and a fuzz run of the sign-in link parser and the message sanitiser
 
 Writing and encryption from the terminal (Phase 11) and the rest follow in the later phases; opening `familychat://` links straight from your browser needs the installers of Phase 12.
 

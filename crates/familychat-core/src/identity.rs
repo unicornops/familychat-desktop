@@ -31,6 +31,12 @@ pub const XDG_DATA_DIR_NAME: &str = "familychat";
 /// `ZMAIL_DATA_DIR` does for Zmail.
 pub const DATA_DIR_ENV: &str = "FAMILYCHAT_DATA_DIR";
 
+/// The Family Chat control panel, where a parent manages the family's
+/// accounts (resets a password, gives a new sign-in code, deactivates an
+/// account). Settings links to it after the usual question (ADR 0015);
+/// nothing in the app manages an account itself.
+pub const PANEL_URL: &str = "https://panel.safechat.family/";
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -124,6 +124,13 @@ ignore-dev-dependencies = true
 #   compose.rs and compose/recipients.rs). The text input's
 #   `submit_on_enter` mode is this project's addition to the ported
 #   crates/familychat-ui/src/components/text_input.rs.
+# - Settings (Phase 13, ADR 0015), same copyright and licence; keep each
+#   file's header notice. Adapted from Zmail's zmail-ui src/settings.rs
+#   (the window, the section list and its keys, the setting rows and
+#   headings) in crates/familychat-ui/src/settings.rs and
+#   src/settings/sections.rs, and its docs/phase5-hardening.md (the
+#   accessibility baseline and the screen-reader script) in
+#   docs/accessibility.md.
 # - crates/familychat-ui/src/testdata/signin-qr-screenshot.png is made for
 #   this project's tests (python-qrcode and Pillow), under its licence, and
 #   crates/familychat-test-support/src/testdata/photo.jpg (a 32x24
@@ -159,6 +166,7 @@ ignore-dev-dependencies = true
 #   shield-off and users from Lucide 1.68.0; in Phase 7 door-open
 #   and face-slightly-smiling-plus from Lucide 1.68.0; in Phase 8
 #   file-key from Zmail's copy, and laptop, save, smartphone and upload
-#   from Lucide 1.68.0. Embedded
+#   from Lucide 1.68.0; in Phase 13 folder from Zmail's copy and bell from
+#   Lucide 1.68.0. Embedded
 #   in all builds; release archives ship the licence as
 #   licenses/Lucide-LICENSE.txt.

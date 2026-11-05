@@ -122,9 +122,10 @@ pub const SHARED: &[(&str, Cmd)] = &[
 /// brings them (PLAN.md, section 13.11: writing in the terminal).
 #[cfg_attr(not(test), allow(dead_code))]
 pub const LATER: &[(&str, &str)] = &[
-    // The window's notification settings dialog (ADR 0013); the terminal
-    // gets its settings with Phase 13.
-    ("NotificationSettings", "Phase 13"),
+    // The window's Settings (ADR 0015); the terminal's own settings page
+    // is not phased yet (PLAN.md, section 14).
+    ("OpenSettings", "later"),
+    ("NotificationSettings", "later"),
     ("FocusComposer", "Phase 11"),
     ("AttachFile", "Phase 11"),
     ("SelectPreviousMessage", "Phase 11"),

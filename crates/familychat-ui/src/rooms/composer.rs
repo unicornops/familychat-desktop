@@ -44,6 +44,7 @@ use crate::components::{
     Avatar, ComponentTheme, HitTargetExt, IconButton, MIN_TARGET_SIZE, TextInput, TextInputEvent,
 };
 use crate::signin::primary_key;
+use crate::styles::TextScale;
 use crate::styles::{
     ICON_SIZE_SM, RADIUS_MD, SPACE_1, SPACE_2, SPACE_3, SPACE_4, SPACE_6, TYPE_BODY, TYPE_CAPTION,
     TypeStyleExt, UiColors, contrast::mix,
@@ -886,7 +887,7 @@ impl ComposerView {
                         .flex()
                         .items_center()
                         .gap(px(SPACE_2))
-                        .h(px(SUGGESTION_HEIGHT))
+                        .h(TextScale::get(cx).fit(SUGGESTION_HEIGHT, TYPE_BODY))
                         .min_w(px(MIN_TARGET_SIZE))
                         .px(px(SPACE_2))
                         .rounded(px(RADIUS_MD))

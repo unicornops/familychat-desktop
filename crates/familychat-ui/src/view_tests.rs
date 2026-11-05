@@ -39,6 +39,7 @@ mod hit_targets;
 mod notifications;
 mod perf;
 mod rooms;
+mod settings;
 mod signin;
 
 pub(super) fn bootstrap() -> AppBootstrap {
@@ -61,6 +62,9 @@ pub(super) fn bootstrap() -> AppBootstrap {
             zed_commit: "c84af5b99cbc366d675064e52b23664a015b6e35".to_owned(),
             zed_tag: "v1.27.0".to_owned(),
         },
+        log_dir: Some(std::path::PathBuf::from(
+            "/home/ana/.local/share/familychat/logs",
+        )),
     }
 }
 

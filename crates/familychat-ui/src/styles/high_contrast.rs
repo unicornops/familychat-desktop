@@ -105,6 +105,10 @@ pub(crate) struct ContrastSetting {
     /// Set by the screenshot fixture: keep this contrast whatever the
     /// platform says.
     pub(crate) simulated: bool,
+    /// Settings → Appearance → Contrast: Increased (ADR 0015). Raises
+    /// contrast where the platform asks for none; a Windows contrast theme
+    /// still wins.
+    pub(crate) prefer_increased: bool,
 }
 
 impl Global for ContrastSetting {}
@@ -113,8 +117,24 @@ impl ContrastSetting {
     /// The active contrast, or [`Contrast::Standard`] before it is set.
     pub(crate) fn get(cx: &App) -> Contrast {
         cx.try_global::<Self>()
-            .map(|setting| setting.contrast)
+            .map(|setting| match setting.contrast {
+                Contrast::Standard if setting.prefer_increased => Contrast::Increased,
+                contrast => contrast,
+            })
             .unwrap_or_default()
+    }
+
+    /// Follows the person's contrast choice. Returns whether it changed.
+    pub(crate) fn set_prefer_increased(prefer: bool, cx: &mut App) -> bool {
+        let current = cx.try_global::<Self>().copied().unwrap_or_default();
+        if current.prefer_increased == prefer && cx.has_global::<Self>() {
+            return false;
+        }
+        cx.set_global(Self {
+            prefer_increased: prefer,
+            ..current
+        });
+        true
     }
 
     /// Re-read the platform's setting unless a fixture pinned one.
@@ -131,15 +151,20 @@ impl ContrastSetting {
         cx.set_global(Self {
             contrast,
             simulated: false,
+            prefer_increased: current.prefer_increased,
         });
         true
     }
 
     /// Pin `contrast`, ignoring the platform (the screenshot fixture).
     pub(crate) fn simulate(contrast: Contrast, cx: &mut App) {
+        let prefer_increased = cx
+            .try_global::<Self>()
+            .is_some_and(|setting| setting.prefer_increased);
         cx.set_global(Self {
             contrast,
             simulated: true,
+            prefer_increased,
         });
     }
 }

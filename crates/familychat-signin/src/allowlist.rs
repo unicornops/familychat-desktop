@@ -91,6 +91,13 @@ impl Allowlist {
             .any(|suffix| name.host_is_under(suffix))
     }
 
+    /// Whether an account's homeserver URL (as the registry keeps it) is
+    /// one of Family Chat's: what Settings shows the panel's guidance for
+    /// (ADR 0015). Anything that doesn't parse is not.
+    pub fn is_family_chat(&self, homeserver_url: &str) -> bool {
+        Url::parse(homeserver_url).is_ok_and(|url| self.check(&url).is_ok())
+    }
+
     /// Checks a resolved homeserver URL: `https://`, a host name (not an
     /// address) under one of the suffixes, no user info. The checked URL
     /// keeps its path, without a query or fragment.
@@ -184,6 +191,22 @@ mod tests {
 
     fn url(text: &str) -> Url {
         Url::parse(text).expect("a URL")
+    }
+
+    #[test]
+    fn an_account_url_is_family_chat_only_under_the_allowlist() {
+        let allowlist = Allowlist::production();
+        assert!(allowlist.is_family_chat("https://smith.safechat.family"));
+        assert!(allowlist.is_family_chat("https://smith.safechat.family/"));
+        for other in [
+            "https://matrix.example.org",
+            "http://smith.safechat.family",
+            "https://safechat.family.example.org",
+            "not a url",
+            "",
+        ] {
+            assert!(!allowlist.is_family_chat(other), "{other}");
+        }
     }
 
     #[test]

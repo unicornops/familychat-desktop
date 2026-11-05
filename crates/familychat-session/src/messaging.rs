@@ -20,11 +20,13 @@ use std::{
 };
 
 use familychat_core::{
+    encryption::{StoppedMessage, StoppedPerson, UnconfirmedDevice},
     messaging::{
         MediaLimits, MessageRef, NewRoom, OutgoingFile, OutgoingMessage, RoomDone, RoomRequest,
         ServerDefaults,
     },
     session::SessionError,
+    timeline::SendProblem,
 };
 use matrix_sdk::{
     Client, Room,
@@ -84,7 +86,7 @@ impl OpenTimelines {
     }
 
     /// The room's open timeline, or a new one for this action.
-    async fn for_room(&self, room: &Room) -> Result<Arc<Timeline>, SessionError> {
+    pub(crate) async fn for_room(&self, room: &Room) -> Result<Arc<Timeline>, SessionError> {
         if let Some(timeline) = self.get(&room.room_id().to_owned()) {
             return Ok(timeline);
         }
@@ -200,17 +202,21 @@ pub(crate) async fn room_action(
                     SessionError::Failed("The message couldn't be deleted. Try again.".to_owned())
                 })
         }
-        RoomRequest::MarkRead => {
+        RoomRequest::MarkRead | RoomRequest::MarkReadPrivately => {
             let timeline = timelines.for_room(&room).await?;
             let Some(latest) = timeline.latest_event_id().await else {
                 return Ok(RoomDone::Done);
             };
+            let receipts = Receipts::new().fully_read_marker(latest.clone());
+            // Read receipts off (ADR 0015): a private receipt keeps the
+            // account's devices and unread counts right, and tells nobody.
+            let receipts = if matches!(request, RoomRequest::MarkReadPrivately) {
+                receipts.private_read_receipt(latest)
+            } else {
+                receipts.public_read_receipt(latest)
+            };
             timeline
-                .send_multiple_receipts(
-                    Receipts::new()
-                        .fully_read_marker(latest.clone())
-                        .public_read_receipt(latest),
-                )
+                .send_multiple_receipts(receipts)
                 .await
                 .map(|()| RoomDone::Done)
                 .map_err(|error| session_error(&error, "The room couldn't be marked as read."))
@@ -259,6 +265,92 @@ pub(crate) async fn room_action(
             let timeline = timelines.for_room(&room).await?;
             send_anyway(&room, &timeline, &target).await
         }
+    }
+}
+
+/// Why a message the encryption stopped is waiting, with the devices or
+/// people it waits on and their names (ADR 0015): what the window shows
+/// before Send anyway.
+pub(crate) async fn stopped_message(
+    room: &Room,
+    timeline: &Timeline,
+    target: &MessageRef,
+) -> Result<StoppedMessage, SessionError> {
+    let not_there =
+        || SessionError::Failed("That message isn't waiting to be sent any more.".to_owned());
+    let items = timeline.items().await;
+    let event = items
+        .iter()
+        .find(|item| item.unique_id().0 == target.item.0)
+        .and_then(|item| item.as_event().cloned())
+        .ok_or_else(not_there)?;
+    let Some(EventSendState::SendingFailed { error, .. }) = event.send_state() else {
+        return Err(not_there());
+    };
+    let client = room.client();
+    let own = client.user_id().map(ToOwned::to_owned);
+    let encryption = client.encryption();
+    let member_name = async |user_id: &matrix_sdk::ruma::UserId| {
+        room.get_member_no_sync(user_id)
+            .await
+            .ok()
+            .flatten()
+            .and_then(|member| member.display_name().map(ToOwned::to_owned))
+    };
+    match QueueWedgeError::from(error.as_ref()) {
+        QueueWedgeError::InsecureDevices { user_device_map } => {
+            let mut devices = Vec::new();
+            for (user_id, device_ids) in user_device_map {
+                let user_name = member_name(&user_id).await;
+                for device_id in device_ids {
+                    let device_name = encryption
+                        .get_device(&user_id, &device_id)
+                        .await
+                        .ok()
+                        .flatten()
+                        .and_then(|device| device.display_name().map(ToOwned::to_owned));
+                    devices.push(UnconfirmedDevice {
+                        own: own.as_ref() == Some(&user_id),
+                        user_id: user_id.clone(),
+                        user_name: user_name.clone(),
+                        device_id: device_id.to_string(),
+                        device_name,
+                    });
+                }
+            }
+            // The account's own devices first, then by person and device.
+            devices.sort_by(|a, b| {
+                b.own
+                    .cmp(&a.own)
+                    .then(a.user_id.cmp(&b.user_id))
+                    .then(a.device_id.cmp(&b.device_id))
+            });
+            Ok(StoppedMessage {
+                problem: SendProblem::UnconfirmedDevices,
+                devices,
+                people: Vec::new(),
+            })
+        }
+        QueueWedgeError::IdentityViolations { users } => {
+            let mut people = Vec::new();
+            for user_id in users {
+                people.push(StoppedPerson {
+                    name: member_name(&user_id).await,
+                    user_id,
+                });
+            }
+            Ok(StoppedMessage {
+                problem: SendProblem::IdentityChanged,
+                devices: Vec::new(),
+                people,
+            })
+        }
+        QueueWedgeError::CrossVerificationRequired => Ok(StoppedMessage {
+            problem: SendProblem::ConfirmThisDevice,
+            devices: Vec::new(),
+            people: Vec::new(),
+        }),
+        _ => Err(not_there()),
     }
 }
 

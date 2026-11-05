@@ -205,10 +205,20 @@ pub struct AccountSummary {
 pub enum Preference {
     /// The theme: `system`, `light` or `dark`.
     Theme,
-    /// The text size.
+    /// The text size, in percent (`100` to `200`).
     TextSize,
     /// Whether notifications show the message's text: `show` or `hide`.
     NotificationContent,
+    /// Whether system notifications are posted at all: `on` or `off`.
+    Notifications,
+    /// Whether public read receipts are sent: `on` or `off`.
+    ReadReceipts,
+    /// Whether typing notices are sent: `on` or `off`.
+    TypingNotices,
+    /// Reduced motion: `system`, `reduce` or `full`.
+    Motion,
+    /// Contrast: `system` or `increased`.
+    Contrast,
 }
 
 impl Preference {
@@ -217,6 +227,11 @@ impl Preference {
             Self::Theme => "theme",
             Self::TextSize => "text-size",
             Self::NotificationContent => "notification-content",
+            Self::Notifications => "notifications",
+            Self::ReadReceipts => "read-receipts",
+            Self::TypingNotices => "typing-notices",
+            Self::Motion => "motion",
+            Self::Contrast => "contrast",
         }
     }
 }

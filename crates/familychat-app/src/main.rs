@@ -471,7 +471,7 @@ fn ready_or_explain(state: ProfileState) -> Result<Profile> {
 /// window closes the accounts' syncs stop before the runtime does.
 fn launch_gui(lock: ProfileLock, link: Option<SecretText>) -> Result<()> {
     let runtime = BackgroundRuntime::start(RUNTIME_WORKER_THREADS)?;
-    let bootstrap = build_bootstrap(runtime.summary())?;
+    let bootstrap = build_bootstrap(runtime.summary(), Some(lock.dir().logs_dir()))?;
     let (requests, inbox) = request_channel();
     if let Some(link) = link {
         let _ = requests.try_send(AppRequest::OpenLink(link));
@@ -520,10 +520,17 @@ fn launch_gui(lock: ProfileLock, link: Option<SecretText>) -> Result<()> {
 #[cfg(feature = "ui-fixture")]
 fn launch_ui_fixture(view: &str, theme: Option<familychat_core::ThemeAppearance>) -> Result<()> {
     let (startup, options) = ui_fixture::startup(view, theme)?;
-    let bootstrap = build_bootstrap(RuntimeSummary {
-        worker_threads: 0,
-        bridge_verified: false,
-    })?;
+    // A stand-in profile's logs, for Settings → Diagnostics: the fixture
+    // has no profile.
+    let bootstrap = build_bootstrap(
+        RuntimeSummary {
+            worker_threads: 0,
+            bridge_verified: false,
+        },
+        Some(std::path::PathBuf::from(
+            "/home/ana/.local/share/familychat/logs",
+        )),
+    )?;
     familychat_ui::run(FamilyChatAssets, bootstrap, startup, options);
     Ok(())
 }
@@ -583,7 +590,10 @@ fn launch_tui(lock: ProfileLock, options: TuiOptions) -> Result<()> {
     result
 }
 
-fn build_bootstrap(runtime: RuntimeSummary) -> Result<AppBootstrap> {
+fn build_bootstrap(
+    runtime: RuntimeSummary,
+    log_dir: Option<std::path::PathBuf>,
+) -> Result<AppBootstrap> {
     Ok(AppBootstrap {
         app_version: VERSION.to_owned(),
         runtime,
@@ -593,6 +603,7 @@ fn build_bootstrap(runtime: RuntimeSummary) -> Result<AppBootstrap> {
             zed_commit: ZED_UPSTREAM_COMMIT.to_owned(),
             zed_tag: ZED_TAG.to_owned(),
         },
+        log_dir,
     })
 }
 
@@ -809,10 +820,13 @@ mod tests {
 
     #[test]
     fn the_bootstrap_carries_both_bundled_themes() {
-        let bootstrap = build_bootstrap(RuntimeSummary {
-            worker_threads: 1,
-            bridge_verified: true,
-        })
+        let bootstrap = build_bootstrap(
+            RuntimeSummary {
+                worker_threads: 1,
+                bridge_verified: true,
+            },
+            None,
+        )
         .expect("the bundled themes parse");
         assert_eq!(
             bootstrap.theme(ThemeAppearance::Dark).appearance,
