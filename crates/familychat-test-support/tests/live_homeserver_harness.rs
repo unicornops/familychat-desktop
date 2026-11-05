@@ -382,6 +382,65 @@ async fn the_non_allowlisted_host_is_a_working_homeserver() -> Result<()> {
 
 #[tokio::test]
 #[ignore = "needs the homeserver harness: scripts/homeserver-harness.sh up"]
+async fn the_redirecting_host_answers_307_on_login_only() -> Result<()> {
+    let harness = harness()?;
+    get(
+        &harness,
+        harness.redirect_url(),
+        &["_matrix", "client", "versions"],
+    )
+    .await?
+    .ok("the redirecting host's /versions")?;
+    let url = HomeserverHarness::url(
+        harness.redirect_url(),
+        &["_matrix", "client", "v3", "login"],
+    )?;
+    let response = harness
+        .client()
+        .post(url)
+        .json(&json!({ "type": "m.login.password" }))
+        .send()
+        .await?;
+    ensure!(response.status().as_u16() == 307, "{}", response.status());
+    ensure!(
+        response
+            .headers()
+            .get("location")
+            .and_then(|value| value.to_str().ok())
+            == Some("https://evil.familychat.example/_matrix/client/v3/login"),
+        "{:?}",
+        response.headers().get("location")
+    );
+    Ok(())
+}
+
+#[tokio::test]
+#[ignore = "needs the homeserver harness: scripts/homeserver-harness.sh up"]
+async fn the_access_log_records_each_request_by_host_without_its_query() -> Result<()> {
+    let harness = harness()?;
+    let marker = HomeserverHarness::unique_localpart("access-log");
+    let mut url = HomeserverHarness::url(
+        harness.evil_url(),
+        &["_matrix", "client", "versions", &marker],
+    )?;
+    url.set_query(Some("secret=query-value"));
+    harness.get(url).await?;
+    let host = harness
+        .evil_url()
+        .strip_prefix("https://")
+        .context("an https URL")?
+        .to_owned();
+    let line = harness
+        .wait_for_access("the marked request", |line| line.path.ends_with(&marker))
+        .await?;
+    ensure!(line.host == host && line.method == "GET", "{line:?}");
+    let log = std::fs::read_to_string(&harness.env().access_log)?;
+    ensure!(!log.contains("query-value"), "the access log keeps queries");
+    Ok(())
+}
+
+#[tokio::test]
+#[ignore = "needs the homeserver harness: scripts/homeserver-harness.sh up"]
 async fn synapse_answers_versions() -> Result<()> {
     let harness = harness()?;
     let versions = get(

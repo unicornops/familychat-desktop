@@ -1,0 +1,58 @@
+[package]
+name = "familychat-signin"
+version = "0.0.1"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+description = "Family Chat's sign-in rules and flows: sign-in links, server names, the allowlist, discovery, code and password sign-in"
+
+[features]
+# Adds *.familychat.dev (Family Chat staging) to the homeserver allowlist.
+# Never in a release build: scripts/check-release-features.sh fails if
+# familychat-app's release graph could enable it (PLAN.md, section 6.5).
+staging = []
+# Adds *.familychat.test (the homeserver harness) to the allowlist, for the
+# live tests. Debug test builds only: a release build with it on fails to
+# compile, and the same check keeps it out of familychat-app (ADR 0004).
+test-harness = []
+
+[dependencies]
+familychat-core = { path = "../familychat-core" }
+familychat-security = { path = "../familychat-security" }
+# The hand-off to matrix-sdk (`AccountManager::add_account`, which restores
+# the session and runs the post-login check). This is what makes the crate
+# a Matrix crate: the frontends reach it only through `familychat-core`'s
+# `SigninApi` (scripts/check-dependency-boundaries.sh).
+familychat-session = { path = "../familychat-session" }
+futures-util = { version = "0.3", default-features = false, features = ["std"] }
+# The dedicated sign-in HTTP client (PLAN.md, section 6.4): the reqwest line
+# matrix-sdk uses, with redirects, retries and pooled connections off.
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+# Reading resolved homeserver URLs (whether a host is a name or an address).
+# Already in the graph through reqwest, which re-exports only `Url`.
+url = "2.5"
+
+[dev-dependencies]
+anyhow.workspace = true
+# The crate's own tests build with the harness allowlist on, as
+# familychat-test-support's do; nothing outside test builds sees it.
+familychat-signin = { path = ".", features = ["test-harness"] }
+familychat-store = { path = "../familychat-store" }
+familychat-test-support = { path = "../familychat-test-support", features = ["test-harness"] }
+# Property tests for the link and server-name parsers (PLAN.md, section 9).
+# Already in the lock file through GPUI; only its default features.
+proptest = "1.12"
+tracing-subscriber.workspace = true
+wiremock = "0.6.5"
+
+[[test]]
+name = "live_signin"
+
+[lints]
+workspace = true

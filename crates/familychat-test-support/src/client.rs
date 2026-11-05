@@ -1,6 +1,7 @@
 //! The harness's test-only HTTP clients (the `test-harness` feature).
 //!
-//! [`edge_client`] is the only place in the workspace that trusts the
+//! [`edge_client`] (and [`edge_client_builder`], the same settings before
+//! they are built) is the only place in the workspace that trusts the
 //! harness CA. It trusts nothing else (no system or bundled roots), resolves
 //! only the harness hostnames, all to the front end on loopback, and refuses
 //! any other name, so a test cannot reach the internet by mistake. Like the
@@ -11,7 +12,7 @@ use std::{net::SocketAddr, sync::Arc, time::Duration};
 
 use anyhow::{Context, Result};
 use reqwest::{
-    Certificate, Client,
+    Certificate, Client, ClientBuilder,
     dns::{Addrs, Name, Resolve, Resolving},
     redirect,
 };
@@ -63,6 +64,15 @@ impl Resolve for HarnessResolver {
 /// trusting only the harness CA, resolving only the harness hosts, with no
 /// redirects and no proxy.
 pub fn edge_client(env: &HarnessEnv) -> Result<Client> {
+    edge_client_builder(env)?
+        .build()
+        .context("could not build the harness HTTP client")
+}
+
+/// [`edge_client`]'s builder, for a client that adds settings of its own:
+/// the sign-in's transport (`familychat_signin::ReqwestTransport::with_builder`)
+/// applies its own redirect, retry and timeout settings on top.
+pub fn edge_client_builder(env: &HarnessEnv) -> Result<ClientBuilder> {
     let pem = std::fs::read(&env.ca_pem).with_context(|| {
         format!(
             "could not read the harness CA at {}; restart the harness with `scripts/homeserver-harness.sh up`",
@@ -70,16 +80,14 @@ pub fn edge_client(env: &HarnessEnv) -> Result<Client> {
         )
     })?;
     let ca = Certificate::from_pem(&pem).context("the harness CA is not a PEM certificate")?;
-    Client::builder()
+    Ok(Client::builder()
         .https_only(true)
         .tls_certs_only([ca])
         .dns_resolver(Arc::new(HarnessResolver::new(env.hosts(), env.edge_addr)))
         .redirect(redirect::Policy::none())
         .no_proxy()
         .connect_timeout(CONNECT_TIMEOUT)
-        .timeout(REQUEST_TIMEOUT)
-        .build()
-        .context("could not build the harness HTTP client")
+        .timeout(REQUEST_TIMEOUT))
 }
 
 /// The client for Palpo's admin API on loopback (plain HTTP, the stand-in
@@ -132,6 +140,7 @@ mod tests {
                     "FAMILYCHAT_HARNESS_HS1_URL" => "https://hs1.familychat.test",
                     "FAMILYCHAT_HARNESS_EVIL_URL" => "https://evil.familychat.example",
                     "FAMILYCHAT_HARNESS_SYNAPSE_URL" => "https://synapse.test",
+                    "FAMILYCHAT_HARNESS_REDIRECT_URL" => "https://redirect.familychat.test",
                     _ => "value",
                 }
                 .to_owned(),

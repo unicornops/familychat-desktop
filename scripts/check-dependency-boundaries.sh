@@ -12,6 +12,11 @@ set -euo pipefail
 #     API cannot expose an SDK type (ruma identifiers are allowed: they are
 #     ruma's, not the SDK's).
 #
+# familychat-signin (ADR 0006) is a Matrix crate (it hands sign-ins to
+# familychat-session), so the first rule keeps it out of both frontends:
+# they drive sign-in through familychat-core's SigninApi only. The
+# self-tests check the rule can see that.
+#
 # It reads the graphs cargo builds for each crate's library, on every target
 # platform (normal and build dependencies; a frontend's dev-dependencies may
 # reach familychat-session for the runtime test, and never ship). Then it
@@ -78,6 +83,8 @@ found="$(matching "${SDK}" <<<"${core}")"
 # Self-tests.
 tree familychat-session | grep -qx matrix-sdk \
   || fail "self-test failed: the check does not see matrix-sdk in familychat-session's graph"
+tree familychat-signin | grep -qx matrix-sdk \
+  || fail "self-test failed: the check does not see matrix-sdk in familychat-signin's graph"
 tree familychat-ui | grep -qx gpui \
   || fail "self-test failed: the check does not see gpui in familychat-ui's graph"
 

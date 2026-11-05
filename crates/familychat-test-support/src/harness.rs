@@ -141,6 +141,53 @@ impl fmt::Debug for LoginToken {
     }
 }
 
+/// One request in the front end's access log
+/// (`FAMILYCHAT_HARNESS_ACCESS_LOG`, nginx's `evidence` format).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AccessLogLine {
+    /// The host the request named (`Host`/SNI).
+    pub host: String,
+    /// `GET`, `POST`...
+    pub method: String,
+    /// The path, without the query.
+    pub path: String,
+    /// The status the front end answered.
+    pub status: u16,
+}
+
+impl AccessLogLine {
+    /// Parses one `host method path status` line.
+    pub fn parse(line: &str) -> Option<Self> {
+        let mut parts = line.split(' ');
+        let host = parts.next()?.to_owned();
+        let method = parts.next()?.to_owned();
+        let path = parts.next()?.to_owned();
+        let status = parts.next()?.parse().ok()?;
+        if parts.next().is_some() {
+            return None;
+        }
+        Some(Self {
+            host,
+            method,
+            path,
+            status,
+        })
+    }
+
+    /// Whether this is a `POST /_matrix/client/*/login` to `host`: a token
+    /// or a password sent there.
+    pub fn is_login_to(&self, host: &str) -> bool {
+        self.host == host
+            && self.method == "POST"
+            && self.path.starts_with("/_matrix/client/")
+            && self.path.ends_with("/login")
+    }
+}
+
+/// How long [`HomeserverHarness::wait_for_access`] waits for nginx to write
+/// the line of a request that was just answered.
+const ACCESS_LOG_PATIENCE: Duration = Duration::from_secs(5);
+
 /// A member made for one test: created with the admin API and signed in
 /// with their password through the front end.
 #[derive(Debug, Clone)]
@@ -287,6 +334,50 @@ impl HomeserverHarness {
             .bearer_auth(self.env.admin_token())
             .json(body);
         send(request).await
+    }
+
+    // --- The access log ------------------------------------------------------
+
+    /// Every request the front end has logged since the harness came up.
+    pub fn access_log(&self) -> Result<Vec<AccessLogLine>> {
+        let text = std::fs::read_to_string(&self.env.access_log).with_context(|| {
+            format!(
+                "could not read the front end's access log at {}",
+                self.env.access_log.display()
+            )
+        })?;
+        text.lines()
+            .filter(|line| !line.trim().is_empty())
+            .map(|line| {
+                AccessLogLine::parse(line).with_context(|| {
+                    format!("an access log line is not `host method path status`: {line}")
+                })
+            })
+            .collect()
+    }
+
+    /// Waits until the access log has a line `accept` takes (nginx writes a
+    /// request's line just after answering it), and returns it.
+    pub async fn wait_for_access(
+        &self,
+        what: &str,
+        accept: impl Fn(&AccessLogLine) -> bool,
+    ) -> Result<AccessLogLine> {
+        let started = SystemTime::now();
+        loop {
+            if let Some(line) = self.access_log()?.into_iter().find(|line| accept(line)) {
+                return Ok(line);
+            }
+            if started.elapsed().unwrap_or_default() > ACCESS_LOG_PATIENCE {
+                bail!("the access log never showed {what}");
+            }
+            tokio::time::sleep(Duration::from_millis(100)).await;
+        }
+    }
+
+    /// `https://redirect.familychat.test`, whose `/login` answers `307`.
+    pub fn redirect_url(&self) -> &str {
+        &self.env.redirect_url
     }
 
     // --- Members ---------------------------------------------------------------
@@ -631,6 +722,21 @@ mod tests {
         let debug = format!("{session:?} {token:?}");
         assert!(!debug.contains("secret-"), "{debug}");
         assert!(debug.contains("@a:hs1.familychat.test"), "{debug}");
+    }
+
+    #[test]
+    fn reads_access_log_lines() {
+        let line =
+            AccessLogLine::parse("evil.familychat.example POST /_matrix/client/v3/login 403")
+                .expect("parses");
+        assert!(line.is_login_to("evil.familychat.example"));
+        assert!(!line.is_login_to("hs1.familychat.test"));
+        assert_eq!(line.status, 403);
+        assert!(AccessLogLine::parse("a GET /x").is_none());
+        assert!(AccessLogLine::parse("a GET /x 200 extra").is_none());
+        let versions = AccessLogLine::parse("hs1.familychat.test GET /_matrix/client/versions 200")
+            .expect("parses");
+        assert!(!versions.is_login_to("hs1.familychat.test"));
     }
 
     #[test]

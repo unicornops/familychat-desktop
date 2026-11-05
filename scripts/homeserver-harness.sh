@@ -28,6 +28,8 @@ set -euo pipefail
 #   smith.test                a custom domain: only the well-known
 #                             documents, delegating to hs1.familychat.test
 #   evil.familychat.example   Palpo again, outside the allowlist
+#   redirect.familychat.test  allowlisted, but its /login answers 307 to
+#                             evil.familychat.example
 #   synapse.test              Synapse
 #
 # Palpo's own HTTP port is published on 127.0.0.1:${FAMILYCHAT_HARNESS_ADMIN_PORT:-18008}
@@ -46,6 +48,10 @@ set -euo pipefail
 #                by it and its key is deleted straight away
 #   env          FAMILYCHAT_HARNESS_* shell exports, read by
 #                familychat-test-support's HomeserverHarness
+#   edge-logs/access.log
+#                the front end's access log, one `host method path status`
+#                line per request (no query strings), which the sign-in
+#                tests read to prove where a token or password went
 #
 # Environment:
 #   FAMILYCHAT_HARNESS_STATE_DIR      where state is written
@@ -83,8 +89,9 @@ SYNAPSE_ADMIN_URL="http://127.0.0.1:${SYNAPSE_ADMIN_PORT}"
 SERVER_NAME="hs1.familychat.test"
 CUSTOM_DOMAIN="smith.test"
 EVIL_HOST="evil.familychat.example"
+REDIRECT_HOST="redirect.familychat.test"
 SYNAPSE_HOST="synapse.test"
-HOSTS=("${SERVER_NAME}" "${CUSTOM_DOMAIN}" "${EVIL_HOST}" "${SYNAPSE_HOST}")
+HOSTS=("${SERVER_NAME}" "${CUSTOM_DOMAIN}" "${EVIL_HOST}" "${REDIRECT_HOST}" "${SYNAPSE_HOST}")
 # family-chat's HOMESERVER_ADMIN_USER.
 ADMIN_LOCALPART="panel-admin"
 ADMIN_MXID="@${ADMIN_LOCALPART}:${SERVER_NAME}"
@@ -94,6 +101,8 @@ SYNAPSE_ADMIN_LOCALPART="harness-admin"
 TLS_DIR="${STATE_DIR}/tls"
 CA_PEM="${STATE_DIR}/ca.pem"
 ENV_FILE="${STATE_DIR}/env"
+EDGE_LOG_DIR="${STATE_DIR}/edge-logs"
+ACCESS_LOG="${EDGE_LOG_DIR}/access.log"
 PALPO_TOML="${STATE_DIR}/palpo.toml"
 
 log() {
@@ -386,6 +395,8 @@ export FAMILYCHAT_HARNESS_SERVER_NAME='${SERVER_NAME}'
 export FAMILYCHAT_HARNESS_HS1_URL='https://${SERVER_NAME}'
 export FAMILYCHAT_HARNESS_CUSTOM_DOMAIN='${CUSTOM_DOMAIN}'
 export FAMILYCHAT_HARNESS_EVIL_URL='https://${EVIL_HOST}'
+export FAMILYCHAT_HARNESS_REDIRECT_URL='https://${REDIRECT_HOST}'
+export FAMILYCHAT_HARNESS_ACCESS_LOG='${ACCESS_LOG}'
 export FAMILYCHAT_HARNESS_SYNAPSE_URL='https://${SYNAPSE_HOST}'
 export FAMILYCHAT_HARNESS_ADMIN_URL='${ADMIN_URL}'
 export FAMILYCHAT_HARNESS_ADMIN_USER='${ADMIN_MXID}'
@@ -404,7 +415,9 @@ up() {
   docker info >/dev/null 2>&1 || die "the Docker daemon is not reachable"
   pull_images
   down
-  mkdir -p "${STATE_DIR}"
+  mkdir -p "${STATE_DIR}" "${EDGE_LOG_DIR}"
+  # nginx in the container writes the access log; the tests read it.
+  chmod 0777 "${EDGE_LOG_DIR}"
   generate_tls
   local registration_token admin_token synapse_admin_token
   registration_token="$(openssl rand -hex 32)"
@@ -425,6 +438,9 @@ up() {
 down() {
   compose down --volumes --remove-orphans --timeout 5 >/dev/null 2>&1 || true
   rm -rf "${TLS_DIR}" "${CA_PEM}" "${ENV_FILE}" "${PALPO_TOML}"
+  # The access log is the container's (root's on most Docker hosts), in a
+  # directory the script made; remove what can be removed.
+  rm -rf "${EDGE_LOG_DIR}" 2>/dev/null || true
 }
 
 load_env() {

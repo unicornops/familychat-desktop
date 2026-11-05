@@ -24,6 +24,8 @@ const HS1_URL: &str = "FAMILYCHAT_HARNESS_HS1_URL";
 const CUSTOM_DOMAIN: &str = "FAMILYCHAT_HARNESS_CUSTOM_DOMAIN";
 const EVIL_URL: &str = "FAMILYCHAT_HARNESS_EVIL_URL";
 const SYNAPSE_URL: &str = "FAMILYCHAT_HARNESS_SYNAPSE_URL";
+const REDIRECT_URL: &str = "FAMILYCHAT_HARNESS_REDIRECT_URL";
+const ACCESS_LOG: &str = "FAMILYCHAT_HARNESS_ACCESS_LOG";
 const ADMIN_URL: &str = "FAMILYCHAT_HARNESS_ADMIN_URL";
 const ADMIN_USER: &str = "FAMILYCHAT_HARNESS_ADMIN_USER";
 const ADMIN_TOKEN: &str = "FAMILYCHAT_HARNESS_ADMIN_TOKEN";
@@ -51,6 +53,12 @@ pub struct HarnessEnv {
     pub evil_url: String,
     /// Synapse's client API base URL, `https://synapse.test`.
     pub synapse_url: String,
+    /// An allowlisted host whose `/login` answers `307` to the
+    /// non-allowlisted one, `https://redirect.familychat.test`.
+    pub redirect_url: String,
+    /// The front end's access log: one `host method path status` line per
+    /// request.
+    pub access_log: PathBuf,
     /// Palpo's admin API on loopback (plain HTTP, the control panel's
     /// port-forward stand-in).
     pub admin_url: String,
@@ -122,6 +130,8 @@ impl HarnessEnv {
             custom_domain: get(CUSTOM_DOMAIN)?,
             evil_url: get(EVIL_URL)?,
             synapse_url: get(SYNAPSE_URL)?,
+            redirect_url: get(REDIRECT_URL)?,
+            access_log: PathBuf::from(get(ACCESS_LOG)?),
             admin_url: get(ADMIN_URL)?,
             admin_user: get(ADMIN_USER)?,
             admin_token: get(ADMIN_TOKEN)?,
@@ -133,6 +143,7 @@ impl HarnessEnv {
             (HS1_URL, &env.hs1_url),
             (EVIL_URL, &env.evil_url),
             (SYNAPSE_URL, &env.synapse_url),
+            (REDIRECT_URL, &env.redirect_url),
         ] {
             https_host(url).with_context(|| format!("{key} is not a bare https:// URL"))?;
         }
@@ -149,10 +160,15 @@ impl HarnessEnv {
 
     /// The hostnames the front end serves, which the test client resolves
     /// to [`HarnessEnv::edge_addr`]: hs1, the custom domain, the
-    /// non-allowlisted host and Synapse's.
+    /// non-allowlisted host, the redirecting host and Synapse's.
     pub fn hosts(&self) -> Vec<String> {
         let mut hosts = vec![self.custom_domain.clone()];
-        for url in [&self.hs1_url, &self.evil_url, &self.synapse_url] {
+        for url in [
+            &self.hs1_url,
+            &self.evil_url,
+            &self.redirect_url,
+            &self.synapse_url,
+        ] {
             if let Ok(host) = https_host(url) {
                 hosts.push(host.to_owned());
             }
@@ -189,6 +205,8 @@ impl fmt::Debug for HarnessEnv {
             .field("custom_domain", &self.custom_domain)
             .field("evil_url", &self.evil_url)
             .field("synapse_url", &self.synapse_url)
+            .field("redirect_url", &self.redirect_url)
+            .field("access_log", &self.access_log)
             .field("admin_url", &self.admin_url)
             .field("admin_user", &self.admin_user)
             .field("admin_token", &"<redacted>")
@@ -284,6 +302,8 @@ export FAMILYCHAT_HARNESS_HS1_URL='https://hs1.familychat.test'
 export FAMILYCHAT_HARNESS_CUSTOM_DOMAIN='smith.test'
 export FAMILYCHAT_HARNESS_EVIL_URL='https://evil.familychat.example'
 export FAMILYCHAT_HARNESS_SYNAPSE_URL='https://synapse.test'
+export FAMILYCHAT_HARNESS_REDIRECT_URL='https://redirect.familychat.test'
+export FAMILYCHAT_HARNESS_ACCESS_LOG='/repo/target/homeserver-harness/edge-logs/access.log'
 export FAMILYCHAT_HARNESS_ADMIN_URL='http://127.0.0.1:18008'
 export FAMILYCHAT_HARNESS_ADMIN_USER='@panel-admin:hs1.familychat.test'
 export FAMILYCHAT_HARNESS_ADMIN_TOKEN='admin-secret'
@@ -329,6 +349,7 @@ export FAMILYCHAT_HARNESS_SYNAPSE_ADMIN_TOKEN='synapse-secret'
             [
                 "evil.familychat.example",
                 "hs1.familychat.test",
+                "redirect.familychat.test",
                 "smith.test",
                 "synapse.test"
             ]
