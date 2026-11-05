@@ -1,0 +1,36 @@
+[package]
+name = "familychat-test-support"
+version = "0.0.1"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+description = "Test support for Family Chat: the live homeserver harness driver and its test-only HTTP client"
+
+[features]
+# The harness driver and its HTTP client, which trusts the harness's
+# throwaway CA and resolves the harness hostnames to loopback. Test builds
+# only: a release build with it on fails to compile, and CI checks that no
+# release build of familychat-app can reach it
+# (scripts/check-release-features.sh, ADR 0004).
+test-harness = ["dep:reqwest", "dep:serde_json", "dep:tokio"]
+
+[dependencies]
+anyhow.workspace = true
+reqwest = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
+tokio = { workspace = true, optional = true }
+
+[dev-dependencies]
+# The crate's own tests (the unit tests and tests/live_homeserver_harness.rs)
+# build with the harness on, so the workspace-wide clippy and test runs
+# compile the driver; nothing outside test builds sees the feature.
+familychat-test-support = { path = ".", features = ["test-harness"] }
+tokio.workspace = true
+
+[[test]]
+name = "live_homeserver_harness"
+required-features = ["test-harness"]
+
+[lints]
+workspace = true

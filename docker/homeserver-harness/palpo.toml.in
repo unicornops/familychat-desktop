@@ -1,0 +1,57 @@
+# Palpo's configuration for the harness, rendered by
+# scripts/homeserver-harness.sh into the state directory on every `up`
+# (@REGISTRATION_TOKEN@ becomes a fresh random token).
+#
+# It mirrors family-chat's render_palpo_config
+# (control-panel/apps/provisioning/homeserver_config.py) for a family whose
+# server name is also its serving host. The only differences, each because
+# the harness is not a Kubernetes pod:
+#
+# - the database is the `postgres` service on the harness network, not
+#   127.0.0.1 inside the pod;
+# - media lives in the image's own /var/palpo/media (owned by the palpo
+#   user) instead of the family's data volume at /data/palpo;
+# - [logger] makes the CI log readable.
+#
+# Palpo ignores unknown keys silently, so every key here was checked against
+# the pinned image's source revision (unicornops/palpo b188d47).
+
+server_name = "hs1.familychat.test"
+# Registration stays closed except via the registration token; the harness
+# script uses it to bootstrap the admin bot, as the control panel does (and
+# one live test registers with it).
+allow_registration = false
+registration_token = "@REGISTRATION_TOKEN@"
+# ~11 MiB, just under the edge proxy's 11m client_max_body_size.
+max_upload_size = 11534336
+# Notary key server for federation key lookups, as family-chat sets it. The
+# harness has no federation peers, so nothing asks it.
+trusted_servers = ["matrix.org"]
+
+[[listeners]]
+address = "0.0.0.0:8008"
+
+[storage]
+backend = "fs"
+root = "/var/palpo/media"
+
+[db]
+url = "postgres://palpo@postgres:5432/palpo"
+
+[federation]
+enable = true
+
+# family-chat's household-sized login bucket. Palpo keys the limiter on the
+# TCP peer, and every client request reaches Palpo through the edge, so the
+# whole harness shares one bucket, as a family does.
+[rc_login]
+per_second = 0.2
+burst = 20
+
+[well_known]
+client = "https://hs1.familychat.test"
+server = "hs1.familychat.test:443"
+
+[logger]
+format = "compact"
+ansi_colors = false

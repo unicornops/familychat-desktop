@@ -36,7 +36,9 @@ ignore-dev-dependencies = true
 #   in crates/familychat-session, crates/familychat-ui/src/fonts.rs,
 #   crates/familychat-tui/src/terminal.rs and crates/familychat-app/build.rs
 #   are copied from Zmail (https://github.com/unicornops/zmail), Copyright
-#   UnicornOps, GPL-3.0-only like this project.
+#   UnicornOps, GPL-3.0-only like this project. scripts/homeserver-harness.sh
+#   follows the structure of Zmail's scripts/proton-harness.sh (retry, the
+#   throwaway TLS CA, the env file), same copyright and licence.
 #
 # Nothing is copied from the Element X forks (AGPL-3.0); see PLAN.md,
 # section 2.
