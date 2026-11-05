@@ -72,6 +72,11 @@ jobs:
                       about.toml|about.hbs|deny.toml|scripts/homeserver-harness.sh|scripts/check-release-features.sh|scripts/check-dependency-boundaries.sh|scripts/capture-ui-screenshots.sh)
                         workspace_checks=true
                         ;;
+                      # The packaging (ADR 0014): the identifiers test in
+                      # familychat-app and the scripts' lint and tests.
+                      packaging/*|scripts/*.sh)
+                        workspace_checks=true
+                        ;;
                       docker/homeserver-harness/*)
                         if [[ "$file" != *.md ]]; then
                           workspace_checks=true
@@ -176,7 +181,12 @@ jobs:
               run: scripts/check-dependency-boundaries.sh
 
             - name: Lint the scripts
-              run: shellcheck scripts/homeserver-harness.sh scripts/check-release-features.sh scripts/check-dependency-boundaries.sh scripts/keychain-session.sh scripts/capture-ui-screenshots.sh
+              run: shellcheck scripts/*.sh
+
+            # The release notes' signing section (ADR 0014): what it says for
+            # signed, ad hoc and unsigned files, and the input it refuses.
+            - name: Release script tests
+              run: scripts/test-release-signing-notes.sh
 
             # The live homeserver harness (ADR 0004): Palpo at Family Chat's
             # image with its Postgres sidecar, Synapse, and the TLS front end.

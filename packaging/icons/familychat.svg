@@ -1,0 +1,18 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <!-- Family Chat's application icon: the teal tile and speech bubble of
+       Family Chat's website favicon (family-chat's
+       website/static/img/favicon.svg), drawn on the 1024 px grid with the
+       margin macOS icons keep (as Zmail's app icon does). Rendered to the
+       macOS icns and asset catalog, the Linux hicolor PNGs and the Windows
+       .ico by scripts/generate-app-icon.sh. -->
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0d9488"/>
+      <stop offset="1" stop-color="#14b8a6"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(112 112) scale(12.5)">
+    <rect width="64" height="64" rx="16" fill="url(#tile)"/>
+    <path d="M18 20h28a4 4 0 0 1 4 4v14a4 4 0 0 1-4 4H30l-8 7v-7h-4a4 4 0 0 1-4-4V24a4 4 0 0 1 4-4z" fill="none" stroke="#fff" stroke-width="4" stroke-linejoin="round"/>
+  </g>
+</svg>

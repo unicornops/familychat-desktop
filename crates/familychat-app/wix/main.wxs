@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+    <!--
+      Family Chat's MSI (WiX v3, built by cargo-wix on the release
+      workflow's Windows job; ADR 0014). Adapted from Zmail's
+      crates/zmail-app/wix/main.wxs (Copyright UnicornOps, GPL-3.0-only).
+
+      It installs for the current user only, with no administrator prompt,
+      to %LOCALAPPDATA%\Programs\Family Chat, and:
+      - registers familychat: links under HKCU\Software\Classes\familychat,
+        so a browser hands a sign-in link to Family Chat (the running
+        window gets it over the single-instance hand-off, ADR 0013);
+      - adds a Start-menu shortcut carrying the app id
+        (System.AppUserModel.ID, familychat_core::identity::APP_ID), which
+        groups the window with the shortcut and lets Windows show its toast
+        notifications;
+      - puts the folder on the user's PATH, so `familychat tui` and the
+        other commands work in a terminal;
+      - installs LICENSE, THIRD_PARTY.html and licenses\.
+
+      The shortcut and the link handler start familychat-launcher.exe,
+      which starts familychat.exe without a console window
+      (src/bin/familychat-launcher.rs). Every user-profile component keeps
+      an HKCU value as its key path (ICE38) and removes its folders
+      (ICE64). The release workflow stages the licences in
+      target\dist\licences (scripts/stage-licences.sh) before
+      cargo wix (without building again); it copies
+      packaging\windows\familychat.ico to target\dist as well.
+
+      crates/familychat-app/tests/packaging.rs checks the identifiers and
+      the handler's command against familychat_core::identity.
+    -->
+    <Product Id="*"
+             Name="Family Chat"
+             Language="1033"
+             Version="!(bind.fileVersion.familychat_exe)"
+             Manufacturer="UnicornOps"
+             UpgradeCode="01B335F4-CB77-4EA2-8CE9-A83137CD57D7">
+        <Package InstallerVersion="500"
+                 Compressed="yes"
+                 InstallScope="perUser"
+                 InstallPrivileges="limited"
+                 Description="Family Chat desktop client" />
+        <MajorUpgrade DowngradeErrorMessage="A newer version of Family Chat is already installed."
+                      AllowSameVersionUpgrades="yes" />
+        <MediaTemplate EmbedCab="yes" />
+
+        <Icon Id="FamilyChatIcon" SourceFile="$(var.CargoTargetDir)\dist\familychat.ico" />
+        <Property Id="ARPPRODUCTICON" Value="FamilyChatIcon" />
+        <Property Id="ARPHELPLINK" Value="https://github.com/unicornops/familychat-desktop" />
+        <Property Id="ARPNOMODIFY" Value="1" />
+
+        <Feature Id="Main"
+                 Title="Family Chat"
+                 Level="1"
+                 Absent="disallow">
+            <ComponentGroupRef Id="ProductComponents" />
+            <ComponentGroupRef Id="LicenceComponents" />
+            <ComponentGroupRef Id="StartMenuComponents" />
+        </Feature>
+    </Product>
+
+    <Fragment>
+        <Directory Id="TARGETDIR" Name="SourceDir">
+            <Directory Id="LocalAppDataFolder">
+                <Directory Id="UserProgramsFolder" Name="Programs">
+                    <Directory Id="APPLICATIONFOLDER" Name="Family Chat">
+                        <Directory Id="LicencesFolder" Name="licenses" />
+                    </Directory>
+                </Directory>
+            </Directory>
+            <Directory Id="ProgramMenuFolder" />
+        </Directory>
+    </Fragment>
+
+    <Fragment>
+        <ComponentGroup Id="ProductComponents" Directory="APPLICATIONFOLDER">
+            <Component Id="app_files"
+                       Guid="F93F0D19-2DA4-4444-8955-DB4ABB8AA560"
+                       Win64="yes">
+                <File Id="familychat_exe"
+                      Name="familychat.exe"
+                      Source="$(var.CargoTargetDir)\release\familychat.exe" />
+                <File Id="familychat_launcher_exe"
+                      Name="familychat-launcher.exe"
+                      Source="$(var.CargoTargetDir)\release\familychat-launcher.exe" />
+                <File Id="licence_file"
+                      Name="LICENSE"
+                      Source="$(var.CargoTargetDir)\dist\licences\LICENSE" />
+                <File Id="third_party_file"
+                      Name="THIRD_PARTY.html"
+                      Source="$(var.CargoTargetDir)\dist\licences\THIRD_PARTY.html" />
+                <RemoveFolder Id="RemoveApplicationFolder" Directory="APPLICATIONFOLDER" On="uninstall" />
+                <RemoveFolder Id="RemoveUserProgramsFolder" Directory="UserProgramsFolder" On="uninstall" />
+                <RegistryValue Root="HKCU"
+                               Key="Software\UnicornOps\Family Chat"
+                               Name="installed"
+                               Type="integer"
+                               Value="1"
+                               KeyPath="yes" />
+            </Component>
+
+            <!-- familychat: links. The command is what a browser runs for
+                 familychat://safechat.family/app/login?...; %1 is the
+                 whole link, quoted. -->
+            <Component Id="url_handler"
+                       Guid="8E9AFD95-CC19-40A3-BEE9-A583261D2E20"
+                       Win64="yes">
+                <RegistryKey Root="HKCU"
+                             Key="Software\Classes\familychat"
+                             ForceDeleteOnUninstall="yes">
+                    <RegistryValue Type="string" Value="URL:Family Chat" KeyPath="yes" />
+                    <RegistryValue Name="URL Protocol" Type="string" Value="" />
+                    <RegistryValue Key="DefaultIcon"
+                                   Type="string"
+                                   Value="&quot;[APPLICATIONFOLDER]familychat.exe&quot;,0" />
+                    <RegistryValue Key="shell\open\command"
+                                   Type="string"
+                                   Value="&quot;[APPLICATIONFOLDER]familychat-launcher.exe&quot; &quot;%1&quot;" />
+                </RegistryKey>
+            </Component>
+
+            <Component Id="path_entry"
+                       Guid="2E47AC63-B386-48A9-A0DF-125469DDDE60"
+                       Win64="yes">
+                <Environment Id="UserPath"
+                             Name="PATH"
+                             Value="[APPLICATIONFOLDER]"
+                             Permanent="no"
+                             Part="last"
+                             Action="set"
+                             System="no" />
+                <RegistryValue Root="HKCU"
+                               Key="Software\UnicornOps\Family Chat"
+                               Name="path"
+                               Type="integer"
+                               Value="1"
+                               KeyPath="yes" />
+            </Component>
+        </ComponentGroup>
+
+        <!-- The licences of what the binary embeds: Inter (SIL OFL 1.1),
+             Lucide (ISC/MIT) and the code ported from Zed (Apache-2.0). -->
+        <ComponentGroup Id="LicenceComponents" Directory="LicencesFolder">
+            <Component Id="licence_files"
+                       Guid="462D80E9-8F52-4F2B-AB0C-0ABBEC207C01"
+                       Win64="yes">
+                <File Id="inter_licence"
+                      Name="Inter-OFL.txt"
+                      Source="$(var.CargoTargetDir)\dist\licences\licenses\Inter-OFL.txt" />
+                <File Id="lucide_licence"
+                      Name="Lucide-LICENSE.txt"
+                      Source="$(var.CargoTargetDir)\dist\licences\licenses\Lucide-LICENSE.txt" />
+                <File Id="gpui_licence"
+                      Name="GPUI-Apache-2.0.txt"
+                      Source="$(var.CargoTargetDir)\dist\licences\licenses\GPUI-Apache-2.0.txt" />
+                <RemoveFolder Id="RemoveLicencesFolder" Directory="LicencesFolder" On="uninstall" />
+                <RegistryValue Root="HKCU"
+                               Key="Software\UnicornOps\Family Chat"
+                               Name="licences"
+                               Type="integer"
+                               Value="1"
+                               KeyPath="yes" />
+            </Component>
+        </ComponentGroup>
+
+        <ComponentGroup Id="StartMenuComponents" Directory="ProgramMenuFolder">
+            <Component Id="start_menu_shortcut"
+                       Guid="49D270B4-DFCE-48D2-916A-091E8BF1E0F1"
+                       Win64="yes">
+                <Shortcut Id="FamilyChatStartMenuShortcut"
+                          Name="Family Chat"
+                          Description="Family Chat desktop client"
+                          Target="[APPLICATIONFOLDER]familychat-launcher.exe"
+                          WorkingDirectory="APPLICATIONFOLDER"
+                          Icon="FamilyChatIcon">
+                    <!-- The id the app sets for itself (APP_ID), so its
+                         windows group with this shortcut on the taskbar
+                         and its notifications are Family Chat's. -->
+                    <ShortcutProperty Key="System.AppUserModel.ID"
+                                      Value="family.safechat.desktop" />
+                </Shortcut>
+                <RegistryValue Root="HKCU"
+                               Key="Software\UnicornOps\Family Chat"
+                               Name="shortcut"
+                               Type="integer"
+                               Value="1"
+                               KeyPath="yes" />
+            </Component>
+        </ComponentGroup>
+    </Fragment>
+</Wix>

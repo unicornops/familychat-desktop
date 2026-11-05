@@ -204,7 +204,7 @@ job).
 Not applicable on the desktop: the web app's URL stripping and soft
 logout (there is no URL bar or soft-logged-out session to redeem into),
 and the mobile apps' universal links (the `familychat://` registration is
-Phase 12, the hand-off to a running window Phase 9).
+Phase 12's, ADR 0014; the hand-off to a running window Phase 9's).
 
 ## Consequences
 

@@ -32,6 +32,10 @@ rqrr = { version = "0.11", default-features = false }
 tokio = { version = "1", default-features = false, features = ["sync"] }
 # The keymap files (`keymaps/*.json`), parsed as Zmail's are.
 serde_json.workspace = true
+# One log line when macOS hands the window links (how many, never what;
+# ADR 0014): the app's subscriber writes it to the profile's log. Already
+# in the graph (every other crate logs through it).
+tracing.workspace = true
 # Text input editing by grapheme, as Zmail's text input does.
 unicode-segmentation = "1"
 # Wiping a pasted sign-in link from the text field once it is handed on.
