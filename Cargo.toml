@@ -5,6 +5,7 @@ members = [
     "crates/familychat-core",
     "crates/familychat-security",
     "crates/familychat-session",
+    "crates/familychat-signin",
     "crates/familychat-store",
     "crates/familychat-test-support",
     "crates/familychat-theme",

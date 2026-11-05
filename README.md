@@ -36,7 +36,14 @@ Phase 3, the Matrix session core ([#4](https://github.com/unicornops/familychat-
 - refresh tokens rotate, and each new token is in the keychain before it is used
 - the room list (with all, unread, people and invites filters) and room timelines (with back-pagination) streamed as view models, ready for the GUI (Phase 5 and 6) and the terminal UI (Phase 10) to draw
 
-Signing in, drawing rooms and the timeline, sending, encryption, notifications and the rest follow in the later phases.
+Phase 4, the sign-in core ([#5](https://github.com/unicornops/familychat-desktop/issues/5), [ADR 0006](./docs/adr/0006-sign-in-rules-and-flows.md)):
+
+- every rule of Family Chat's sign-in link contract, as one state machine both frontends will drive: sign-in links (`https://safechat.family/app/login?...`, `familychat://...` or pasted), a confirmation before any code is used, one redemption at a time through a client that never follows a redirect or retries, the account bound to the link, and a used or expired code falling through to the password
+- a strict server-name parser and the `*.safechat.family` allowlist, applied to where a family's address really leads (so custom-domain families work), with nothing but discovery sent to a server outside it, and a re-check after every sign-in
+- password sign-in for Family Chat and for any other Matrix server over HTTPS; a rate limit is shown with its wait, never retried
+- tokens and passwords never in logs, debug output, panic messages or on disk; proven against the local homeserver harness from its access log
+
+There are no sign-in screens yet (the window in Phase 5, the terminal UI in Phase 10). Drawing rooms and the timeline, sending, encryption, notifications and the rest follow in the later phases.
 
 ## Building
 

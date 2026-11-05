@@ -187,6 +187,15 @@ jobs:
               timeout-minutes: 15
               run: cargo test -p familychat-session --test live_session --locked -- --ignored --nocapture
 
+            # The sign-in against the harness (ADR 0006): a code redeemed and
+            # replayed, a code for a non-allowlisted hs never sent and a
+            # 307 never followed (both from the front end's access log), a
+            # code for someone else signed out, the custom domain, and
+            # another server's password sign-in on Synapse.
+            - name: Live sign-in tests
+              timeout-minutes: 15
+              run: cargo test -p familychat-signin --test live_signin --locked -- --ignored --nocapture
+
             - name: Homeserver harness logs
               if: failure()
               run: scripts/homeserver-harness.sh logs

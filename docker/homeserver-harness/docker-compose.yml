@@ -65,13 +65,16 @@ services:
   # certificate from the throwaway CA the script makes on every `up`.
   # hs1.familychat.test is a Family Chat family's edge proxy (the paths
   # family-chat's render_nginx_edge_config exposes), smith.test a custom
-  # domain that only publishes the well-known delegation, and
-  # evil.familychat.example a working homeserver outside the allowlist.
+  # domain that only publishes the well-known delegation,
+  # evil.familychat.example a working homeserver outside the allowlist, and
+  # redirect.familychat.test an allowlisted host whose login answers 307.
   edge:
     image: nginx:1.30.6-alpine@sha256:0e52bd054126cdc040b1276c0af347aeb02a41b9cfe305d6094767ac30e97949
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - ${FAMILYCHAT_HARNESS_STATE_DIR:?run scripts/homeserver-harness.sh up}/tls:/etc/nginx/tls:ro
+      # The access log the tests read (HomeserverHarness::access_log).
+      - ${FAMILYCHAT_HARNESS_STATE_DIR:?run scripts/homeserver-harness.sh up}/edge-logs:/var/log/harness
     depends_on:
       - palpo
       - synapse

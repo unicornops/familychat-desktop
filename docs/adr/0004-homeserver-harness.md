@@ -57,7 +57,20 @@ The front end serves, with one certificate signed by a throwaway CA:
   `hs1.familychat.test`, as family-chat's domain verification expects.
 - `evil.familychat.example`: a working homeserver (the same Palpo) outside
   the allowlist, for the sign-in refusal tests.
+- `redirect.familychat.test` (Phase 4): an allowlisted host whose
+  `POST /_matrix/client/v3/login` answers `307` to
+  `evil.familychat.example`, and whose other client paths are hs1's Palpo,
+  so a client that followed redirects would send a token or a password
+  outside the allowlist (ADR 0006).
 - `synapse.test`: Synapse.
+
+The front end also writes every request to an access log the tests read
+(Phase 4): `edge-logs/access.log` in the state directory
+(`FAMILYCHAT_HARNESS_ACCESS_LOG`), one `host method path status` line per
+request, without query strings. `HomeserverHarness::access_log` and
+`wait_for_access` read it; the sign-in tests prove from it which host a
+token or a password reached, and that the non-allowlisted host never saw
+a login.
 
 Palpo's own HTTP port is published on `127.0.0.1:18008` for the admin API
 only, standing in for the control panel's port-forward. Client traffic
@@ -173,7 +186,12 @@ every service's log on failure and runs `down` always. They prove:
   reachable from this repository's CI, so nothing checks the two agree.
 - One Palpo serves one server name, so the harness has no family whose
   Matrix server name is its custom domain (`@alice:smith.test` served from
-  a `*.familychat.test` host). The sign-in tests that need that binding
-  (PLAN.md section 6.4, step 5) add a second Palpo when they come.
+  a `*.familychat.test` host). Phase 4 did not add a second Palpo (another
+  Postgres, another admin bootstrap, on every CI run): the live tests prove
+  `account_provider=smith.test` by password through its well-known, prove
+  the user binding by refusing a code redeemed at hs1 for a link that
+  names `smith.test` or another member, and the offline flow tests cover a
+  custom-domain code end to end (ADR 0006). A second Palpo is the way to
+  add a live custom-domain code sign-in later.
 - MAS for OAuth sign-in is not in the harness; Phase 14 adds Synapse with
   MAS.

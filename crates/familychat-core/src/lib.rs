@@ -7,6 +7,9 @@
 //! - [`identity`]: the app's names and identifiers;
 //! - [`session`]: the [`SessionApi`](session::SessionApi) both frontends
 //!   consume, and the channels its answers arrive on (ADR 0005);
+//! - [`signin`]: the sign-in steps and answers both frontends exchange
+//!   with `familychat-signin`, and the [`SigninApi`](signin::SigninApi)
+//!   that starts them;
 //! - [`sync`], [`rooms`], [`timeline`]: the view models (sync state, room
 //!   summaries, timeline items) with their wording;
 //! - [`diff`]: [`ListDiff`](diff::ListDiff), the changes the room list and
@@ -17,6 +20,7 @@ pub mod diff;
 pub mod identity;
 pub mod rooms;
 pub mod session;
+pub mod signin;
 pub mod sync;
 pub mod timeline;
 

@@ -23,6 +23,6 @@ mod client;
 mod harness;
 
 #[cfg(feature = "test-harness")]
-pub use client::{HarnessResolver, admin_client, edge_client};
+pub use client::{HarnessResolver, admin_client, edge_client, edge_client_builder};
 #[cfg(feature = "test-harness")]
-pub use harness::{HomeserverHarness, LoginToken, Reply, Session, TestUser};
+pub use harness::{AccessLogLine, HomeserverHarness, LoginToken, Reply, Session, TestUser};

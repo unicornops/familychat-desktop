@@ -16,6 +16,8 @@ ruma.workspace = true
 # GPUI tasks await them and the terminal UI polls them. No runtime, timer
 # or I/O feature.
 tokio = { version = "1", default-features = false, features = ["sync"] }
+# Wiping the sign-in's secrets in transit (`signin::SecretText`).
+zeroize.workspace = true
 
 [lints]
 workspace = true

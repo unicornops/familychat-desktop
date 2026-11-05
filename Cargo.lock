@@ -2101,6 +2101,7 @@ dependencies = [
  "familychat-core",
  "familychat-security",
  "familychat-session",
+ "familychat-signin",
  "familychat-store",
  "familychat-theme",
  "familychat-tui",
@@ -2124,6 +2125,7 @@ version = "0.0.1"
 dependencies = [
  "ruma",
  "tokio",
+ "zeroize",
 ]
 
 [[package]]
@@ -2162,6 +2164,30 @@ dependencies = [
  "tracing-subscriber",
  "wiremock",
  "zeroize",
+]
+
+[[package]]
+name = "familychat-signin"
+version = "0.0.1"
+dependencies = [
+ "anyhow",
+ "familychat-core",
+ "familychat-security",
+ "familychat-session",
+ "familychat-signin",
+ "familychat-store",
+ "familychat-test-support",
+ "futures-util",
+ "proptest",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "url",
+ "wiremock",
 ]
 
 [[package]]

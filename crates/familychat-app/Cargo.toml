@@ -17,6 +17,10 @@ familychat-assets = { path = "../familychat-assets" }
 familychat-core = { path = "../familychat-core" }
 familychat-security = { path = "../familychat-security" }
 familychat-session = { path = "../familychat-session" }
+# The sign-in flows (ADR 0006), wired into the sign-in screens in Phase 5.
+# Never with its `staging` or `test-harness` feature in a release build
+# (scripts/check-release-features.sh).
+familychat-signin = { path = "../familychat-signin" }
 familychat-store = { path = "../familychat-store" }
 familychat-theme = { path = "../familychat-theme" }
 familychat-tui = { path = "../familychat-tui", optional = true }
