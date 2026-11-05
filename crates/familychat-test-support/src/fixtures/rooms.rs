@@ -184,7 +184,7 @@ pub fn family_rooms(now: u64) -> Vec<RoomSummary> {
         5 * HOUR,
         now,
     );
-    photos.preview = preview("dad", "Sent a file");
+    photos.preview = preview("dad", "Sent an image");
 
     let mut holiday = summary(
         HOLIDAY_ROOM,

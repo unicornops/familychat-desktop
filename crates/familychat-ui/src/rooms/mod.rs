@@ -902,13 +902,19 @@ impl RoomsView {
 
     fn render_list_body(&mut self, colors: &UiColors, cx: &mut Context<Self>) -> AnyElement {
         if let Some(error) = &self.list_error {
-            return empty_state(
-                "Your rooms couldn't be loaded",
-                error,
-                "alert-circle",
-                None,
-                colors,
-            );
+            return div()
+                .flex_1()
+                .min_h_0()
+                .flex()
+                .flex_col()
+                .child(empty_state(
+                    "Your rooms couldn't be loaded",
+                    error,
+                    "alert-circle",
+                    None,
+                    colors,
+                ))
+                .into_any_element();
         }
         if !self.loaded || self.loading == RoomListLoading::NotLoaded && self.rooms.is_empty() {
             return div()
@@ -959,9 +965,13 @@ impl RoomsView {
                     )
                     .into_any_element()
             });
+            // A column, so the card takes the pane's width and its text
+            // wraps instead of running past the edge.
             return div()
                 .flex_1()
+                .min_h_0()
                 .flex()
+                .flex_col()
                 .child(empty_state(title, detail, icon_name, action, colors))
                 .into_any_element();
         }
