@@ -795,14 +795,14 @@ async fn new_direct_chats_are_encrypted() -> Result<()> {
     let ActionEvent::RoomCreated { room, direct: true } = created else {
         bail!("no direct chat: {created:?}");
     };
+    // The room list can show the new room before its encryption state has
+    // synced (briefly not encrypted), so wait for it to show as encrypted;
+    // the room was made with `m.room.encryption` in its initial state, and
+    // a room that never shows as encrypted fails on the timeout.
     let summary = alice
-        .room(&room, |summary| summary.encryption != Encryption::Unknown)
-        .await?;
-    ensure!(
-        summary.encryption == Encryption::Encrypted,
-        "the new chat is {:?}",
-        summary.encryption
-    );
+        .room(&room, |summary| summary.encryption == Encryption::Encrypted)
+        .await
+        .context("the new chat never showed as encrypted")?;
     ensure!(summary.is_direct, "the new chat is not a direct chat");
     alice.shutdown().await;
     Ok(())
