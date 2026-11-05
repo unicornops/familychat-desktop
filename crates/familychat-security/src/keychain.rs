@@ -371,6 +371,23 @@ pub enum AuthKind {
     /// A one-time login token, such as a Family Chat sign-in code
     /// (`m.login.token`).
     LoginToken,
+    /// OAuth 2.0 in the browser (MSC3861, ADR 0010); the session restores
+    /// through the SDK's OAuth API with [`AccountSession::oauth_client_id`].
+    #[serde(rename = "oauth")]
+    OAuth,
+    /// A QR code a signed-in device scanned (MSC4108): an OAuth session too.
+    QrCode,
+    /// Single sign-on in the browser (`m.login.sso`), redeemed with
+    /// `m.login.token`.
+    Sso,
+}
+
+impl AuthKind {
+    /// Whether the session is an OAuth 2.0 one (its refresh and sign-out go
+    /// to the server's OAuth endpoints).
+    pub fn is_oauth(self) -> bool {
+        matches!(self, Self::OAuth | Self::QrCode)
+    }
 }
 
 /// What `account-<uuid>-session` holds: everything needed to restore an
@@ -390,6 +407,9 @@ pub struct AccountSession {
     pub refresh_token: Option<Secret<String>>,
     /// How the account signed in.
     pub auth_kind: AuthKind,
+    /// For an OAuth session, the client id the server registered this app
+    /// under (dynamic client registration), needed to refresh and revoke.
+    pub oauth_client_id: Option<String>,
 }
 
 impl fmt::Debug for AccountSession {
@@ -413,6 +433,8 @@ struct SessionRecordOut<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     refresh_token: Option<&'a str>,
     auth_kind: AuthKind,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    oauth_client_id: Option<&'a str>,
 }
 
 #[derive(Deserialize)]
@@ -424,6 +446,8 @@ struct SessionRecordIn {
     access_token: String,
     refresh_token: Option<String>,
     auth_kind: AuthKind,
+    #[serde(default)]
+    oauth_client_id: Option<String>,
 }
 
 impl AccountSession {
@@ -439,6 +463,7 @@ impl AccountSession {
                 .as_ref()
                 .map(|token| token.expose().as_str()),
             auth_kind: self.auth_kind,
+            oauth_client_id: self.oauth_client_id.as_deref(),
         };
         serde_json::to_string(&record)
             .map(Zeroizing::new)
@@ -460,6 +485,7 @@ impl AccountSession {
             access_token: Secret::new(record.access_token),
             refresh_token: record.refresh_token.map(Secret::new),
             auth_kind: record.auth_kind,
+            oauth_client_id: record.oauth_client_id,
         })
     }
 }
@@ -506,6 +532,7 @@ mod tests {
             access_token: Secret::new("syt_YWxpY2U_access_secret".to_owned()),
             refresh_token: Some(Secret::new("syr_YWxpY2U_refresh_secret".to_owned())),
             auth_kind: AuthKind::LoginToken,
+            oauth_client_id: None,
         }
     }
 
@@ -651,6 +678,21 @@ mod tests {
                 .expect("present"),
             without
         );
+
+        // An OAuth session keeps the client id it registered with (ADR
+        // 0010); a session written before Phase 14 has none.
+        let mut oauth = session.clone();
+        oauth.auth_kind = AuthKind::OAuth;
+        oauth.oauth_client_id = Some("01JCLIENT".to_owned());
+        save_session(&keychain, id, &oauth).expect("saved");
+        assert_eq!(
+            load_session(&keychain, id)
+                .expect("works")
+                .expect("present"),
+            oauth
+        );
+        assert!(AuthKind::OAuth.is_oauth() && AuthKind::QrCode.is_oauth());
+        assert!(!AuthKind::Sso.is_oauth() && !AuthKind::Password.is_oauth());
 
         create_passphrase(&keychain, &KeychainEntry::AccountStore(id)).expect("store");
         assert_eq!(keychain.entry_names().len(), 2);

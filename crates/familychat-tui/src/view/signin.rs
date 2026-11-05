@@ -5,7 +5,7 @@
 
 use familychat_core::{
     identity::APP_NAME,
-    signin::{PasswordKind, SigninStep},
+    signin::{BrowserKind, BrowserPurpose, PasswordKind, SigninStep},
 };
 use familychat_security::terminal::{sanitize, sanitize_line};
 use ratatui::{Frame, layout::Rect, style::Style, text::Span};
@@ -29,6 +29,9 @@ pub(super) fn title(signin: &SigninState) -> &'static str {
                 "ANOTHER MATRIX SERVER"
             }
             SigninStep::Password(_) => "SIGN IN WITH YOUR PASSWORD",
+            SigninStep::Server(_) => "ANOTHER MATRIX SERVER",
+            SigninStep::ConfirmBrowser(_) => "CONFIRM",
+            SigninStep::Browser(_) => "IN YOUR BROWSER",
             SigninStep::AlreadySignedIn(_) => "ALREADY SIGNED IN",
             _ => "SIGNING IN",
         },
@@ -216,15 +219,20 @@ fn flow(card: &mut Card, signin: &SigninState) {
             card.text("This takes a few seconds.", theme.faint());
         }
         SigninStep::Password(form) => {
-            let (heading, detail, label) = match form.kind {
-                PasswordKind::FamilyChat => (
+            let (heading, detail, label) = match (form.kind, &form.methods) {
+                (PasswordKind::FamilyChat, _) => (
                     "Sign in with your password",
                     "Use your family's address, your username and your password.",
                     "Your family's address",
                 ),
-                PasswordKind::OtherServer => (
+                (PasswordKind::OtherServer, None) => (
                     "Use another Matrix server",
                     "Sign in to any Matrix homeserver with your username and password.",
+                    "Homeserver",
+                ),
+                (PasswordKind::OtherServer, Some(_)) => (
+                    "Use another Matrix server",
+                    "Choose how to sign in. Only the ways this server offers are shown.",
                     "Homeserver",
                 ),
             };
@@ -235,12 +243,52 @@ fn flow(card: &mut Card, signin: &SigninState) {
                 card.text(&sanitize(notice), theme.info());
             }
             card.blank();
-            card.field(
-                label,
-                &sanitize_line(&signin.server),
-                &sanitize_line(&form.server_placeholder),
-                signin.focus == Field::Server,
-            );
+            if form.server_is_fixed() {
+                card.field(label, &sanitize_line(&form.server), "", false);
+            } else {
+                card.field(
+                    label,
+                    &sanitize_line(&signin.server),
+                    &sanitize_line(&form.server_placeholder),
+                    signin.focus == Field::Server,
+                );
+            }
+            if let Some(methods) = &form.methods {
+                if let Some(browser) = &methods.browser {
+                    card.blank();
+                    card.key("Ctrl-B", "Continue in your browser");
+                    card.text(
+                        &match browser.kind {
+                            BrowserKind::OAuth => {
+                                format!("You sign in at {}", sanitize_line(&browser.address))
+                            }
+                            BrowserKind::Sso => format!(
+                                "Your server's single sign-on, at {}",
+                                sanitize_line(&browser.address)
+                            ),
+                        },
+                        theme.faint(),
+                    );
+                }
+                if methods.qr_code {
+                    card.blank();
+                    card.text(
+                        "This server also signs in with a QR code: use the Family Chat window                          for that.",
+                        theme.faint(),
+                    );
+                }
+                if form.server_is_fixed() {
+                    card.key("Ctrl-E", "Change server");
+                }
+                if !form.shows_password() {
+                    if let Some(problem) = &form.problem {
+                        card.blank();
+                        card.text(&sanitize(&problem.message), theme.danger());
+                    }
+                    return;
+                }
+                card.blank();
+            }
             card.field(
                 "Username or Matrix ID",
                 &sanitize_line(&signin.username),
@@ -272,6 +320,64 @@ fn flow(card: &mut Card, signin: &SigninState) {
             card.text(&sanitize(message), Style::new());
             card.blank();
             card.key("Enter", "Back to sign-in");
+        }
+        SigninStep::Server(form) => {
+            card.heading("Use another Matrix server");
+            card.text(
+                "Type the server's address. Family Chat then shows the ways it offers to sign in.",
+                theme.faint(),
+            );
+            card.blank();
+            card.field(
+                "Homeserver",
+                &sanitize_line(&signin.server),
+                &sanitize_line(&form.server_placeholder),
+                true,
+            );
+            if let Some(problem) = &form.problem {
+                card.blank();
+                card.text(&sanitize(&problem.message), theme.danger());
+            }
+            card.blank();
+            card.text("Enter finds the server.", theme.faint());
+        }
+        SigninStep::ConfirmBrowser(confirm) => {
+            card.heading(&sanitize_line(&confirm.question));
+            card.blank();
+            // The whole address, never shortened.
+            card.text(&sanitize_line(&confirm.address), theme.bold());
+            card.blank();
+            card.text(&sanitize(&confirm.detail), Style::new());
+            card.blank();
+            card.key("Y", "Continue");
+            card.key("N", "Cancel");
+        }
+        SigninStep::Browser(browser) => {
+            card.heading(match browser.purpose {
+                BrowserPurpose::SignIn => "Waiting for your browser",
+                BrowserPurpose::ApproveDevice => "Approve the new device",
+            });
+            card.blank();
+            card.text(&sanitize(&browser.message), Style::new());
+            card.text(&sanitize_line(&browser.address), theme.bold());
+            card.blank();
+            card.key("O", "Open the browser again");
+            card.key("C", "Copy the address, for a browser elsewhere");
+            card.key("N", "Cancel");
+        }
+        SigninStep::QrCode(_) | SigninStep::CheckCode(_) => {
+            card.heading("Use the Family Chat window");
+            card.text(
+                "QR codes are drawn in the window only. Press Esc to go back.",
+                theme.faint(),
+            );
+        }
+        SigninStep::DeviceLinked(message) | SigninStep::Stopped(message) => {
+            card.heading("Sign in a new device");
+            card.blank();
+            card.text(&sanitize(message), Style::new());
+            card.blank();
+            card.key("Enter", "OK");
         }
         SigninStep::Finished(_) => card.heading("Opening your account…"),
         SigninStep::NotALink(_) | SigninStep::Cancelled => {}

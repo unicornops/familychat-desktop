@@ -1,7 +1,9 @@
 //! The sign-in's own HTTP client (PLAN.md, section 6.4).
 //!
 //! Every sign-in request (discovery, the code redemption, the password
-//! login, signing out a device the sign-in will not keep) goes through a
+//! login, signing out a device the sign-in will not keep, and from Phase 14
+//! the server's sign-in methods and an OAuth sign-in's registration, code
+//! exchange and revocation, ADR 0010) goes through a
 //! [`Transport`], never through matrix-sdk, so the SDK's general HTTP
 //! behaviour (its retries, its handling of a login response's
 //! `well_known`) cannot touch a token or a password. The app's transport is
@@ -56,6 +58,9 @@ pub struct HttpRequest {
     pub bearer: Option<Secret<String>>,
     /// A JSON body (it may hold a token or a password).
     pub json: Option<Secret<Vec<u8>>>,
+    /// An `application/x-www-form-urlencoded` body, as OAuth's token and
+    /// revocation endpoints take (it may hold a code or a token).
+    pub form: Option<Secret<Vec<u8>>>,
 }
 
 impl HttpRequest {
@@ -66,6 +71,7 @@ impl HttpRequest {
             url,
             bearer: None,
             json: None,
+            form: None,
         }
     }
 
@@ -76,6 +82,23 @@ impl HttpRequest {
             url,
             bearer: None,
             json: Some(Secret::new(body.to_string().into_bytes())),
+            form: None,
+        }
+    }
+
+    /// A `POST` of a form to `url`. The encoded body is a [`Secret`]
+    /// straight away.
+    pub fn post_form(url: Url, pairs: &[(&str, &str)]) -> Self {
+        let mut serializer = form_urlencoded::Serializer::new(String::new());
+        for (name, value) in pairs {
+            serializer.append_pair(name, value);
+        }
+        Self {
+            method: Method::Post,
+            url,
+            bearer: None,
+            json: None,
+            form: Some(Secret::new(serializer.finish().into_bytes())),
         }
     }
 
@@ -93,6 +116,7 @@ impl fmt::Debug for HttpRequest {
             .field("url", &redact_url(self.url.as_str()))
             .field("bearer", &self.bearer.as_ref().map(|_| "[redacted]"))
             .field("json", &self.json.as_ref().map(|_| "[redacted]"))
+            .field("form", &self.form.as_ref().map(|_| "[redacted]"))
             .finish()
     }
 }
@@ -180,6 +204,7 @@ impl Transport for ReqwestTransport {
                 url,
                 bearer,
                 json,
+                form,
             } = request;
             let mut builder = match method {
                 Method::Get => self.client.get(url),
@@ -191,6 +216,14 @@ impl Transport for ReqwestTransport {
             if let Some(body) = json {
                 builder = builder
                     .header(reqwest::header::CONTENT_TYPE, "application/json")
+                    .body(body.expose().clone());
+            }
+            if let Some(body) = form {
+                builder = builder
+                    .header(
+                        reqwest::header::CONTENT_TYPE,
+                        "application/x-www-form-urlencoded",
+                    )
                     .body(body.expose().clone());
             }
             let mut response = builder

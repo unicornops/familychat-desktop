@@ -1,0 +1,99 @@
+  FAMILY CHAT 0.0.0-test     ANOTHER MATRIX SERVER
+
+
+   Use another Matrix server
+   Choose how to sign in. Only the ways this server offers are shown.
+
+   Homeserver             example.org
+
+   Ctrl-B Continue in your browser
+   You sign in at https://account.example.org/
+
+   This server also signs in with a QR code: use the Family Chat window
+   for that.
+   Ctrl-E Change server
+
+   Username or Matrix ID
+   Password
+
+   Tab moves between the fields. Enter signs in from the password.
+
+
+
+^B Browser   Tab NextFld  Esc Back
+Enter Next   ^E Server    ^C Quit
+--- styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+
+
+   BBBBBBBBBBBBBBBBBBBBBBBBB
+   kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+
+   BBBBBBBBBBBBBBBBBBBBBBB
+
+   RRRRRR
+   kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+
+   kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+   kkkkkkkkk
+   RRRRRR
+
+   BBBBBBBBBBBBBBBBBBBBBBBR
+   BBBBBBBBBBBBBBBBBBBBBBB
+
+   kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+
+
+
+RR           RRR          RRR
+RRRRR        RR           RR
+--- NO_COLOR styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+
+
+   BBBBBBBBBBBBBBBBBBBBBBBBB
+
+
+   BBBBBBBBBBBBBBBBBBBBBBB
+
+   RRRRRR
+
+
+
+
+   RRRRRR
+
+   BBBBBBBBBBBBBBBBBBBBBBBR
+   BBBBBBBBBBBBBBBBBBBBBBB
+
+
+
+
+
+RR           RRR          RRR
+RRRRR        RR           RR
+--- ASCII ---
+  FAMILY CHAT 0.0.0-test     ANOTHER MATRIX SERVER
+
+
+   Use another Matrix server
+   Choose how to sign in. Only the ways this server offers are shown.
+
+   Homeserver             example.org
+
+   Ctrl-B Continue in your browser
+   You sign in at https://account.example.org/
+
+   This server also signs in with a QR code: use the Family Chat window
+   for that.
+   Ctrl-E Change server
+
+   Username or Matrix ID
+   Password
+
+   Tab moves between the fields. Enter signs in from the password.
+
+
+
+^B Browser   Tab NextFld  Esc Back
+Enter Next   ^E Server    ^C Quit

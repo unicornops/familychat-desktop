@@ -1302,7 +1302,9 @@ impl EncryptionView {
                 };
                 modal
                     .child(readable("encryption-verify-ready", text))
-                    .children(qr.as_ref().map(qr_code))
+                    .children(qr.as_ref().map(|qr| {
+                        qr_code("encryption-qr", "A QR code for your other device to scan", qr)
+                    }))
                     .footer(cancel())
                     .footer(
                         Button::new("encryption-verify-emoji", "Compare emoji")
@@ -1975,9 +1977,10 @@ fn emoji_grid(emoji: &[SasEmoji], colors: &UiColors) -> AnyElement {
         .into_any_element()
 }
 
-/// A verification QR code: dark modules on white whatever the theme, with
-/// its quiet zone, so a phone's camera reads it.
-fn qr_code(qr: &QrModules) -> AnyElement {
+/// A QR code: dark modules on white whatever the theme, with its quiet
+/// zone, so a phone's camera reads it. The verification's, and the sign-in's
+/// (ADR 0010).
+pub(crate) fn qr_code(id: &'static str, label: &'static str, qr: &QrModules) -> AnyElement {
     let side = qr.width + 2 * QR_QUIET;
     let rows = (0..side).map(|y| {
         div().flex().children((0..side).map(move |x| {
@@ -1993,8 +1996,8 @@ fn qr_code(qr: &QrModules) -> AnyElement {
         .justify_center()
         .child(
             div()
-                .id("encryption-qr")
-                .accessible(Role::Image, "A QR code for your other device to scan")
+                .id(id)
+                .accessible(Role::Image, label)
                 .flex()
                 .flex_col()
                 .rounded(px(RADIUS_LG))

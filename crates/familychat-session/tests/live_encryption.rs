@@ -85,6 +85,7 @@ impl Device {
                         .refresh_token()
                         .map(|token| Secret::new(token.to_owned())),
                     auth_kind,
+                    oauth_client_id: None,
                 },
                 &AnyHomeserver,
                 password.map(|password| Secret::new(password.to_owned())),

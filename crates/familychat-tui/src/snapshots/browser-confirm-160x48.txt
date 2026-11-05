@@ -1,0 +1,195 @@
+  FAMILY CHAT 0.0.0-test                                                    CONFIRM
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                           Continue in your browser?
+
+                                           https://account.example.org/
+
+                                           Your browser opens at this address, where you sign in. Only continue if
+                                           it's your server's.
+
+                                           Y Continue
+                                           N Cancel
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Y Continue          ^C Quit
+N Cancel
+--- styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                           BBBBBBBBBBBBBBBBBBBBBBBBB
+
+                                           BBBBBBBBBBBBBBBBBBBBBBBBBBBB
+
+
+
+
+                                           R
+                                           R
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+R                   RR
+R
+--- NO_COLOR styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                           BBBBBBBBBBBBBBBBBBBBBBBBB
+
+                                           BBBBBBBBBBBBBBBBBBBBBBBBBBBB
+
+
+
+
+                                           R
+                                           R
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+R                   RR
+R
+--- ASCII ---
+  FAMILY CHAT 0.0.0-test                                                    CONFIRM
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                           Continue in your browser?
+
+                                           https://account.example.org/
+
+                                           Your browser opens at this address, where you sign in. Only continue if
+                                           it's your server's.
+
+                                           Y Continue
+                                           N Cancel
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Y Continue          ^C Quit
+N Cancel

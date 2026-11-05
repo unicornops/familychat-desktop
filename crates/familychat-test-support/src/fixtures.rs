@@ -46,8 +46,10 @@ use familychat_core::{
     },
     settings::{MemorySettings, NotificationSettings},
     signin::{
-        ConfirmCode, Finished, PasswordForm, PasswordKind, SigninAnswer, SigninApi, SigninFlow,
-        SigninProblem, SigninStart, SigninStep, Working,
+        BrowserKind, BrowserMethod, BrowserPurpose, BrowserStep, BrowserUrl, CheckCodeForm,
+        ConfirmBrowser, ConfirmCode, Finished, PasswordForm, PasswordKind, QrCodeStep, QrPurpose,
+        ServerForm, ServerMethods, SigninAnswer, SigninApi, SigninFlow, SigninProblem, SigninStart,
+        SigninStep, Working,
     },
     startup::{OpenState, Opened, StartupApi},
     sync::{AccountStatus, SyncState},
@@ -1122,7 +1124,20 @@ pub enum FixtureStart {
     FamilyChatPassword,
     /// "Use another Matrix server".
     OtherServer,
+    /// "Sign in a new device".
+    LinkDevice,
 }
+
+/// The server "Use another Matrix server" finds in the fixture, whatever
+/// is typed: it offers the password, the browser and a QR code.
+pub const FIXTURE_OTHER_SERVER: &str = "example.org";
+/// Its authorization server, as the browser confirmation shows it.
+pub const FIXTURE_ISSUER: &str = "https://account.example.org/";
+/// What the fixture's browser step opens.
+pub const FIXTURE_BROWSER_URL: &str =
+    "https://account.example.org/authorize?client_id=fixture&state=fixture-state";
+/// The check code the fixture's QR sign-ins take.
+pub const FIXTURE_CHECK_CODE: &str = "42";
 
 /// An answer the fixture received, without the password.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1140,6 +1155,16 @@ pub enum FixtureAnswer {
         /// Whether the password was not empty.
         with_password: bool,
     },
+    /// "Use another Matrix server": this server.
+    ChooseServer(String),
+    /// Back to the server step.
+    ChangeServer,
+    /// "Continue in your browser".
+    UseBrowser,
+    /// "Sign in with a QR code".
+    UseQrCode,
+    /// A check code was typed.
+    SubmitCheckCode(String),
     /// Stop.
     Cancel,
 }
@@ -1179,6 +1204,8 @@ pub struct FixtureSignin {
     session: Arc<FixtureSession>,
     script: Mutex<SigninScript>,
     events: Arc<Mutex<Vec<FixtureEvent>>>,
+    /// The latest flow's answers, so a test can play the other device.
+    latest: Mutex<Option<mpsc::UnboundedSender<SigninAnswer>>>,
 }
 
 impl std::fmt::Debug for FixtureSignin {
@@ -1199,7 +1226,16 @@ impl FixtureSignin {
                 password: FixtureOutcome::SignIn,
             }),
             events: Arc::default(),
+            latest: Mutex::new(None),
         })
+    }
+
+    /// The other device scans the QR code the latest flow shows: the flow
+    /// moves on to the check code.
+    pub fn scan(&self) -> bool {
+        lock(&self.latest)
+            .as_ref()
+            .is_some_and(|answers| answers.send(SigninAnswer::Continue).is_ok())
     }
 
     /// The next flow shows `step` first, whatever it starts with (the
@@ -1267,10 +1303,12 @@ impl SigninApi for FixtureSignin {
                 FixtureStart::FamilyChatPassword,
                 SigninStep::Password(blank_form(PasswordKind::FamilyChat)),
             ),
-            SigninStart::OtherServer => (
-                FixtureStart::OtherServer,
-                SigninStep::Password(blank_form(PasswordKind::OtherServer)),
-            ),
+            SigninStart::OtherServer => (FixtureStart::OtherServer, steps::server()),
+            SigninStart::LinkDevice(_) => (FixtureStart::LinkDevice, SigninStep::Starting),
+        };
+        let (kind, first) = match &start {
+            SigninStart::LinkDevice(_) => (FixtureStart::LinkDevice, steps::link_device_qr()),
+            _ => (kind, first),
         };
         drop(start);
         let (script, events) = {
@@ -1284,6 +1322,7 @@ impl SigninApi for FixtureSignin {
         lock(&events).push(FixtureEvent::Started(kind));
         let (steps, receiver) = watch::channel(SigninStep::Starting);
         let (answers, answers_receiver) = mpsc::unbounded_channel();
+        *lock(&self.latest) = Some(answers.clone());
         let flow = FixtureFlow {
             session: self.session.clone(),
             events,
@@ -1291,6 +1330,7 @@ impl SigninApi for FixtureSignin {
             answers: answers_receiver,
             code: script.1,
             password: script.2,
+            methods_form: None,
         };
         let first = script.0;
         thread::Builder::new()
@@ -1312,6 +1352,29 @@ fn blank_form(kind: PasswordKind) -> PasswordForm {
         username: String::new(),
         notice: None,
         problem: None,
+        methods: None,
+    }
+}
+
+/// What the fixture's other server offers.
+pub fn fixture_methods() -> ServerMethods {
+    ServerMethods {
+        password: true,
+        browser: Some(BrowserMethod {
+            kind: BrowserKind::OAuth,
+            address: FIXTURE_ISSUER.to_owned(),
+        }),
+        qr_code: true,
+    }
+}
+
+/// The form "Use another Matrix server" shows once the fixture's server
+/// is found.
+fn methods_form(server: String) -> PasswordForm {
+    PasswordForm {
+        server,
+        methods: Some(fixture_methods()),
+        ..blank_form(PasswordKind::OtherServer)
     }
 }
 
@@ -1390,6 +1453,94 @@ pub mod steps {
     pub fn already_signed_in() -> SigninStep {
         SigninStep::AlreadySignedIn(wording::already_signed_in(&fixture_user()))
     }
+
+    /// "Use another Matrix server"'s server step.
+    pub fn server() -> SigninStep {
+        SigninStep::Server(ServerForm {
+            server: String::new(),
+            server_placeholder: wording::OTHER_SERVER_PLACEHOLDER.to_owned(),
+            problem: None,
+        })
+    }
+
+    /// The fixture server's ways to sign in: the browser, a QR code and the
+    /// password (ADR 0010).
+    pub fn methods() -> SigninStep {
+        SigninStep::Password(methods_form(FIXTURE_OTHER_SERVER.to_owned()))
+    }
+
+    /// A server whose only way is the browser.
+    pub fn browser_only() -> SigninStep {
+        SigninStep::Password(PasswordForm {
+            methods: Some(ServerMethods {
+                password: false,
+                qr_code: false,
+                ..fixture_methods()
+            }),
+            ..methods_form(FIXTURE_OTHER_SERVER.to_owned())
+        })
+    }
+
+    /// "Continue in your browser?".
+    pub fn confirm_browser() -> SigninStep {
+        SigninStep::ConfirmBrowser(ConfirmBrowser {
+            question: wording::CONFIRM_BROWSER.to_owned(),
+            address: FIXTURE_ISSUER.to_owned(),
+            detail: wording::CONFIRM_BROWSER_DETAIL.to_owned(),
+            purpose: BrowserPurpose::SignIn,
+        })
+    }
+
+    /// Waiting for the browser.
+    pub fn browser() -> SigninStep {
+        SigninStep::Browser(BrowserStep {
+            address: FIXTURE_ISSUER.to_owned(),
+            url: BrowserUrl::new(FIXTURE_BROWSER_URL.to_owned()),
+            message: wording::BROWSER_WAITING.to_owned(),
+            purpose: BrowserPurpose::SignIn,
+        })
+    }
+
+    /// This computer's QR code for a signed-in phone to scan.
+    pub fn qr_code() -> SigninStep {
+        SigninStep::QrCode(QrCodeStep {
+            qr: encryption::fixture_qr(),
+            purpose: QrPurpose::SignIn,
+            server: FIXTURE_OTHER_SERVER.to_owned(),
+        })
+    }
+
+    /// The other device's check code.
+    pub fn check_code() -> SigninStep {
+        SigninStep::CheckCode(CheckCodeForm {
+            purpose: QrPurpose::SignIn,
+            problem: None,
+        })
+    }
+
+    /// A signed-in account's QR code for a new device.
+    pub fn link_device_qr() -> SigninStep {
+        SigninStep::QrCode(QrCodeStep {
+            qr: encryption::fixture_qr(),
+            purpose: QrPurpose::LinkDevice,
+            server: FIXTURE_HOMESERVER_URL.to_owned(),
+        })
+    }
+
+    /// "Approve the new device in your browser?".
+    pub fn confirm_approve() -> SigninStep {
+        SigninStep::ConfirmBrowser(ConfirmBrowser {
+            question: wording::CONFIRM_APPROVE.to_owned(),
+            address: FIXTURE_ISSUER.to_owned(),
+            detail: wording::CONFIRM_APPROVE_DETAIL.to_owned(),
+            purpose: BrowserPurpose::ApproveDevice,
+        })
+    }
+
+    /// The new device is signed in.
+    pub fn device_linked() -> SigninStep {
+        SigninStep::DeviceLinked(wording::LINKED.to_owned())
+    }
 }
 
 struct FixtureFlow {
@@ -1399,6 +1550,8 @@ struct FixtureFlow {
     answers: mpsc::UnboundedReceiver<SigninAnswer>,
     code: FixtureOutcome,
     password: FixtureOutcome,
+    /// The form a browser or QR sign-in started from, to go back to.
+    methods_form: Option<PasswordForm>,
 }
 
 impl FixtureFlow {
@@ -1425,6 +1578,15 @@ impl FixtureFlow {
                 username: username.clone(),
                 with_password: !password.expose().is_empty(),
             },
+            Some(SigninAnswer::ChooseServer { server }) => {
+                FixtureAnswer::ChooseServer(server.clone())
+            }
+            Some(SigninAnswer::ChangeServer) => FixtureAnswer::ChangeServer,
+            Some(SigninAnswer::UseBrowser) => FixtureAnswer::UseBrowser,
+            Some(SigninAnswer::UseQrCode) => FixtureAnswer::UseQrCode,
+            Some(SigninAnswer::SubmitCheckCode(code)) => {
+                FixtureAnswer::SubmitCheckCode(code.clone())
+            }
             Some(SigninAnswer::Cancel) | None => FixtureAnswer::Cancel,
         };
         self.record(FixtureEvent::Answered(recorded));
@@ -1458,9 +1620,17 @@ impl FixtureFlow {
                     }
                     Some(SigninAnswer::UsePassword) => SigninStep::Password(link_form()),
                     Some(SigninAnswer::Cancel) | None => SigninStep::Cancelled,
-                    // The live flow ignores a password here, and so does
-                    // the fixture.
-                    Some(SigninAnswer::SubmitPassword { .. }) => continue,
+                    // The live flow ignores anything else here, and so
+                    // does the fixture.
+                    Some(_) => continue,
+                },
+                SigninStep::Server(_) => match self.answer() {
+                    Some(SigninAnswer::ChooseServer { server }) => {
+                        self.show(SigninStep::Working(Working::CheckingServer));
+                        SigninStep::Password(methods_form(server.trim().to_owned()))
+                    }
+                    Some(SigninAnswer::Cancel) | None => SigninStep::Cancelled,
+                    Some(_) => continue,
                 },
                 SigninStep::Password(mut form) => match self.answer() {
                     Some(SigninAnswer::SubmitPassword {
@@ -1477,10 +1647,65 @@ impl FixtureFlow {
                             }
                         }
                     }
-                    Some(SigninAnswer::Cancel) | None => SigninStep::Cancelled,
-                    Some(SigninAnswer::Continue | SigninAnswer::UsePassword) => {
-                        continue;
+                    Some(SigninAnswer::UseBrowser) if form.methods.is_some() => {
+                        self.methods_form = Some(form.clone());
+                        steps::confirm_browser()
                     }
+                    Some(SigninAnswer::UseQrCode) if form.methods.is_some() => {
+                        self.methods_form = Some(form.clone());
+                        self.show(SigninStep::Working(Working::PreparingQrCode));
+                        steps::qr_code()
+                    }
+                    Some(SigninAnswer::ChangeServer) if form.server_is_fixed() => steps::server(),
+                    Some(SigninAnswer::Cancel) | None => SigninStep::Cancelled,
+                    Some(_) => continue,
+                },
+                // The browser opens only after Continue here; the fixture
+                // then waits for a browser that never comes back.
+                SigninStep::ConfirmBrowser(confirm) => match self.answer() {
+                    Some(SigninAnswer::Continue) => match confirm.purpose {
+                        BrowserPurpose::SignIn => steps::browser(),
+                        BrowserPurpose::ApproveDevice => SigninStep::Browser(BrowserStep {
+                            message: wording::APPROVE_WAITING.to_owned(),
+                            purpose: BrowserPurpose::ApproveDevice,
+                            ..match steps::browser() {
+                                SigninStep::Browser(browser) => browser,
+                                _ => unreachable!("the browser step"),
+                            }
+                        }),
+                    },
+                    Some(SigninAnswer::Cancel) | None => self.back(confirm.purpose),
+                    Some(_) => continue,
+                },
+                SigninStep::Browser(browser) => match self.answer() {
+                    Some(SigninAnswer::Cancel) | None => self.back(browser.purpose),
+                    Some(_) => continue,
+                },
+                // The other device "scans" the code when a test asks
+                // (`FixtureSignin::scan`); the window sends nothing else.
+                SigninStep::QrCode(qr) => match self.answer() {
+                    Some(SigninAnswer::Cancel) | None => self.back_from_qr(qr.purpose),
+                    Some(_) => SigninStep::CheckCode(CheckCodeForm {
+                        purpose: qr.purpose,
+                        problem: None,
+                    }),
+                },
+                SigninStep::CheckCode(form) => match self.answer() {
+                    Some(SigninAnswer::SubmitCheckCode(code)) => {
+                        if code.trim() != FIXTURE_CHECK_CODE {
+                            SigninStep::CheckCode(CheckCodeForm {
+                                problem: Some(wording::CHECK_CODE_INVALID.to_owned()),
+                                ..form
+                            })
+                        } else if form.purpose == QrPurpose::LinkDevice {
+                            steps::confirm_approve()
+                        } else {
+                            self.show(SigninStep::Working(Working::WaitingForOtherDevice));
+                            self.finish()
+                        }
+                    }
+                    Some(SigninAnswer::Cancel) | None => self.back_from_qr(form.purpose),
+                    Some(_) => continue,
                 },
                 // Shown and kept (the screenshot fixture's working steps).
                 SigninStep::Starting | SigninStep::Working(_) => loop {
@@ -1492,8 +1717,26 @@ impl FixtureFlow {
                 SigninStep::Finished(_)
                 | SigninStep::AlreadySignedIn(_)
                 | SigninStep::NotALink(_)
-                | SigninStep::Cancelled => return,
+                | SigninStep::Cancelled
+                | SigninStep::DeviceLinked(_)
+                | SigninStep::Stopped(_) => return,
             };
+        }
+    }
+
+    /// Where Cancel goes from a browser step: the form it came from, or
+    /// for a new device's approval, the end.
+    fn back(&mut self, purpose: BrowserPurpose) -> SigninStep {
+        match (purpose, self.methods_form.take()) {
+            (BrowserPurpose::SignIn, Some(form)) => SigninStep::Password(form),
+            _ => SigninStep::Cancelled,
+        }
+    }
+
+    fn back_from_qr(&mut self, purpose: QrPurpose) -> SigninStep {
+        match purpose {
+            QrPurpose::SignIn => self.back(BrowserPurpose::SignIn),
+            QrPurpose::LinkDevice => SigninStep::Cancelled,
         }
     }
 }
@@ -1793,6 +2036,61 @@ mod tests {
         );
         drop(flow);
         assert!(!format!("{:?}", signin.events()).contains("secret"));
+    }
+
+    #[test]
+    fn another_server_shows_its_methods_and_the_browser_waits_for_continue() {
+        let signin = FixtureSignin::new(FixtureSession::new());
+        let flow = signin.start(SigninStart::OtherServer);
+        let mut steps = flow.steps();
+        next_step(&mut steps, |step| matches!(step, SigninStep::Server(_)));
+        flow.answer(SigninAnswer::ChooseServer {
+            server: FIXTURE_OTHER_SERVER.to_owned(),
+        });
+        next_step(
+            &mut steps,
+            |step| matches!(step, SigninStep::Password(form) if form.methods == Some(fixture_methods())),
+        );
+        flow.answer(SigninAnswer::UseBrowser);
+        next_step(&mut steps, |step| {
+            matches!(step, SigninStep::ConfirmBrowser(_))
+        });
+        flow.answer(SigninAnswer::Continue);
+        next_step(&mut steps, |step| matches!(step, SigninStep::Browser(_)));
+        flow.answer(SigninAnswer::Cancel);
+        next_step(&mut steps, |step| matches!(step, SigninStep::Password(_)));
+
+        flow.answer(SigninAnswer::UseQrCode);
+        next_step(&mut steps, |step| matches!(step, SigninStep::QrCode(_)));
+        assert!(signin.scan());
+        next_step(&mut steps, |step| matches!(step, SigninStep::CheckCode(_)));
+        flow.answer(SigninAnswer::SubmitCheckCode("17".to_owned()));
+        next_step(
+            &mut steps,
+            |step| matches!(step, SigninStep::CheckCode(form) if form.problem.is_some()),
+        );
+        flow.answer(SigninAnswer::SubmitCheckCode(FIXTURE_CHECK_CODE.to_owned()));
+        next_step(&mut steps, |step| matches!(step, SigninStep::Finished(_)));
+    }
+
+    #[test]
+    fn linking_a_device_asks_before_the_browser_and_ends_linked_or_cancelled() {
+        let signin = FixtureSignin::new(FixtureSession::new());
+        let flow = signin.start(SigninStart::LinkDevice(AccountKey("ana".to_owned())));
+        let mut steps = flow.steps();
+        next_step(
+            &mut steps,
+            |step| matches!(step, SigninStep::QrCode(qr) if qr.purpose == QrPurpose::LinkDevice),
+        );
+        assert!(signin.scan());
+        next_step(&mut steps, |step| matches!(step, SigninStep::CheckCode(_)));
+        flow.answer(SigninAnswer::SubmitCheckCode(FIXTURE_CHECK_CODE.to_owned()));
+        next_step(
+            &mut steps,
+            |step| matches!(step, SigninStep::ConfirmBrowser(confirm) if confirm.purpose == BrowserPurpose::ApproveDevice),
+        );
+        flow.answer(SigninAnswer::Cancel);
+        next_step(&mut steps, |step| *step == SigninStep::Cancelled);
     }
 
     #[test]
