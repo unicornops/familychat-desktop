@@ -372,6 +372,41 @@ async fn second_device(harness: &HomeserverHarness, user: &TestUser, name: &str)
     .await
 }
 
+/// Waits until `device` sees another of the account's devices signed by
+/// the account's identity: matrix-sdk sends a request to confirm this
+/// device only to those, so a request made before then reaches no one.
+/// On a timeout it says which devices it saw, and how.
+async fn knows_a_signed_sibling(device: &Device) -> Result<()> {
+    let deadline = tokio::time::Instant::now() + WAIT;
+    loop {
+        let devices = device
+            .session
+            .devices(&device.key)
+            .await
+            .context("devices answers")?
+            .map_err(|error| anyhow::anyhow!("the devices couldn't be listed: {error}"))?;
+        if devices
+            .iter()
+            .any(|seen| !seen.is_this_device && seen.verified)
+        {
+            return Ok(());
+        }
+        if tokio::time::Instant::now() >= deadline {
+            let seen: Vec<String> = devices
+                .iter()
+                .map(|seen| {
+                    format!(
+                        "{} (this device: {}, signed: {})",
+                        seen.device_id, seen.is_this_device, seen.verified
+                    )
+                })
+                .collect();
+            bail!("no signed sibling device within {WAIT:?}; the device saw {seen:?}");
+        }
+        tokio::time::sleep(Duration::from_millis(500)).await;
+    }
+}
+
 #[tokio::test]
 #[ignore = "needs the homeserver harness: scripts/homeserver-harness.sh up"]
 async fn two_devices_verify_each_other_by_emoji_and_history_decrypts() -> Result<()> {
@@ -404,6 +439,10 @@ async fn two_devices_verify_each_other_by_emoji_and_history_decrypts() -> Result
             EncryptionStatus::needs_confirmation,
         )
         .await?;
+    // A device that has just signed in may not know its siblings, or their
+    // signatures, yet, and a verification request goes only to the signed
+    // devices it knows.
+    knows_a_signed_sibling(&second).await?;
     let mut incoming = first.session.verification_requests();
     let ours = second
         .session
