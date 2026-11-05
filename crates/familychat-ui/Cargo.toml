@@ -1,0 +1,28 @@
+[package]
+name = "familychat-ui"
+version = "0.0.1"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+description = "Family Chat's GPUI desktop frontend"
+
+[dependencies]
+anyhow.workspace = true
+familychat-assets = { path = "../familychat-assets" }
+familychat-core = { path = "../familychat-core" }
+gpui.workspace = true
+gpui_platform.workspace = true
+
+[dev-dependencies]
+# The background runtime, for the test that a GPUI task can await work done
+# on Tokio (PLAN.md, section 5.2). The frontend itself never depends on the
+# session crate's Matrix half (section 5.1).
+familychat-session = { path = "../familychat-session" }
+familychat-theme = { path = "../familychat-theme" }
+# `#[gpui::test]`, `TestAppContext` and `VisualTestContext` for view tests.
+gpui = { workspace = true, features = ["test-support"] }
+tokio.workspace = true
+
+[lints]
+workspace = true

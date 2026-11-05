@@ -1,0 +1,61 @@
+[workspace]
+members = [
+    "crates/familychat-app",
+    "crates/familychat-assets",
+    "crates/familychat-core",
+    "crates/familychat-session",
+    "crates/familychat-theme",
+    "crates/familychat-tui",
+    "crates/familychat-ui",
+]
+resolver = "3"
+
+[workspace.package]
+edition = "2024"
+license = "GPL-3.0-only"
+publish = false
+rust-version = "1.98"
+version = "0.0.1"
+
+[workspace.dependencies]
+anyhow = "1"
+# The terminal UI's terminal layer: raw mode, the alternate screen, key,
+# mouse and bracketed-paste events on Linux, macOS and Windows terminals.
+# The version ratatui's backend uses.
+crossterm = { version = "0.29", default-features = false, features = ["bracketed-paste", "events", "windows"] }
+# GPUI is a git dependency on Zed pinned to a stable release tag (ADR 0002,
+# docs/upstream/zed.md), never the crates.io `gpui` crate. The weekly
+# `zed-upstream` workflow moves both lines; keep them on the same tag.
+gpui = { git = "https://github.com/zed-industries/zed", tag = "v1.27.0" }
+gpui_platform = { git = "https://github.com/zed-industries/zed", tag = "v1.27.0", default-features = false, features = ["font-kit", "wayland", "x11"] }
+# The terminal UI's drawing, on its crossterm backend; no optional widgets
+# or macros.
+ratatui = { version = "0.30.2", default-features = false, features = ["crossterm_0_29"] }
+rust-embed = { version = "8", features = ["interpolate-folder-path"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync", "time"] }
+
+[workspace.lints.rust]
+missing_docs = "warn"
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+dbg_macro = "deny"
+todo = "deny"
+unwrap_used = "deny"
+
+# Zed's root Cargo.toml patches these crates.io crates, but `[patch]` sections
+# only apply to the workspace that declares them, so a git consumer of GPUI
+# gets the unpatched crates.io releases unless it repeats the patches. We
+# mirror the ones that change GPUI's own runtime behaviour: the async-task
+# executor (gpui), the calloop event loop's idle budgeting (gpui_linux) and
+# khronos-egl, so a failed EGL call that reports EGL_SUCCESS does not panic
+# (wgpu's GL backend on Linux). Zed's other patches (cpal, tree-sitter,
+# livekit, notify, async-process, windows-capture, crash-context, scratch)
+# cover crates this build does not compile. The `zed-upstream` workflow
+# re-syncs these revisions from the pinned tag.
+[patch.crates-io]
+async-task = { git = "https://github.com/zed-industries/async-task.git", rev = "015845a19fc31752c02367567d3b8900a406f9da" }
+calloop = { git = "https://github.com/zed-industries/calloop", rev = "3759371fee14c40066d64777e2a36b6ffcc22590" }
+khronos-egl = { git = "https://github.com/zed-industries/khronos-egl", rev = "42214b36347b108fd9630ca6254b96dde59e04fe" }
