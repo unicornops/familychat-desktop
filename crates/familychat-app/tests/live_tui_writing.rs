@@ -284,6 +284,10 @@ impl StartupApi for Ready {
 struct LiveTerminal {
     root: std::path::PathBuf,
     manager: Arc<AccountManager>,
+    /// The terminal's own session and account, for the facts the test
+    /// checks before it acts (never to drive the terminal).
+    session: Arc<LiveSession>,
+    key: AccountKey,
     app: App,
     terminal: Terminal<TestBackend>,
 }
@@ -298,7 +302,7 @@ impl LiveTerminal {
     ) -> Result<Self> {
         let root = unique_dir(name);
         let manager = manager(harness, &root)?;
-        add_account(harness, &manager, user, session, password).await?;
+        let key = add_account(harness, &manager, user, session, password).await?;
         let handle = tokio::runtime::Handle::current();
         let transport = ReqwestTransport::with_builder(edge_client_builder(harness.env())?)?;
         let signin = LiveSignin::with_services(
@@ -311,8 +315,9 @@ impl LiveTerminal {
             },
             handle.clone(),
         );
+        let live = Arc::new(LiveSession::new(manager.clone(), handle));
         let startup = Arc::new(Ready(Opened {
-            session: Arc::new(LiveSession::new(manager.clone(), handle)),
+            session: live.clone(),
             signin: Arc::new(signin),
             settings: Arc::new(familychat_core::settings::MemorySettings::default()),
             notice: None,
@@ -334,6 +339,8 @@ impl LiveTerminal {
         Ok(Self {
             root,
             manager,
+            session: live,
+            key,
             app,
             terminal: Terminal::new(TestBackend::new(120, 40))?,
         })
@@ -543,6 +550,29 @@ async fn the_terminal_joins_sends_receives_replies_and_reacts() -> Result<()> {
     Ok(())
 }
 
+/// Waits until `session` lists at least `count` of the account's devices:
+/// a device that has just signed in may not know its siblings yet, and a
+/// verification request goes only to the devices it knows.
+async fn knows_devices(session: &LiveSession, key: &AccountKey, count: usize) -> Result<()> {
+    let deadline = Instant::now() + WAIT;
+    loop {
+        let devices = session
+            .devices(key)
+            .await
+            .context("devices answers")?
+            .map_err(|error| anyhow::anyhow!("the devices couldn't be listed: {error}"))?;
+        if devices.len() >= count {
+            return Ok(());
+        }
+        ensure!(
+            Instant::now() < deadline,
+            "only {} of {count} devices known after {WAIT:?}",
+            devices.len()
+        );
+        tokio::time::sleep(Duration::from_millis(500)).await;
+    }
+}
+
 /// Waits for a verification step that passes `accept`.
 async fn step(
     flow: &VerificationFlow,
@@ -633,6 +663,7 @@ async fn the_terminal_verifies_by_emoji_with_another_device() -> Result<()> {
     .await?;
     tui.shows("Confirm it's you").await?;
     tui.shows("Use another device").await?;
+    knows_devices(&tui.session, &tui.key, 2).await?;
     // d: another device. The first device gets the request and accepts.
     tui.key(KeyCode::Char('d'));
     let theirs = request(&mut first_incoming).await?;
@@ -686,6 +717,7 @@ async fn the_terminal_verifies_by_emoji_with_another_device() -> Result<()> {
             EncryptionStatus::needs_confirmation,
         )
         .await?;
+    knows_devices(&third.session, &third.key, 3).await?;
     let ours = third
         .session
         .verify_this_device(&third.key)

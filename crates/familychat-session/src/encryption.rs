@@ -767,17 +767,32 @@ pub(crate) fn register_incoming(client: &Client, account: AccountKey, feed: Veri
 /// Asks the account's other devices to verify this one.
 pub(crate) async fn verify_this_device(client: &Client) -> Result<VerificationFlow, SessionError> {
     let user_id = client.user_id().ok_or(SessionError::NotReady)?.to_owned();
-    let identity = client
-        .encryption()
-        .get_user_identity(&user_id)
-        .await
-        .ok()
-        .flatten()
-        .ok_or_else(|| {
-            SessionError::Failed(
-                "Your account has no identity to confirm this device with yet.".to_owned(),
-            )
-        })?;
+    // A device that has just signed in may not know its sibling devices
+    // yet, and the request goes to the devices this one knows: ask the
+    // server for the account's keys first (`request_user_identity` forces
+    // a `/keys/query`; `get_user_identity` reads the store only, and is the
+    // fallback when the server can't be asked).
+    let fresh = match client.encryption().request_user_identity(&user_id).await {
+        Ok(identity) => identity,
+        Err(error) => {
+            info!(%error, "the account's keys couldn't be fetched; using the stored ones");
+            None
+        }
+    };
+    let stored = match fresh {
+        Some(identity) => Some(identity),
+        None => client
+            .encryption()
+            .get_user_identity(&user_id)
+            .await
+            .ok()
+            .flatten(),
+    };
+    let identity = stored.ok_or_else(|| {
+        SessionError::Failed(
+            "Your account has no identity to confirm this device with yet.".to_owned(),
+        )
+    })?;
     let request = identity.request_verification().await.map_err(|error| {
         info!(%error, "asking the other devices to verify failed");
         SessionError::Failed("The request couldn't be sent. Try again.".to_owned())
