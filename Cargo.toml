@@ -53,7 +53,7 @@ matrix-sdk-store-encryption = "=0.19.1"
 # (SQLite built from source, as rusqlite's `bundled` does) and rustls with
 # aws-lc-rs. No automatic room key forwarding (key requests to other
 # devices are left to verification and backup, Phase 8), no native TLS.
-matrix-sdk = { version = "=0.19.1", default-features = false, features = ["bundled-sqlite", "e2e-encryption", "rustls-aws-lc-rs", "sqlite"] }
+matrix-sdk = { version = "=0.19.1", default-features = false, features = ["bundled-sqlite", "e2e-encryption", "qrcode", "rustls-aws-lc-rs", "sqlite"] }
 # SyncService, RoomListService and Timeline, on the same TLS provider.
 matrix-sdk-ui = { version = "=0.19.1", default-features = false, features = ["rustls-aws-lc-rs"] }
 # Matrix identifiers for familychat-core's view models: the ruma matrix-sdk

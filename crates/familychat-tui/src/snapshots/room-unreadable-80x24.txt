@@ -1,14 +1,14 @@
   FAMILY CHAT 0.0.0-test              @ana:smith.safechat.family  Room 10 of 11
 Birthday surprise  Encrypted  4 members
 ────────────────────────────────────────────────────────────────────────────────
-
-──────────────────────────────────── Monday ────────────────────────────────────
-  · Dad turned on end-to-end encryption
-Mum  10:01
   Waiting for this message's key. It shows once a device that can read it shares
   the key.
-  Waiting for this message's key. It shows once a device that can read it shares
-  the key.
+  This message was sent before this device signed in. Confirm it's you with
+  another device or your recovery key to read older messages.
+Grandad  10:03
+  You can't read this message: it was sent before you joined.
+Ben  10:04
+  The sender didn't share this message's key with you.
 Dad  11:00
   Cake is ordered. Chocolate, obviously.
 Ana  11:05
@@ -26,14 +26,14 @@ PgUp Older   Tab NextLink s Save       G Latest     n NextNew    O OTHER
 RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
 BBBBBBBBBBBBBBBBBkkkkkkkkkkkkkkkkkkkkkk
 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
-
-kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
-  kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+  kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+  kkkkkkkk
+  kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+  kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+BBBBBBB  kkkkk
+  kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
 BBB  kkkkk
-  kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
-  kkkkkkkk
-  kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
-  kkkkkkkk
+  kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
 BBB  kkkkk
 kk
 ccc  kkkkk
@@ -51,14 +51,14 @@ RRRR         RRR          R            R            R            R
 RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
 BBBBBBBBBBBBBBBBB
 
-
-
-
+  IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+  IIIIIIII
+  IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+  IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+BBBBBBB
+  IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
 BBB
-  IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
-  IIIIIIII
-  IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
-  IIIIIIII
+  IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
 BBB
 
 BBB
@@ -76,14 +76,14 @@ RRRR         RRR          R            R            R            R
   FAMILY CHAT 0.0.0-test              @ana:smith.safechat.family  Room 10 of 11
 Birthday surprise  Encrypted  4 members
 --------------------------------------------------------------------------------
-
------------------------------------- Monday ------------------------------------
-  - Dad turned on end-to-end encryption
-Mum  10:01
   Waiting for this message's key. It shows once a device that can read it shares
   the key.
-  Waiting for this message's key. It shows once a device that can read it shares
-  the key.
+  This message was sent before this device signed in. Confirm it's you with
+  another device or your recovery key to read older messages.
+Grandad  10:03
+  You can't read this message: it was sent before you joined.
+Ben  10:04
+  The sender didn't share this message's key with you.
 Dad  11:00
   Cake is ordered. Chocolate, obviously.
 Ana  11:05

@@ -228,7 +228,9 @@ async fn rule4_continue_redeems_the_code_once_at_hs() {
     assert_eq!(
         harness.accounts.added(),
         [(ANA.to_owned(), SMITH.to_owned(), AuthKind::LoginToken)]
-    );
+    ); // A code has no password to hand on: the session relies on MSC3967
+    // for the first cross-signing upload (ADR 0009).
+    assert_eq!(*harness.accounts.passwords.lock().expect("lock"), [None]);
 }
 
 #[tokio::test]
@@ -515,6 +517,11 @@ async fn rule7_after_a_used_code_the_password_goes_to_account_provider() {
             SMITH.to_owned(),
             AuthKind::Password
         )]
+    ); // The typed password goes with the credentials, once, for the
+    // cross-signing set-up's user-interactive auth (ADR 0009).
+    assert_eq!(
+        *harness.accounts.passwords.lock().expect("lock"),
+        [Some(true)]
     );
 }
 

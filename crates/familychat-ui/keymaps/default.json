@@ -8,7 +8,12 @@
     "context": "Shell",
     "bindings": {
       "secondary-k": "familychat::ToggleCommandPalette",
-      "secondary-alt-n": "familychat::NotificationSettings"
+      "secondary-alt-n": "familychat::NotificationSettings",
+      "secondary-alt-v": "familychat::ConfirmIdentity",
+      "secondary-alt-r": "familychat::SetUpRecovery",
+      "secondary-shift-d": "familychat::ManageDevices",
+      "secondary-alt-e": "familychat::ExportRoomKeys",
+      "secondary-alt-i": "familychat::ImportRoomKeys"
     }
   },
   {

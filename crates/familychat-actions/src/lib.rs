@@ -101,6 +101,8 @@ pub enum Action {
     SaveDraft,
     /// Opened a draft.
     LoadDraft,
+    /// Sent a message the encryption stopped, anyway (ADR 0009).
+    SendAnyway,
 }
 
 impl Action {
@@ -122,6 +124,7 @@ impl Action {
             Self::CreateDirectChat => "The chat couldn't be started. Try again.",
             Self::SaveDraft => "Your draft couldn't be kept.",
             Self::LoadDraft => "Your draft couldn't be opened.",
+            Self::SendAnyway => "The message couldn't be sent anyway. Try again.",
         }
     }
 
@@ -213,6 +216,9 @@ pub enum ActionEvent {
         room: OwnedRoomId,
         /// Whether it is a direct chat.
         direct: bool,
+        /// Whether it was made encrypted (its `m.room.encryption` state may
+        /// reach the room list a moment after the room does).
+        encrypted: bool,
     },
     /// A room's draft was read.
     DraftLoaded {
@@ -506,6 +512,15 @@ impl Actions {
         self.room_task(room, Action::Redact, RoomRequest::Redact { target, reason })
     }
 
+    /// Sends a message the encryption stopped
+    /// (`familychat_core::timeline::SendProblem`), as Element X's "Send
+    /// anyway" does: an unconfirmed device of a verified person gets the
+    /// key too, or a changed identity's old verification is withdrawn
+    /// (ADR 0009). Refused while paused, like every write.
+    pub fn send_anyway(&self, room: &RoomId, target: MessageRef) -> ActionTask {
+        self.room_task(room, Action::SendAnyway, RoomRequest::SendAnyway(target))
+    }
+
     /// Moves the read receipt and the read marker to the newest message.
     /// Nothing is sent while paused, and nothing is reported when it went
     /// well (it happens every time a room is read).
@@ -681,16 +696,21 @@ impl Actions {
                 Ok(Ok(defaults)) => defaults,
                 _ => ServerDefaults::default(),
             };
+            let encrypted = encrypt_new_room(&defaults);
             let request = NewRoom {
                 name: name
                     .map(|name| name.trim().to_owned())
                     .filter(|name| !name.is_empty()),
                 invite,
                 direct,
-                encrypted: encrypt_new_room(&defaults),
+                encrypted,
             };
             match this.session.create_room(&this.account, request).await {
-                Ok(Ok(room)) => this.emit(ActionEvent::RoomCreated { room, direct }),
+                Ok(Ok(room)) => this.emit(ActionEvent::RoomCreated {
+                    room,
+                    direct,
+                    encrypted,
+                }),
                 Ok(Err(error)) => this.emit(ActionEvent::Failed {
                     room: None,
                     action,

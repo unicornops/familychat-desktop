@@ -173,6 +173,9 @@ pub struct FakeAccounts {
     pub signed_in: Mutex<Vec<OwnedUserId>>,
     pub added: Mutex<Vec<(String, String, AuthKind)>>,
     pub failure: Mutex<Option<AddFailure>>,
+    /// For each account added, whether the sign-in handed its password on
+    /// (for the cross-signing set-up), and whether it was the one typed.
+    pub passwords: Mutex<Vec<Option<bool>>>,
 }
 
 impl FakeAccounts {
@@ -190,8 +193,14 @@ impl AccountSink for FakeAccounts {
         &self,
         session: AccountSession,
         check: Box<dyn PostLoginCheck>,
+        password: Option<familychat_security::Secret<String>>,
     ) -> BoxFuture<'_, Result<AccountKey, AddFailure>> {
         Box::pin(async move {
+            lock(&self.passwords).push(
+                password
+                    .as_ref()
+                    .map(|password| password.expose() == PASSWORD),
+            );
             // As the account manager does: the check sees the client's
             // homeserver and user once the session is restored.
             let homeserver = Url::parse(&session.homeserver_url).expect("a URL");

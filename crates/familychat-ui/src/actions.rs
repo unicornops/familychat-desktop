@@ -64,6 +64,16 @@ actions!(
         ShowInvites,
         /// Open the notification settings.
         NotificationSettings,
+        /// "Confirm it's you": verify this device (ADR 0009).
+        ConfirmIdentity,
+        /// Set recovery up and show the recovery key once.
+        SetUpRecovery,
+        /// Show the account's devices.
+        ManageDevices,
+        /// Save the room keys to a passphrase-protected file.
+        ExportRoomKeys,
+        /// Read room keys from such a file.
+        ImportRoomKeys,
         /// Move to the message field.
         FocusComposer,
         /// Pick files to send.
