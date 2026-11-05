@@ -692,7 +692,10 @@ jobs:
             $view = $database.GetType().InvokeMember('OpenView', 'InvokeMethod', $null, $database, @($Query))
             $view.GetType().InvokeMember('Execute', 'InvokeMethod', $null, $view, $null) | Out-Null
             while ($null -ne ($record = $view.GetType().InvokeMember('Fetch', 'InvokeMethod', $null, $view, $null))) {
-              $fields = 1..$Columns | ForEach-Object { $record.GetType().InvokeMember('StringData', 'GetProperty', $null, $record, @($_)) }
+              # A plain [int], not the pipeline's PSObject-wrapped $_, which COM refuses (DISP_E_TYPEMISMATCH).
+              $fields = for ($column = 1; $column -le $Columns; $column++) {
+                [string]$record.GetType().InvokeMember('StringData', 'GetProperty', $null, $record, [object[]]@([int]$column))
+              }
               Write-Host ('  ' + ($fields -join ' | '))
             }
             $view.GetType().InvokeMember('Close', 'InvokeMethod', $null, $view, $null) | Out-Null
