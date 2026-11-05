@@ -193,7 +193,7 @@ is in front, at most every two seconds. Settings for both are Phase 13's.
   changed still refuses to open (ADR 0003).
 - Not done here: the window has no dialog yet to start a direct chat or
   make a room, or to invite someone (the actions, their tests and the
-  session can); slash commands; retrying or discarding a message the
-  server refused for good; private read receipts and turning typing
+  session can); slash commands; retrying a message the server refused
+  for good (it can be deleted, which cancels it); private read receipts and turning typing
   notices off (Phase 13's settings); verification and the rest of
   encryption (Phase 8).

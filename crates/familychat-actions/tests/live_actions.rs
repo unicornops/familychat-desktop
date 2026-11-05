@@ -660,12 +660,16 @@ async fn a_paused_account_cannot_send_until_the_pause_ends() -> Result<()> {
     Ok(())
 }
 
-/// The upload paths in the front end's access log.
+/// The media uploads in the front end's access log (`/_matrix/media/*/upload`
+/// or `/_matrix/client/*/media/upload`; not the encryption keys' uploads,
+/// which every new device makes).
 fn uploads(harness: &HomeserverHarness) -> Result<usize> {
     Ok(harness
         .access_log()?
         .iter()
-        .filter(|line| line.method == "POST" && line.path.contains("/upload"))
+        .filter(|line| {
+            line.method == "POST" && line.path.contains("/media/") && line.path.ends_with("/upload")
+        })
         .count())
 }
 
