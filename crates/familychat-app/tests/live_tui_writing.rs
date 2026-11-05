@@ -500,6 +500,10 @@ async fn the_terminal_joins_sends_receives_replies_and_reacts() -> Result<()> {
     );
     tui.typed(&reply);
     tui.key(KeyCode::Enter);
+    // The terminal shows its own reply: it takes in the session's news
+    // only when it ticks, so the test waits on the terminal before it
+    // looks at its timeline again.
+    tui.shows(&reply).await?;
     let replied = followed
         .until("the terminal's reply", |event| {
             body(event) == Some(reply.as_str())
@@ -539,21 +543,21 @@ async fn the_terminal_joins_sends_receives_replies_and_reacts() -> Result<()> {
                     .any(|reaction| reaction.key == "👍" && reaction.count == 1)
         })
         .await?;
-    let text = tui.text()?;
-    ensure!(
-        text.contains("👍"),
-        "the terminal shows the reaction:\n{text}"
-    );
+    // And the terminal shows its own reaction under the friend's message.
+    tui.shows("👍").await?;
 
     tui.shutdown().await;
     other.shutdown().await;
     Ok(())
 }
 
-/// Waits until `session` lists at least `count` of the account's devices:
-/// a device that has just signed in may not know its siblings yet, and a
-/// verification request goes only to the devices it knows.
-async fn knows_devices(session: &LiveSession, key: &AccountKey, count: usize) -> Result<()> {
+/// Waits until `session` knows a sibling device signed by the account's
+/// self-signing key. matrix-sdk-crypto 0.19.1 sends "Confirm it's you"
+/// (`OwnUserIdentity::request_verification`) only to the account's devices
+/// its store has seen signed (`filter_devices_to_request`), so a device
+/// that has just signed in and asks too early reaches nobody. On a timeout
+/// the devices it saw are in the error.
+async fn knows_a_signed_sibling(session: &LiveSession, key: &AccountKey) -> Result<()> {
     let deadline = Instant::now() + WAIT;
     loop {
         let devices = session
@@ -561,14 +565,24 @@ async fn knows_devices(session: &LiveSession, key: &AccountKey, count: usize) ->
             .await
             .context("devices answers")?
             .map_err(|error| anyhow::anyhow!("the devices couldn't be listed: {error}"))?;
-        if devices.len() >= count {
+        if devices
+            .iter()
+            .any(|seen| !seen.is_this_device && seen.verified)
+        {
             return Ok(());
         }
-        ensure!(
-            Instant::now() < deadline,
-            "only {} of {count} devices known after {WAIT:?}",
-            devices.len()
-        );
+        if Instant::now() >= deadline {
+            let seen: Vec<String> = devices
+                .iter()
+                .map(|seen| {
+                    format!(
+                        "{} (this device: {}, signed: {})",
+                        seen.device_id, seen.is_this_device, seen.verified
+                    )
+                })
+                .collect();
+            bail!("no signed sibling device within {WAIT:?}; the device saw {seen:?}");
+        }
         tokio::time::sleep(Duration::from_millis(500)).await;
     }
 }
@@ -663,7 +677,7 @@ async fn the_terminal_verifies_by_emoji_with_another_device() -> Result<()> {
     .await?;
     tui.shows("Confirm it's you").await?;
     tui.shows("Use another device").await?;
-    knows_devices(&tui.session, &tui.key, 2).await?;
+    knows_a_signed_sibling(&tui.session, &tui.key).await?;
     // d: another device. The first device gets the request and accepts.
     tui.key(KeyCode::Char('d'));
     let theirs = request(&mut first_incoming).await?;
@@ -717,7 +731,7 @@ async fn the_terminal_verifies_by_emoji_with_another_device() -> Result<()> {
             EncryptionStatus::needs_confirmation,
         )
         .await?;
-    knows_devices(&third.session, &third.key, 3).await?;
+    knows_a_signed_sibling(&third.session, &third.key).await?;
     let ours = third
         .session
         .verify_this_device(&third.key)
