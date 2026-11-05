@@ -33,6 +33,7 @@ mod manager;
 mod mapping;
 mod media;
 mod notifications;
+mod messaging;
 mod room_list;
 mod runtime;
 mod settings;

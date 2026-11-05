@@ -31,7 +31,7 @@ use crate::{diff::ListDiff, media::MediaInfo, rich_text::RichText};
 pub struct TimelineItemId(pub String);
 
 /// A message's text. `Debug` prints its length, never the text.
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq, Hash, Default)]
 pub struct MessageBody(String);
 
 impl MessageBody {

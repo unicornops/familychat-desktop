@@ -17,6 +17,9 @@ set -euo pipefail
 #                               the admin API and print it
 #   create-user LOCALPART PASS  create (or update) a Palpo user with the
 #                               admin API, as the control panel does
+#   stop-edge                   stop the TLS front end, so every harness
+#                               host is unreachable (the offline tests)
+#   start-edge                  start it again and wait until it answers
 #   logs                        print every service's log
 #   ps                          show the services
 #
@@ -489,6 +492,20 @@ create_user() {
   echo "${mxid}"
 }
 
+# The front end alone, for the tests of what happens while the server
+# can't be reached: its access log carries on in the same file.
+stop_edge() {
+  load_env
+  compose stop --timeout 2 edge >/dev/null
+}
+
+start_edge() {
+  require curl
+  load_env
+  compose start edge >/dev/null
+  wait_for "https://${SERVER_NAME} through the edge on ${EDGE_ADDR}" edge_ready
+}
+
 case "${1:-}" in
   up) up ;;
   down) down ;;
@@ -496,10 +513,12 @@ case "${1:-}" in
   env) load_env && cat "${ENV_FILE}" ;;
   mint-token) shift && mint_token "$@" ;;
   create-user) shift && create_user "$@" ;;
+  stop-edge) stop_edge ;;
+  start-edge) start_edge ;;
   logs) compose logs --no-color --timestamps ;;
   ps) compose ps ;;
   *)
-    echo "usage: scripts/homeserver-harness.sh [up|down|reset|env|mint-token USER [TTL_MS]|create-user LOCALPART PASSWORD|logs|ps]" >&2
+    echo "usage: scripts/homeserver-harness.sh [up|down|reset|env|mint-token USER [TTL_MS]|create-user LOCALPART PASSWORD|stop-edge|start-edge|logs|ps]" >&2
     exit 1
     ;;
 esac

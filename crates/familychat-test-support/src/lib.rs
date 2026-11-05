@@ -21,6 +21,7 @@ compile_error!(
 mod env;
 #[cfg(feature = "fixtures")]
 pub mod fixtures;
+pub mod photo;
 
 pub use env::{DEFAULT_STATE_DIR, ENV_FILE_VAR, HarnessEnv, STATE_DIR_VAR, parse_env_file};
 

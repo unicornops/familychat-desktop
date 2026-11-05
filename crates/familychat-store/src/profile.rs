@@ -169,6 +169,26 @@ impl Profile {
     pub fn set_ui_state(&self, key: &str, value: &impl Serialize) -> Result<(), StoreError> {
         self.store.set_ui_state(key, value)
     }
+
+    /// The account's draft for `room` (ADR 0012), decrypted.
+    pub fn draft<T: DeserializeOwned>(
+        &self,
+        account: AccountId,
+        room: &str,
+    ) -> Result<Option<T>, StoreError> {
+        self.store.draft(account, room)
+    }
+
+    /// Keeps the account's draft for `room`, encrypted (`None` forgets
+    /// it). Removing the account removes its drafts.
+    pub fn set_draft(
+        &self,
+        account: AccountId,
+        room: &str,
+        draft: Option<&impl Serialize>,
+    ) -> Result<(), StoreError> {
+        self.store.set_draft(account, room, draft)
+    }
 }
 
 /// Why an account could not be removed.
