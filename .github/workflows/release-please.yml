@@ -703,7 +703,8 @@ jobs:
           Show-Table "SELECT Property, Value FROM Property WHERE Property = 'ProductName' OR Property = 'ProductVersion' OR Property = 'Manufacturer' OR Property = 'ARPPRODUCTICON' OR Property = 'ALLUSERS' OR Property = 'UpgradeCode'" 2
           Show-Table 'SELECT Directory, Directory_Parent, DefaultDir FROM Directory' 3
           Show-Table 'SELECT File, FileName, FileSize FROM File' 3
-          Show-Table 'SELECT Root, Key, Name, Value FROM Registry' 4
+          # `Key` is reserved in Windows Installer SQL, so the names are quoted.
+          Show-Table 'SELECT `Root`, `Key`, `Name`, `Value` FROM `Registry`' 4
           Show-Table 'SELECT Shortcut, Name, Target FROM Shortcut' 3
           Show-Table 'SELECT Name, Value FROM Environment' 2
           $summary = $database.GetType().InvokeMember('SummaryInformation', 'GetProperty', $null, $database, @(0))
