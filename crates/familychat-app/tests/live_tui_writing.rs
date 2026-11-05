@@ -731,7 +731,10 @@ async fn the_terminal_verifies_by_emoji_with_another_device() -> Result<()> {
             asked < TRIES,
             "no request reached the first device in {asked} tries"
         );
+        // n stops it ("You stopped the verification."), Enter closes it.
         tui.key(KeyCode::Char('n'));
+        tui.shows("You stopped the verification").await?;
+        tui.key(KeyCode::Enter);
         tui.shows("Use another device").await?;
     };
     eprintln!("the terminal's request got through on try {asked}");
