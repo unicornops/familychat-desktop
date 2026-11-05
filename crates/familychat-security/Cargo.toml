@@ -1,0 +1,23 @@
+[package]
+name = "familychat-security"
+version = "0.0.1"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+description = "Family Chat's keychain access, typed secrets, log redaction and local logs"
+
+[dependencies]
+familychat-core = { path = "../familychat-core" }
+getrandom.workspace = true
+keyring.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+uuid.workspace = true
+zeroize.workspace = true
+
+[lints]
+workspace = true

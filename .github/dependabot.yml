@@ -20,13 +20,17 @@ updates:
       # The Matrix crates move together, at every version step: matrix-sdk
       # has breaking changes in most releases and is pinned exactly from
       # Phase 3 (PLAN.md, section 12). A dependency goes to the first group
-      # it matches, so this one comes first.
+      # it matches, so this one comes first. rusqlite (and so
+      # libsqlite3-sys, which links SQLite once per build) must stay on the
+      # line matrix-sdk-sqlite uses (ADR 0003), so it moves with them.
       matrix:
         patterns:
           - "matrix-sdk"
           - "matrix-sdk-*"
           - "ruma"
           - "ruma-*"
+          - "rusqlite"
+          - "libsqlite3-sys"
       cargo-minor-and-patch:
         update-types:
           - minor

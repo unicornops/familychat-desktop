@@ -15,10 +15,13 @@ path = "src/main.rs"
 anyhow.workspace = true
 familychat-assets = { path = "../familychat-assets" }
 familychat-core = { path = "../familychat-core" }
+familychat-security = { path = "../familychat-security" }
 familychat-session = { path = "../familychat-session" }
+familychat-store = { path = "../familychat-store" }
 familychat-theme = { path = "../familychat-theme" }
 familychat-tui = { path = "../familychat-tui", optional = true }
 familychat-ui = { path = "../familychat-ui" }
+tracing.workspace = true
 
 [features]
 # The terminal UI, `familychat tui`. On by default, so every release has it.

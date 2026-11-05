@@ -39,6 +39,15 @@ ignore-dev-dependencies = true
 #   UnicornOps, GPL-3.0-only like this project. scripts/homeserver-harness.sh
 #   follows the structure of Zmail's scripts/proton-harness.sh (retry, the
 #   throwaway TLS CA, the env file), same copyright and licence.
+# - Adapted from Zmail in the same way: the keychain wrapper and the
+#   passphrase handling (zmail-security's lib.rs and vault.rs) in
+#   crates/familychat-security/src/keychain.rs and secret.rs; the crash log
+#   hook (zmail-app's install_panic_log) in
+#   crates/familychat-security/src/logging.rs; the data directory rules
+#   (zmail-app's data_dir) in crates/familychat-store/src/paths.rs; the
+#   lock and its two-process test (zmail-store's lock.rs) in
+#   crates/familychat-store/src/lock.rs; the migrations (zmail-store's
+#   apply_migrations) in crates/familychat-store/src/app_store.rs.
 #
 # Nothing is copied from the Element X forks (AGPL-3.0); see PLAN.md,
 # section 2.

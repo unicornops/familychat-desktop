@@ -3,7 +3,9 @@ members = [
     "crates/familychat-app",
     "crates/familychat-assets",
     "crates/familychat-core",
+    "crates/familychat-security",
     "crates/familychat-session",
+    "crates/familychat-store",
     "crates/familychat-test-support",
     "crates/familychat-theme",
     "crates/familychat-tui",
@@ -24,11 +26,23 @@ anyhow = "1"
 # mouse and bracketed-paste events on Linux, macOS and Windows terminals.
 # The version ratatui's backend uses.
 crossterm = { version = "0.29", default-features = false, features = ["bracketed-paste", "events", "windows"] }
+# The OS CSPRNG, for passphrases and account ids (PLAN.md, section 5.4).
+# Already in the graph through GPUI.
+getrandom = "0.4"
 # GPUI is a git dependency on Zed pinned to a stable release tag (ADR 0002,
 # docs/upstream/zed.md), never the crates.io `gpui` crate. The weekly
 # `zed-upstream` workflow moves both lines; keep them on the same tag.
 gpui = { git = "https://github.com/zed-industries/zed", tag = "v1.27.0" }
 gpui_platform = { git = "https://github.com/zed-industries/zed", tag = "v1.27.0", default-features = false, features = ["font-kit", "wayland", "x11"] }
+# Secrets live only in the OS keychain (PLAN.md, section 5.4): the macOS
+# login keychain, Windows Credential Manager and the Secret Service on
+# Linux. The version and features Zmail uses; 4.x is to be evaluated for
+# both apps together.
+keyring = { version = "3.6.3", features = ["apple-native", "windows-native", "sync-secret-service"] }
+# The SDK's store cipher (ChaCha20-Poly1305, keys hashed with keyed
+# BLAKE3), for the identifying values in the app store (ADR 0003). Pinned
+# exactly, and moved with the other Matrix crates (PLAN.md, section 4).
+matrix-sdk-store-encryption = "=0.19.1"
 # The terminal UI's drawing, on its crossterm backend; no optional widgets
 # or macros.
 ratatui = { version = "0.30.2", default-features = false, features = ["crossterm_0_29"] }
@@ -37,9 +51,25 @@ ratatui = { version = "0.30.2", default-features = false, features = ["crossterm
 # its default aws-lc-rs provider. No system proxy, cookies or native TLS.
 reqwest = { version = "0.13.5", default-features = false, features = ["http2", "json", "rustls"] }
 rust-embed = { version = "8", features = ["interpolate-folder-path"] }
+# The app store (ADR 0003). libsqlite3-sys links SQLite once per build, so
+# this must stay on the line matrix-sdk-sqlite uses (0.19.1 requires
+# `^0.40.2`, libsqlite3-sys 0.38): move it only with the Matrix crates.
+# `bundled` builds SQLite from source on every OS, as matrix-sdk's
+# `bundled-sqlite` will from Phase 3.
+rusqlite = { version = "0.40.2", features = ["bundled"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+thiserror = "2"
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync", "time"] }
+# Local logs only (PLAN.md, section 5.4): a plain-text formatter writing
+# through the redacting writer in familychat-security, no ANSI, no env
+# filter (its regex is not needed for `target=level` directives).
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt", "std"] }
+# Account ids (`account-<uuid>` keychain entries, `accounts/<uuid>/`),
+# built from OS random bytes, so no random-number feature is enabled.
+uuid = { version = "1", default-features = false, features = ["std"] }
+zeroize = "1.9"
 
 [workspace.lints.rust]
 missing_docs = "warn"
