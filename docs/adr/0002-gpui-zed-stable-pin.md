@@ -89,6 +89,33 @@ job summary, so growth from matrix-sdk (Phase 3) onwards shows up per pull
 request (PLAN.md, section 12). The first fetch of the Zed repository takes
 about 400 MB of Cargo git database, which CI caches.
 
+### Binary size from Phase 5
+
+Phase 5 is the first build whose binary links matrix-sdk (earlier phases
+depended on it, but nothing called it, so the linker dropped it). Clean
+release builds of `familychat-app` on the same host (x86-64, 12 cores,
+warm Cargo caches, each in an empty target directory):
+
+| Release profile | Clean build | Binary |
+| --- | --- | --- |
+| Cargo's defaults (no LTO, 16 codegen units, symbols kept) | 329 s | 165.0 MB (157.3 MiB) |
+| The same, stripped afterwards | 329 s | 117.2 MB |
+| **`lto = "thin"`, `codegen-units = 1`, `strip = "symbols"` (chosen)** | **448 s** | **93.4 MB (89.1 MiB)** |
+| `lto = "fat"`, `codegen-units = 1`, `strip = "symbols"` | 824 s | 84.4 MB (80.5 MiB) |
+
+The workspace's `[profile.release]` is the thin-LTO row: 43% smaller than
+the default for 36% more build time. Fat LTO saves a further 10% for
+nearly twice the build time again, which every release, the build job's
+release binary on each OS and the UI Screenshots job would pay (CI
+runners have a third of this host's cores). The symbol table alone was
+48 MB; release builds carry no debug information (`debug = 0`), so there
+is nothing for split debug info to keep, and the crash log (ADR 0003)
+writes the panic message and location, not a backtrace, so stripping
+loses nothing it shows. If symbolicated crash reports are wanted later,
+Phase 12 can ship separate symbol files. The panic strategy stays
+`unwind`. `opt-level` stays 3: the window's rendering and the SDK's
+crypto are the hot paths.
+
 On Linux the window renders through wgpu on Vulkan (lavapipe in headless
 runs) with an EGL/GL fallback, so it needs `libvulkan1` or `libegl1` at
 runtime.

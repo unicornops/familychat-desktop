@@ -85,6 +85,19 @@ tracing-subscriber = { version = "0.3", default-features = false, features = ["f
 uuid = { version = "1", default-features = false, features = ["std"] }
 zeroize = "1.9"
 
+# Release builds (ADR 0002, "Binary size"): thin LTO across crates with one
+# codegen unit per crate, and the symbol table stripped. Measured on the
+# Phase 5 binary (GPUI with matrix-sdk): 165 MB and a 329 s clean build
+# with Cargo's defaults, 93 MB and 448 s with these, 84 MB and 824 s with
+# fat LTO, whose last 10% is not worth nearly doubling every release and
+# screenshot build. The panic strategy stays `unwind` (the crash log hook
+# needs it); the crash log carries no backtrace, so stripped symbols lose
+# nothing it writes.
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = "symbols"
+
 [workspace.lints.rust]
 missing_docs = "warn"
 unsafe_code = "forbid"
