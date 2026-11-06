@@ -875,13 +875,62 @@ async fn first_message_on_server(
         if tokio::time::Instant::now() >= deadline {
             bail!("no message reached the server in {room} within {WAIT:?}");
         }
-        tokio::time::sleep(Duration::from_millis(250)).await;
+        tokio::time::sleep(Duration::from_secs(1)).await;
     }
 }
 
 /// How many rooms each server gets: the plaintext send was a race with
 /// the sync, so one room may miss it.
-const FRESH_ROOMS: usize = 5;
+const FRESH_ROOMS: usize = 8;
+
+/// Every encryption state the SDK gives each of the client's rooms, in
+/// order, read every few milliseconds from before a room is made: whether
+/// a sync ever made a room look not encrypted, whatever the send did.
+struct StateWatch {
+    seen: Arc<std::sync::Mutex<std::collections::HashMap<OwnedRoomId, Vec<String>>>>,
+    task: tokio::task::JoinHandle<()>,
+}
+
+impl StateWatch {
+    fn start(client: matrix_sdk::Client) -> Self {
+        let seen = Arc::new(std::sync::Mutex::new(std::collections::HashMap::<
+            OwnedRoomId,
+            Vec<String>,
+        >::new()));
+        let record = seen.clone();
+        let task = tokio::spawn(async move {
+            loop {
+                for room in client.rooms() {
+                    let state = format!("{:?}", room.encryption_state());
+                    let mut seen = record
+                        .lock()
+                        .unwrap_or_else(|poisoned| poisoned.into_inner());
+                    let states = seen.entry(room.room_id().to_owned()).or_default();
+                    if states.last() != Some(&state) {
+                        states.push(state);
+                    }
+                }
+                tokio::time::sleep(Duration::from_millis(2)).await;
+            }
+        });
+        Self { seen, task }
+    }
+
+    fn states(&self, room: &OwnedRoomId) -> Vec<String> {
+        self.seen
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .get(room)
+            .cloned()
+            .unwrap_or_default()
+    }
+}
+
+impl Drop for StateWatch {
+    fn drop(&mut self) {
+        self.task.abort();
+    }
+}
 
 /// On the server at `homeserver_url`, `user` makes [`FRESH_ROOMS`]
 /// encrypted rooms through `SessionApi` and sends into each at once, as
@@ -908,7 +957,9 @@ async fn sends_at_once(
     let reader = harness
         .login_password_on(homeserver_url, &user.user_id, &user.password, false)
         .await?;
+    let watch = StateWatch::start(client.clone());
     let mut problems = Vec::new();
+    let mut looked_unencrypted = 0;
     for round in 1..=FRESH_ROOMS {
         let text = format!(
             "a secret for a fresh room {}",
@@ -943,9 +994,14 @@ async fn sends_at_once(
         let stored = first_message_on_server(harness, homeserver_url, &reader, &room).await?;
         let after = client.get_room(&room).map(|room| room.encryption_state());
         let kind = stored["type"].as_str().unwrap_or("no type").to_owned();
+        let states = watch.states(&room);
+        if states.iter().any(|state| state == "NotEncrypted") {
+            looked_unencrypted += 1;
+        }
         eprintln!(
             "{server}, room {round}: the SDK said {before:?} as the message was queued and \
-             {after:?} once it was on the server; the server stored {kind}"
+             {after:?} once it was on the server (every state seen: {states:?}); the server \
+             stored {kind}"
         );
         if kind != "m.room.encrypted" {
             problems.push(format!(
@@ -958,6 +1014,11 @@ async fn sends_at_once(
             ));
         }
     }
+    eprintln!(
+        "{server}: {looked_unencrypted} of {FRESH_ROOMS} rooms made encrypted looked not \
+         encrypted to the SDK at some point"
+    );
+    drop(watch);
     device.shutdown().await;
     Ok(problems)
 }

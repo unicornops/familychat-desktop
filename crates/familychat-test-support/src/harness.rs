@@ -55,7 +55,8 @@ impl Reply {
 }
 
 /// How long [`HomeserverHarness::login_password`] keeps trying a login
-/// the homeserver rate-limits (Palpo's one bucket for the whole harness).
+/// the homeserver rate-limits (Palpo's one bucket for the whole harness),
+/// and [`HomeserverHarness::recent_events_on`] a read.
 const LOGIN_RATE_LIMIT_PATIENCE: Duration = Duration::from_secs(120);
 
 /// A signed-in device. `Debug` never prints the tokens.
@@ -830,10 +831,31 @@ impl HomeserverHarness {
         url.query_pairs_mut()
             .append_pair("dir", "b")
             .append_pair("limit", "20");
-        let reply = send(self.edge.get(url).bearer_auth(session.access_token()))
-            .await?
-            .ok("reading a room's messages")?;
-        Ok(reply.body["chunk"].as_array().cloned().unwrap_or_default())
+        // Palpo rate-limits reads across the whole harness (one peer), and
+        // several live tests read at once: a read it limits is tried again
+        // after the wait it asks for.
+        let started = SystemTime::now();
+        loop {
+            let reply = send(
+                self.edge
+                    .get(url.clone())
+                    .bearer_auth(session.access_token()),
+            )
+            .await?;
+            if reply.errcode() == Some("M_LIMIT_EXCEEDED") {
+                let waited = started.elapsed().unwrap_or_default();
+                let wait = reply.body["retry_after_ms"]
+                    .as_u64()
+                    .map_or(Duration::from_secs(2), Duration::from_millis)
+                    .min(Duration::from_secs(30));
+                if waited + wait <= LOGIN_RATE_LIMIT_PATIENCE {
+                    tokio::time::sleep(wait).await;
+                    continue;
+                }
+            }
+            let reply = reply.ok("reading a room's messages")?;
+            return Ok(reply.body["chunk"].as_array().cloned().unwrap_or_default());
+        }
     }
 }
 
