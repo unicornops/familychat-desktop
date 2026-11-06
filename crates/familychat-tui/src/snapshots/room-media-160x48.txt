@@ -23,8 +23,6 @@
     Dad: Message deleted                    │
   Book club                          Sunday │
     No messages yet                         │
-                                            │
-                                            │
                                             │ ───────────────────────────────────────────────────── Today ──────────────────────────────────────────────────────
                                             │ Dad  06:00
                                             │   [file] Cottage booking.pdf [1]  184 KB
@@ -43,9 +41,11 @@
                                             │   [image] sunset.jpg [7]  1600×1067, 2.4 MB
                                             │   Beach at sunset
                                             │   😍  3
+                                            │ ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                            │ ›  Message Holiday photos
                                                                                                                                                      Up to date
-< Rooms             PgDn Newer          l Link#             u FirstNew          m Members           : Commands          ^N NextRoom         N PrevNew
-PgUp Older          Tab NextLink        s Save              G Latest            n NextNew           q Quit              ^P PrevRoom         O OTHER
+Enter Send          Esc Messages        PgDn Newer          ^P PrevRoom         ^C Quit
+^J NewLine          PgUp Older          ^N NextRoom         ^R Recovery
 --- styles ---
 RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
  kkRRR  kk        kk        kk              k BBBBBBBBBBBBBBkkkkkkkkkkkkkkkkkkkkkk
@@ -72,8 +72,6 @@ kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
                                      kkkkkk k
 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
-                                            k
-                                            k
                                             k kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
                                             k BBB  kkkkk
                                             k kkkkkkkkkccccccccccccccccccccccckkkkkkkk
@@ -92,9 +90,11 @@ kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
                                             k kkkkkkkkkkcccccccccccccckkkkkkkkkkkkkkkkkkk
                                             k kk
                                             k   R RR
+                                            k kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+                                            k BBkkkkkkkkkkkkkkkkkkkkkkk
                                                                                                                                                      kkkkkkkkkkk
-R                   RRRR                R                   R                   R                   R                   RR                  R
-RRRR                RRR                 R                   R                   R                   R                   RR                  R
+RRRRR               RRR                 RRRR                RR                  RR
+RR                  RRRR                RR                  RR
 --- NO_COLOR styles ---
 RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
    RRR                                        BBBBBBBBBBBBBB
@@ -122,8 +122,6 @@ BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 
 
 
-
-
                                               BBB
                                                        UUUUUUUUUUUUUUUUUUUUUUU
                                               BBB
@@ -142,8 +140,10 @@ BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 
                                                 R RR
 
-R                   RRRR                R                   R                   R                   R                   RR                  R
-RRRR                RRR                 R                   R                   R                   R                   RR                  R
+                                              BBR
+
+RRRRR               RRR                 RRRR                RR                  RR
+RR                  RRRR                RR                  RR
 --- ASCII ---
   FAMILY CHAT 0.0.0-test                                                     ROOMS                                     @ana:smith.safechat.family  Room 5 of 11
  1 All  2 Unread  3 People  4 Invites       | Holiday photos  Encrypted  5 members
@@ -170,8 +170,6 @@ RRRR                RRR                 R                   R                   
     Dad: Message deleted                    |
   Book club                          Sunday |
     No messages yet                         |
-                                            |
-                                            |
                                             | ----------------------------------------------------- Today ------------------------------------------------------
                                             | Dad  06:00
                                             |   [file] Cottage booking.pdf [1]  184 KB
@@ -190,6 +188,8 @@ RRRR                RRR                 R                   R                   
                                             |   [image] sunset.jpg [7]  1600x1067, 2.4 MB
                                             |   Beach at sunset
                                             |   😍  3
+                                            | ------------------------------------------------------------------------------------------------------------------
+                                            | >  Message Holiday photos
                                                                                                                                                      Up to date
-< Rooms             PgDn Newer          l Link#             u FirstNew          m Members           : Commands          ^N NextRoom         N PrevNew
-PgUp Older          Tab NextLink        s Save              G Latest            n NextNew           q Quit              ^P PrevRoom         O OTHER
+Enter Send          Esc Messages        PgDn Newer          ^P PrevRoom         ^C Quit
+^J NewLine          PgUp Older          ^N NextRoom         ^R Recovery

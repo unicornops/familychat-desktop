@@ -99,20 +99,20 @@ impl SecretField {
         self.0.is_empty()
     }
 
-    fn push_str(&mut self, text: &str) {
+    pub(crate) fn push_str(&mut self, text: &str) {
         self.0.push_str(text);
     }
 
-    fn pop(&mut self) {
+    pub(crate) fn pop(&mut self) {
         self.0.pop();
     }
 
-    fn clear(&mut self) {
+    pub(crate) fn clear(&mut self) {
         self.0.zeroize();
     }
 
     /// The text, leaving the field empty.
-    fn take(&mut self) -> SecretText {
+    pub(crate) fn take(&mut self) -> SecretText {
         SecretText::new(std::mem::take(&mut self.0))
     }
 }

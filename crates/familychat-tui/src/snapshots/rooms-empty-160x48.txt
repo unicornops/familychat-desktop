@@ -44,8 +44,8 @@
                                             │
                                             │
                                                                                                                                                      Up to date
-Enter Open          : Commands          ^N NextRoom         N PrevNew           2 Unread            4 Invites           y Copy
-n NextNew           q Quit              ^P PrevRoom         1 All               3 People            m Members           b Bell
+Enter Open          : Commands          ^N NextRoom         N PrevNew           2 Unread            4 Invites           V Confirm           y Copy
+n NextNew           q Quit              ^P PrevRoom         1 All               3 People            m Members           ^R Recovery         b Bell
 --- styles ---
 RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
  kkRRR  kk        kk        kk              k
@@ -93,8 +93,8 @@ BBBBBBBBBBBBB                               k
                                             k
                                             k
                                                                                                                                                      kkkkkkkkkkk
-RRRRR               R                   RR                  R                   R                   R                   R
-R                   R                   RR                  R                   R                   R                   R
+RRRRR               R                   RR                  R                   R                   R                   R                   R
+R                   R                   RR                  R                   R                   R                   RR                  R
 --- NO_COLOR styles ---
 RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
    RRR
@@ -142,8 +142,8 @@ BBBBBBBBBBBBB
 
 
 
-RRRRR               R                   RR                  R                   R                   R                   R
-R                   R                   RR                  R                   R                   R                   R
+RRRRR               R                   RR                  R                   R                   R                   R                   R
+R                   R                   RR                  R                   R                   R                   RR                  R
 --- ASCII ---
   FAMILY CHAT 0.0.0-test                                                     ROOMS                                                   @ana:smith.safechat.family
  1 All  2 Unread  3 People  4 Invites       |
@@ -191,5 +191,5 @@ R                   R                   RR                  R                   
                                             |
                                             |
                                                                                                                                                      Up to date
-Enter Open          : Commands          ^N NextRoom         N PrevNew           2 Unread            4 Invites           y Copy
-n NextNew           q Quit              ^P PrevRoom         1 All               3 People            m Members           b Bell
+Enter Open          : Commands          ^N NextRoom         N PrevNew           2 Unread            4 Invites           V Confirm           y Copy
+n NextNew           q Quit              ^P PrevRoom         1 All               3 People            m Members           ^R Recovery         b Bell

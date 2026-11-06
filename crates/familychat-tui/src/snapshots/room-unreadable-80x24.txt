@@ -1,8 +1,6 @@
   FAMILY CHAT 0.0.0-test              @ana:smith.safechat.family  Room 10 of 11
 Birthday surprise  Encrypted  4 members
 ────────────────────────────────────────────────────────────────────────────────
-  Waiting for this message's key. It shows once a device that can read it shares
-  the key.
   This message was sent before this device signed in. Confirm it's you with
   another device or your recovery key to read older messages.
 Grandad  10:03
@@ -19,15 +17,15 @@ Grandad  13:00
   Family Chat can't show this kind of message yet.
 Mum  14:00
   [sticker] A party popper
+────────────────────────────────────────────────────────────────────────────────
+›  Message Birthday surprise
                                                                      Up to date
-< Rooms      PgDn Newer   l Link#      u FirstNew   m Members    : Commands
-PgUp Older   Tab NextLink s Save       G Latest     n NextNew    O OTHER
+Enter Send   Esc Messages PgDn Newer   ^P PrevRoom  ^C Quit
+^J NewLine   PgUp Older   ^N NextRoom  ^R Recovery
 --- styles ---
 RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
 BBBBBBBBBBBBBBBBBkkkkkkkkkkkkkkkkkkkkkk
 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
-  kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
-  kkkkkkkk
   kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
   kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
 BBBBBBB  kkkkk
@@ -44,15 +42,15 @@ BBBBBBB  kkkkk
   kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
 BBB  kkkkk
   kkkkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+BBkkkkkkkkkkkkkkkkkkkkkkkkkk
                                                                      kkkkkkkkkkk
-R            RRRR         R            R            R            R
-RRRR         RRR          R            R            R            R
+RRRRR        RRR          RRRR         RR           RR
+RR           RRRR         RR           RR
 --- NO_COLOR styles ---
 RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
 BBBBBBBBBBBBBBBBB
 
-  IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
-  IIIIIIII
   IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
   IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
 BBBBBBB
@@ -70,14 +68,14 @@ BBBBBBB
 BBB
   IIIIIIIIIIIIIIIIIIIIIIII
 
-R            RRRR         R            R            R            R
-RRRR         RRR          R            R            R            R
+BBR
+
+RRRRR        RRR          RRRR         RR           RR
+RR           RRRR         RR           RR
 --- ASCII ---
   FAMILY CHAT 0.0.0-test              @ana:smith.safechat.family  Room 10 of 11
 Birthday surprise  Encrypted  4 members
 --------------------------------------------------------------------------------
-  Waiting for this message's key. It shows once a device that can read it shares
-  the key.
   This message was sent before this device signed in. Confirm it's you with
   another device or your recovery key to read older messages.
 Grandad  10:03
@@ -94,6 +92,8 @@ Grandad  13:00
   Family Chat can't show this kind of message yet.
 Mum  14:00
   [sticker] A party popper
+--------------------------------------------------------------------------------
+>  Message Birthday surprise
                                                                      Up to date
-< Rooms      PgDn Newer   l Link#      u FirstNew   m Members    : Commands
-PgUp Older   Tab NextLink s Save       G Latest     n NextNew    O OTHER
+Enter Send   Esc Messages PgDn Newer   ^P PrevRoom  ^C Quit
+^J NewLine   PgUp Older   ^N NextRoom  ^R Recovery

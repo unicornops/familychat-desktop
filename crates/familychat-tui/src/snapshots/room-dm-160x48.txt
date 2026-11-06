@@ -32,8 +32,6 @@
                                             │
                                             │
                                             │
-                                            │
-                                            │
                                             │ ───────────────────────────────────────────────────── Today ──────────────────────────────────────────────────────
                                             │ Mum  11:10
                                             │   Have you got your keys?
@@ -43,9 +41,11 @@
                                             │   Love you
                                             │ Ana  11:25
                                             │   Love you too ❤️
+                                            │ ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                            │ ›  Message Mum
                                                                                                                                                      Up to date
-< Rooms             PgDn Newer          l Link#             u FirstNew          m Members           : Commands          ^N NextRoom         N PrevNew
-PgUp Older          Tab NextLink        s Save              G Latest            n NextNew           q Quit              ^P PrevRoom         O OTHER
+Enter Send          Esc Messages        PgDn Newer          ^P PrevRoom         ^C Quit
+^J NewLine          PgUp Older          ^N NextRoom         ^R Recovery
 --- styles ---
 RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
  kkRRR  kk        kk        kk              k BBBkkkkkkkkkkkkkkkkkkkkkk
@@ -81,8 +81,6 @@ kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
                                             k
                                             k
                                             k
-                                            k
-                                            k
                                             k kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
                                             k BBB  kkkkk
                                             k kk
@@ -92,9 +90,11 @@ kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
                                             k kk
                                             k ccc  kkkkk
                                             k kk
+                                            k kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+                                            k BBkkkkkkkkkkkk
                                                                                                                                                      kkkkkkkkkkk
-R                   RRRR                R                   R                   R                   R                   RR                  R
-RRRR                RRR                 R                   R                   R                   R                   RR                  R
+RRRRR               RRR                 RRRR                RR                  RR
+RR                  RRRR                RR                  RR
 --- NO_COLOR styles ---
 RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
    RRR                                        BBB
@@ -131,8 +131,6 @@ BBBBBBBBBBBBBBBBBBBBBBB BBBBBBBBBBBBBBBBBBBB
 
 
 
-
-
                                               BBB
 
                                               BBB
@@ -142,8 +140,10 @@ BBBBBBBBBBBBBBBBBBBBBBB BBBBBBBBBBBBBBBBBBBB
                                               BBB
 
 
-R                   RRRR                R                   R                   R                   R                   RR                  R
-RRRR                RRR                 R                   R                   R                   R                   RR                  R
+                                              BBR
+
+RRRRR               RRR                 RRRR                RR                  RR
+RR                  RRRR                RR                  RR
 --- ASCII ---
   FAMILY CHAT 0.0.0-test                                                     ROOMS                                     @ana:smith.safechat.family  Room 3 of 11
  1 All  2 Unread  3 People  4 Invites       | Mum  Encrypted  2 members
@@ -179,8 +179,6 @@ RRRR                RRR                 R                   R                   
                                             |
                                             |
                                             |
-                                            |
-                                            |
                                             | ----------------------------------------------------- Today ------------------------------------------------------
                                             | Mum  11:10
                                             |   Have you got your keys?
@@ -190,6 +188,8 @@ RRRR                RRR                 R                   R                   
                                             |   Love you
                                             | Ana  11:25
                                             |   Love you too ❤️
+                                            | ------------------------------------------------------------------------------------------------------------------
+                                            | >  Message Mum
                                                                                                                                                      Up to date
-< Rooms             PgDn Newer          l Link#             u FirstNew          m Members           : Commands          ^N NextRoom         N PrevNew
-PgUp Older          Tab NextLink        s Save              G Latest            n NextNew           q Quit              ^P PrevRoom         O OTHER
+Enter Send          Esc Messages        PgDn Newer          ^P PrevRoom         ^C Quit
+^J NewLine          PgUp Older          ^N NextRoom         ^R Recovery

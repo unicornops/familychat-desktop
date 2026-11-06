@@ -1,0 +1,99 @@
+  FAMILY CHAT 0.0.0-test               @ana:smith.safechat.family  Room 1 of 11
+
+
+
+
+
+
+
+    Enter your recovery key
+    Type or paste the recovery key you saved. Spaces don't matter.
+
+    Recovery key: ••••••••••••••
+
+    Enter confirms. Esc goes back to the other ways.
+
+
+
+
+
+
+
+                                                                     Up to date
+Enter OK     ^C Quit
+Esc Back
+--- styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+
+
+
+
+
+
+
+BBBBBBBBBBBBBBBBBBBBBBBBBBB
+
+
+    BBBBBBBBBBBBBBUUUUUUUUUUUUUU
+
+    kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+
+
+
+
+
+
+
+                                                                     kkkkkkkkkkk
+RRRRR        RR
+RRR
+--- NO_COLOR styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+
+
+
+
+
+
+
+BBBBBBBBBBBBBBBBBBBBBBBBBBB
+
+
+    BBBBBBBBBBBBBBUUUUUUUUUUUUUU
+
+
+
+
+
+
+
+
+
+
+RRRRR        RR
+RRR
+--- ASCII ---
+  FAMILY CHAT 0.0.0-test               @ana:smith.safechat.family  Room 1 of 11
+
+
+
+
+
+
+
+    Enter your recovery key
+    Type or paste the recovery key you saved. Spaces don't matter.
+
+    Recovery key: **************
+
+    Enter confirms. Esc goes back to the other ways.
+
+
+
+
+
+
+
+                                                                     Up to date
+Enter OK     ^C Quit
+Esc Back

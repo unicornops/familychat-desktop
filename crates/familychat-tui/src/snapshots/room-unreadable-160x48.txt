@@ -21,10 +21,8 @@
     Coach Rivera: Training moves to Thursda…│
 › Birthday surprise                  Monday │
     Dad: Message deleted                    │
-  Book club                          Sunday │
-    No messages yet                         │
-                                            │ ───────────────────────────────────────────────────── Monday ─────────────────────────────────────────────────────
-                                            │   · Dad turned on end-to-end encryption
+  Book club                          Sunday │ ───────────────────────────────────────────────────── Monday ─────────────────────────────────────────────────────
+    No messages yet                         │   · Dad turned on end-to-end encryption
                                             │ Mum  10:01
                                             │   Waiting for this message's key. It shows once a device that can read it shares the key.
                                             │   This message was sent before this device signed in. Confirm it's you with another device or your recovery key to
@@ -43,9 +41,11 @@
                                             │   Family Chat can't show this kind of message yet.
                                             │ Mum  14:00
                                             │   [sticker] A party popper
+                                            │ ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                            │ ›  Message Birthday surprise
                                                                                                                                                      Up to date
-< Rooms             PgDn Newer          l Link#             u FirstNew          m Members           : Commands          ^N NextRoom         N PrevNew
-PgUp Older          Tab NextLink        s Save              G Latest            n NextNew           q Quit              ^P PrevRoom         O OTHER
+Enter Send          Esc Messages        PgDn Newer          ^P PrevRoom         ^C Quit
+^J NewLine          PgUp Older          ^N NextRoom         ^R Recovery
 --- styles ---
 RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
  kkRRR  kk        kk        kk              k BBBBBBBBBBBBBBBBBkkkkkkkkkkkkkkkkkkkkkk
@@ -70,10 +70,8 @@ kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
 BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBkkkkkk k
 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
-                                     kkkkkk k
-kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
-                                            k kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
-                                            k   kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+                                     kkkkkk k kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk   kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
                                             k BBB  kkkkk
                                             k   kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
                                             k   kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
@@ -92,9 +90,11 @@ kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
                                             k   kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
                                             k BBB  kkkkk
                                             k   kkkkkkkkkkkkkkkkkkkkkkkk
+                                            k kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+                                            k BBkkkkkkkkkkkkkkkkkkkkkkkkkk
                                                                                                                                                      kkkkkkkkkkk
-R                   RRRR                R                   R                   R                   R                   RR                  R
-RRRR                RRR                 R                   R                   R                   R                   RR                  R
+RRRRR               RRR                 RRRR                RR                  RR
+RR                  RRRR                RR                  RR
 --- NO_COLOR styles ---
 RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
    RRR                                        BBBBBBBBBBBBBBBBB
@@ -121,8 +121,6 @@ BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 
 
-
-
                                               BBB
                                                 IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
                                                 IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
@@ -142,8 +140,10 @@ BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
                                               BBB
                                                 IIIIIIIIIIIIIIIIIIIIIIII
 
-R                   RRRR                R                   R                   R                   R                   RR                  R
-RRRR                RRR                 R                   R                   R                   R                   RR                  R
+                                              BBR
+
+RRRRR               RRR                 RRRR                RR                  RR
+RR                  RRRR                RR                  RR
 --- ASCII ---
   FAMILY CHAT 0.0.0-test                                                     ROOMS                                    @ana:smith.safechat.family  Room 10 of 11
  1 All  2 Unread  3 People  4 Invites       | Birthday surprise  Encrypted  4 members
@@ -168,10 +168,8 @@ RRRR                RRR                 R                   R                   
     Coach Rivera: Training moves to Thurs...|
 > Birthday surprise                  Monday |
     Dad: Message deleted                    |
-  Book club                          Sunday |
-    No messages yet                         |
-                                            | ----------------------------------------------------- Monday -----------------------------------------------------
-                                            |   - Dad turned on end-to-end encryption
+  Book club                          Sunday | ----------------------------------------------------- Monday -----------------------------------------------------
+    No messages yet                         |   - Dad turned on end-to-end encryption
                                             | Mum  10:01
                                             |   Waiting for this message's key. It shows once a device that can read it shares the key.
                                             |   This message was sent before this device signed in. Confirm it's you with another device or your recovery key to
@@ -190,6 +188,8 @@ RRRR                RRR                 R                   R                   
                                             |   Family Chat can't show this kind of message yet.
                                             | Mum  14:00
                                             |   [sticker] A party popper
+                                            | ------------------------------------------------------------------------------------------------------------------
+                                            | >  Message Birthday surprise
                                                                                                                                                      Up to date
-< Rooms             PgDn Newer          l Link#             u FirstNew          m Members           : Commands          ^N NextRoom         N PrevNew
-PgUp Older          Tab NextLink        s Save              G Latest            n NextNew           q Quit              ^P PrevRoom         O OTHER
+Enter Send          Esc Messages        PgDn Newer          ^P PrevRoom         ^C Quit
+^J NewLine          PgUp Older          ^N NextRoom         ^R Recovery

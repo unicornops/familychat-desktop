@@ -4,8 +4,8 @@ Cousins  Encrypted  4 members
 
   Aunt Clare invited you to Cousins.
 
-  Join or decline it in the Family Chat window. Answering invitations in the
-  terminal arrives in a later release.
+  Press a to join it, or x to decline. Until you join, you can't read or write
+  in it.
 
 
 
@@ -20,8 +20,8 @@ Cousins  Encrypted  4 members
 
 
                                                                      Up to date
-< Rooms      n NextNew    q Quit       ^P PrevRoom  1 All        3 People
-m Members    : Commands   ^N NextRoom  N PrevNew    2 Unread     O OTHER
+< Rooms      x Decline    n NextNew    q Quit       ^P PrevRoom  1 All
+a Join       m Members    : Commands   ^N NextRoom  N PrevNew    O OTHER
 --- styles ---
 RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
 BBBBBBBkkkkkkkkkkkkkkkkkkkkkk
@@ -29,8 +29,8 @@ kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
 
   BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 
-  kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
-  kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+  kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+  kkkkkk
 
 
 
@@ -45,8 +45,8 @@ kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
 
 
                                                                      kkkkkkkkkkk
+R            R            R            R            RR           R
 R            R            R            RR           R            R
-R            R            RR           R            R            R
 --- NO_COLOR styles ---
 RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
 BBBBBBB
@@ -70,8 +70,8 @@ BBBBBBB
 
 
 
+R            R            R            R            RR           R
 R            R            R            RR           R            R
-R            R            RR           R            R            R
 --- ASCII ---
   FAMILY CHAT 0.0.0-test               @ana:smith.safechat.family  Room 1 of 11
 Cousins  Encrypted  4 members
@@ -79,8 +79,8 @@ Cousins  Encrypted  4 members
 
   Aunt Clare invited you to Cousins.
 
-  Join or decline it in the Family Chat window. Answering invitations in the
-  terminal arrives in a later release.
+  Press a to join it, or x to decline. Until you join, you can't read or write
+  in it.
 
 
 
@@ -95,5 +95,5 @@ Cousins  Encrypted  4 members
 
 
                                                                      Up to date
-< Rooms      n NextNew    q Quit       ^P PrevRoom  1 All        3 People
-m Members    : Commands   ^N NextRoom  N PrevNew    2 Unread     O OTHER
+< Rooms      x Decline    n NextNew    q Quit       ^P PrevRoom  1 All
+a Join       m Members    : Commands   ^N NextRoom  N PrevNew    O OTHER

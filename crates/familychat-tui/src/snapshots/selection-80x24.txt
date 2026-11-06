@@ -2,8 +2,6 @@
 Smith family  Encrypted  5 members
 Plans, photos and who's picking up whom
 ────────────────────────────────────────────────────────────────────────────────
-  Morning all. Pancakes are ready!
-Dad  10:00
   Ana[1]: leaving for football at 10. Bring your boots.
   👍  1  ⚽  3
 Ana  10:03
@@ -19,16 +17,16 @@ Mum  11:58
   ❤️  1
 Ana  11:59
   See you then (sending…)
+────────────────────────────────────────────────────────────────────────────────
+›  Message Smith family
                                                                      Up to date
-< Rooms      PgDn Newer   l Link#      u FirstNew   m Members    : Commands
-PgUp Older   Tab NextLink s Save       G Latest     n NextNew    O OTHER
+Enter Send   Esc Messages PgDn Newer   ^P PrevRoom  ^C Quit
+^J NewLine   PgUp Older   ^N NextRoom  ^R Recovery
 --- styles ---
 RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
 BBBBBBBBBBBBkkkkkkkkkkkkkkkkkkkkkk
 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
-kk
-BBB  kkkkk
 kkcccccc                          BB
   R RR  k kk
 ccc  kkkkk
@@ -44,6 +42,8 @@ kk             IIIIIIIIIIIII  cccccc
   k kk
 ccc  kkkkk
 kk            kkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+BBkkkkkkkkkkkkkkkkkkkkk
                                                                      kkkkkkkkkkk
-R            RRRR         R            R            R            R
-RRRR         RRR          R            R            R            R
+RRRRR        RRR          RRRR         RR           RR
+RR           RRRR         RR           RR

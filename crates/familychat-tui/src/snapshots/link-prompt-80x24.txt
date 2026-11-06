@@ -2,23 +2,23 @@
 Summer holiday 2027  Encrypted  5 members
 Cornwall, 2 to 16 August
 ────────────────────────────────────────────────────────────────────────────────
-Grandad  02:30
-  │ Beach by lunchtime
-  Opti┌──────────────────────────────────────────────────────────────────┐
-Dad  0│ Open this link?                                                  │
-  Cott│                                                                  │
-    Ne│ https://cottages.example/booking/4471                            │
+  Optimistic! Traffic on the A30 is bad terrible in August.
+Dad  03:00
+  Cott┌──────────────────────────────────────────────────────────────────┐
+    Ne│ Open this link?                                                  │
     Ch│                                                                  │
-    Ch│ It goes to cottages.example and opens in your browser.           │
+    Ch│ https://cottages.example/booking/4471                            │
 Dad  0│                                                                  │
-  Book│ Y Open Link   C Copy the address   N Cancel                      │at
-  surf└──────────────────────────────────────────────────────────────────┘
-Ben  04:00
-  Free tickets!! https://www.bank.example[3]
+  Book│ It goes to cottages.example and opens in your browser.           │at
+  surf│                                                                  │
+Ben  0│ Y Open Link   C Copy the address   N Cancel                      │
+  Free└──────────────────────────────────────────────────────────────────┘
 Mum  04:02
   Ben, don't click links like that. Ask in #family[4] first.
 Ana  05:00
   Spoiler for Ben: ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒ 🚤
+────────────────────────────────────────────────────────────────────────────────
+›  Message Summer holiday 2027
 Open this link? (y open, c copy, n cancel)
 Y Open       N Cancel
 C Copy
@@ -27,23 +27,23 @@ RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
 BBBBBBBBBBBBBBBBBBBkkkkkkkkkkkkkkkkkkkkkk
 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
-BBBBBBB  kkkkk
-kkkk
-kk    BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
-BBB  kB BBBBBBBBBBBBBBB                                                  B
-kk    B                                                                  B
-kkkkggB ccccccccccccccccccccccccccccccccccccc                            B
-kkkkggB                                                                  B
-kkkkggB                                                                  B
-BBB  kB                                                                  B
-kk    B R             R                    R                             B
-kkccccBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+kk                                  XXX UUUUUUUU
 BBB  kkkkk
-kk               ccccccccccccccccccccccccccc
+kk    BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+kkkkggB BBBBBBBBBBBBBBB                                                  B
+kkkkggB                                                                  B
+kkkkggB ccccccccccccccccccccccccccccccccccccc                            B
+BBB  kB                                                                  B
+kk    B                                                                  B
+kkccccB                                                                  B
+BBB  kB R             R                    R                             B
+kk    BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 BBB  kkkkk
 kkBBB                                      cccccccccc
 ccc  kkkkk
 kk                 kkkkkkkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+BBkkkkkkkkkkkkkkkkkkkkkkkkkkkk
 BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 R            R
 R
@@ -52,23 +52,23 @@ RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
 BBBBBBBBBBBBBBBBBBB
 
 
-BBBBBBB
-
+                                    XXX UUUUUUUU
+BBB
       BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
-BBB   B BBBBBBBBBBBBBBB                                                  B
+      B BBBBBBBBBBBBBBB                                                  B
       B                                                                  B
       B UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU                            B
-      B                                                                  B
-      B                                                                  B
 BBB   B                                                                  B
-      B R             R                    R                             B
-  UUUUBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
-BBB
-                 UUUUUUUUUUUUUUUUUUUUUUUUUUU
+      B                                                                  B
+  UUUUB                                                                  B
+BBB   B R             R                    R                             B
+      BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 BBB
   BBB                                      UUUUUUUUUU
 BBB
 
+
+BBR
 BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 R            R
 R
@@ -77,23 +77,23 @@ R
 Summer holiday 2027  Encrypted  5 members
 Cornwall, 2 to 16 August
 --------------------------------------------------------------------------------
-Grandad  02:30
-  | Beach by lunchtime
-  Opti+------------------------------------------------------------------+
-Dad  0| Open this link?                                                  |
-  Cott|                                                                  |
-    Ne| https://cottages.example/booking/4471                            |
+  Optimistic! Traffic on the A30 is bad terrible in August.
+Dad  03:00
+  Cott+------------------------------------------------------------------+
+    Ne| Open this link?                                                  |
     Ch|                                                                  |
-    Ch| It goes to cottages.example and opens in your browser.           |
+    Ch| https://cottages.example/booking/4471                            |
 Dad  0|                                                                  |
-  Book| Y Open Link   C Copy the address   N Cancel                      |at
-  surf+------------------------------------------------------------------+
-Ben  04:00
-  Free tickets!! https://www.bank.example[3]
+  Book| It goes to cottages.example and opens in your browser.           |at
+  surf|                                                                  |
+Ben  0| Y Open Link   C Copy the address   N Cancel                      |
+  Free+------------------------------------------------------------------+
 Mum  04:02
   Ben, don't click links like that. Ask in #family[4] first.
 Ana  05:00
   Spoiler for Ben: ########################### 🚤
+--------------------------------------------------------------------------------
+>  Message Summer holiday 2027
 Open this link? (y open, c copy, n cancel)
 Y Open       N Cancel
 C Copy

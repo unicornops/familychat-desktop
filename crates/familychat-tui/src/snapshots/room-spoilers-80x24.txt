@@ -2,8 +2,6 @@
 Summer holiday 2027  Encrypted  5 members
 Cornwall, 2 to 16 August
 ────────────────────────────────────────────────────────────────────────────────
-Grandad  02:30
-  │ Beach by lunchtime
   Optimistic! Traffic on the A30 is bad terrible in August.
 Dad  03:00
   Cottage wifi is `SeaView-5G`, the code is in the welcome book:
@@ -19,16 +17,16 @@ Mum  04:02
   Ben, don't click links like that. Ask in #family[4] first.
 Ana  05:00
   Spoiler for Ben: the surprise is a boat trip 🚤
+────────────────────────────────────────────────────────────────────────────────
+›  Message Summer holiday 2027
                                                                      Up to date
-< Rooms      PgDn Newer   l Link#      u FirstNew   m Members    : Commands
-PgUp Older   Tab NextLink s Save       G Latest     n NextNew    O OTHER
+Enter Send   Esc Messages PgDn Newer   ^P PrevRoom  ^C Quit
+^J NewLine   PgUp Older   ^N NextRoom  ^R Recovery
 --- styles ---
 RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
 BBBBBBBBBBBBBBBBBBBkkkkkkkkkkkkkkkkkkkkkk
 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
-BBBBBBB  kkkkk
-kkkk
 kk                                  XXX UUUUUUUU
 BBB  kkkkk
 kk                gggggggggggg
@@ -44,15 +42,15 @@ BBB  kkkkk
 kkBBB                                      cccccccccc
 ccc  kkkkk
 kk                 kkkkkkkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+BBkkkkkkkkkkkkkkkkkkkkkkkkkkkk
                                                                      kkkkkkkkkkk
-R            RRRR         R            R            R            R
-RRRR         RRR          R            R            R            R
+RRRRR        RRR          RRRR         RR           RR
+RR           RRRR         RR           RR
 --- NO_COLOR styles ---
 RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
 BBBBBBBBBBBBBBBBBBB
 
-
-BBBBBBB
 
                                     XXX UUUUUUUU
 BBB
@@ -70,15 +68,15 @@ BBB
 BBB
 
 
-R            RRRR         R            R            R            R
-RRRR         RRR          R            R            R            R
+BBR
+
+RRRRR        RRR          RRRR         RR           RR
+RR           RRRR         RR           RR
 --- ASCII ---
   FAMILY CHAT 0.0.0-test               @ana:smith.safechat.family  Room 6 of 11
 Summer holiday 2027  Encrypted  5 members
 Cornwall, 2 to 16 August
 --------------------------------------------------------------------------------
-Grandad  02:30
-  | Beach by lunchtime
   Optimistic! Traffic on the A30 is bad terrible in August.
 Dad  03:00
   Cottage wifi is `SeaView-5G`, the code is in the welcome book:
@@ -94,6 +92,8 @@ Mum  04:02
   Ben, don't click links like that. Ask in #family[4] first.
 Ana  05:00
   Spoiler for Ben: the surprise is a boat trip 🚤
+--------------------------------------------------------------------------------
+>  Message Summer holiday 2027
                                                                      Up to date
-< Rooms      PgDn Newer   l Link#      u FirstNew   m Members    : Commands
-PgUp Older   Tab NextLink s Save       G Latest     n NextNew    O OTHER
+Enter Send   Esc Messages PgDn Newer   ^P PrevRoom  ^C Quit
+^J NewLine   PgUp Older   ^N NextRoom  ^R Recovery

@@ -1,0 +1,99 @@
+  FAMILY CHAT 0.0.0-test               @ana:smith.safechat.family  Room 2 of 11
+Smith family  Encrypted  5 members
+Plans, photos and who's picking up whom
+────────────────────────────────────────────────────────────────────────────────
+  Ana[1]: leaving for football at 10. Bring your boots.
+  👍  1  ⚽  3
+Ana  1┌──────────────────────────────────────────────────────────────────┐
+  ┃ Da│ Delete this message?                                             │
+  On i│                                                                  │
+── New│ It goes for everyone in the room, and it can't be brought back.  │──────
+Granda│                                                                  │
+  Good│ See you then                                                     │
+Ben  1│                                                                  │
+  can │ Y Delete   N Cancel                                              │
+Mum  1└──────────────────────────────────────────────────────────────────┘
+  Dinner at 7, don't be late! Ana[2]
+  ❤️  1
+› Ana  11:59
+  See you then (sending…)
+────────────────────────────────────────────────────────────────────────────────
+›  Message Smith family
+                                                                     Up to date
+Y Delete
+N Cancel
+--- styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+BBBBBBBBBBBBkkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+kkcccccc                          BB
+  R RR  k kk
+ccc  kBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+kkkkkkB BBBBBBBBBBBBBBBBBBBB                                             Bkkkkkk
+kk    B                                                                  B
+rrrrrrB                                                                  Brrrrrr
+BBBBBBB                                                                  B
+kk    B kkkkkkkkkkkk                                                     B
+BBB  kB                                                                  B
+kk    B R          R                                                     B
+BBB  kBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+kk             IIIIIIIIIIIII  cccccc
+  k kk
+cccccRRkkkkk
+kk            kkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkk
+                                                                     kkkkkkkkkkk
+R
+R
+--- NO_COLOR styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+BBBBBBBBBBBB
+
+
+  UUUUUU                          BB
+  R RR
+BBB   BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+      B BBBBBBBBBBBBBBBBBBBB                                             B
+      B                                                                  B
+BBBBBBB                                                                  BBBBBBB
+BBBBBBB                                                                  B
+      B                                                                  B
+BBB   B                                                                  B
+      B R          R                                                     B
+BBB   BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+               IIIIIIIIIIIII  UUUUUU
+
+RRRRRRRRRRRR
+
+
+
+
+R
+R
+--- ASCII ---
+  FAMILY CHAT 0.0.0-test               @ana:smith.safechat.family  Room 2 of 11
+Smith family  Encrypted  5 members
+Plans, photos and who's picking up whom
+--------------------------------------------------------------------------------
+  Ana[1]: leaving for football at 10. Bring your boots.
+  👍  1  ⚽  3
+Ana  1+------------------------------------------------------------------+
+  | Da| Delete this message?                                             |
+  On i|                                                                  |
+-- New| It goes for everyone in the room, and it can't be brought back.  |------
+Granda|                                                                  |
+  Good| See you then                                                     |
+Ben  1|                                                                  |
+  can | Y Delete   N Cancel                                              |
+Mum  1+------------------------------------------------------------------+
+  Dinner at 7, don't be late! Ana[2]
+  ❤️  1
+> Ana  11:59
+  See you then (sending...)
+--------------------------------------------------------------------------------
+>  Message Smith family
+                                                                     Up to date
+Y Delete
+N Cancel

@@ -23,8 +23,6 @@
                                             │
                                             │
                                             │
-                                            │
-                                            │
                                             │ ───────────────────────────────────────────────────── Today ──────────────────────────────────────────────────────
                                             │ Mum Dad  11:30
                                             │   Hello red
@@ -43,9 +41,11 @@
                                             │   · Eve joined
                                             │ Family Chat  11:35
                                             │   Notice end
+                                            │ ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                            │ ›  Message Smith family
                                                                                                                                                      Up to date
-Enter Open          : Commands          ^N NextRoom         N PrevNew           2 Unread            4 Invites           y Copy
-n NextNew           q Quit              ^P PrevRoom         1 All               3 People            m Members           b Bell
+Enter Open          : Commands          ^N NextRoom         N PrevNew           2 Unread            4 Invites           V Confirm           y Copy
+n NextNew           q Quit              ^P PrevRoom         1 All               3 People            m Members           ^R Recovery         b Bell
 --- styles ---
 RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
  kkRRR  kk        kk        kk              k BBBBBBBBBBBBkkkkkkkkkkkkkkkkkkkkkk
@@ -56,8 +56,6 @@ kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
   BBBBBBBBBBBBBBBBBBBBBBBBBBB ccccccc kkkkk k
 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
-                                            k
-                                            k
                                             k
                                             k
                                             k
@@ -92,9 +90,11 @@ kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
                                             k   kkkkkkkkkkkk
                                             k BBBBBBBBBBB  kkkkk
                                             k kkkkkkkkkkkk
+                                            k kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+                                            k kkkkkkkkkkkkkkkkkkkkkkk
                                                                                                                                                      kkkkkkkkkkk
-RRRRR               R                   RR                  R                   R                   R                   R
-R                   R                   RR                  R                   R                   R                   R
+RRRRR               R                   RR                  R                   R                   R                   R                   R
+R                   R                   RR                  R                   R                   R                   RR                  R
 --- NO_COLOR styles ---
 RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
    RRR                                        BBBBBBBBBBBB
@@ -104,8 +104,6 @@ RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
 
 
   BBBBBBBBBBBBBBBBBBBBBBBBBBB
-
-
 
 
 
@@ -142,8 +140,10 @@ RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
                                               BBBBBBBBBBB
 
 
-RRRRR               R                   RR                  R                   R                   R                   R
-R                   R                   RR                  R                   R                   R                   R
+
+
+RRRRR               R                   RR                  R                   R                   R                   R                   R
+R                   R                   RR                  R                   R                   R                   RR                  R
 --- ASCII ---
   FAMILY CHAT 0.0.0-test                                                     ROOMS                                      @ana:smith.safechat.family  Room 1 of 3
  1 All  2 Unread  3 People  4 Invites       | Smith family  Encrypted  3 members
@@ -154,8 +154,6 @@ R                   R                   RR                  R                   
     Ben: ok                                 |
   Cousins                     invited 11:50 |
     Invitation from Aunt Clare              |
-                                            |
-                                            |
                                             |
                                             |
                                             |
@@ -190,6 +188,8 @@ R                   R                   RR                  R                   
                                             |   - Eve joined
                                             | Family Chat  11:35
                                             |   Notice end
+                                            | ------------------------------------------------------------------------------------------------------------------
+                                            | >  Message Smith family
                                                                                                                                                      Up to date
-Enter Open          : Commands          ^N NextRoom         N PrevNew           2 Unread            4 Invites           y Copy
-n NextNew           q Quit              ^P PrevRoom         1 All               3 People            m Members           b Bell
+Enter Open          : Commands          ^N NextRoom         N PrevNew           2 Unread            4 Invites           V Confirm           y Copy
+n NextNew           q Quit              ^P PrevRoom         1 All               3 People            m Members           ^R Recovery         b Bell

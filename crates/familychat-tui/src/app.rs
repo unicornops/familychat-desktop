@@ -27,23 +27,29 @@ use familychat_core::{
     identity::APP_NAME,
     links::LinkPrompt,
     media::MediaInfo,
-    rooms::RoomListFilter,
-    session::AccountView,
+    messaging::MessageRef,
+    rooms::{RoomListFilter, RoomSummary},
+    session::{AccountView, IncomingVerification},
     startup::{OpenState, Opened, StartupApi},
     timeline,
 };
 use familychat_security::terminal::sanitize_line;
 use ratatui::layout::Rect;
-use tokio::sync::{oneshot, watch};
+use tokio::sync::{mpsc as tokio_mpsc, oneshot, watch};
 
 use crate::{
     clipboard::CopySettings,
     commands::Cmd,
     palette::Palette,
     pane::{DrawnPane, PaneId, Point, Selection, logical_line, selected_text, word_at},
-    rooms::RoomsState,
+    rooms::{Focus, RoomsState},
     signin::SigninState,
+    tasks::Tasks,
+    writing::QUICK_REACTIONS,
 };
+
+/// The quick reactions' names on the command bar.
+const QUICK_REACTION_LABELS: [&str; 6] = ["ThumbsUp", "Heart", "Laugh", "Wow", "Sad", "Party"];
 
 /// Clicks closer together than this count as a double or triple click.
 const MULTI_CLICK: Duration = Duration::from_millis(400);
@@ -121,7 +127,7 @@ fn system_now_ms() -> u64 {
 }
 
 /// The person's choices for this run (`familychat tui --bell --ascii
-/// --no-mouse`, and `FAMILYCHAT_TUI_COPY_COMMAND`).
+/// --no-mouse --editor`, and `FAMILYCHAT_TUI_COPY_COMMAND`).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Settings {
     /// Ring the terminal bell for new messages.
@@ -132,6 +138,10 @@ pub struct Settings {
     pub ascii: bool,
     /// Where copies go.
     pub copy: CopySettings,
+    /// The composer's `^_` opens `$VISUAL` or `$EDITOR` (off unless asked
+    /// for: the message is written unencrypted to a temporary file while
+    /// the editor is open).
+    pub external_editor: bool,
 }
 
 impl Default for Settings {
@@ -141,6 +151,7 @@ impl Default for Settings {
             mouse: true,
             ascii: false,
             copy: CopySettings::default(),
+            external_editor: false,
         }
     }
 }
@@ -159,6 +170,14 @@ pub enum Effect {
     Open(String),
     /// Clear and redraw the whole screen.
     Redraw,
+    /// Hand the terminal to the external editor on this text, then give
+    /// what it saved to [`App::external_edit_done`].
+    Edit {
+        /// The editor and its arguments.
+        command: Vec<String>,
+        /// The text.
+        text: String,
+    },
 }
 
 /// Where the terminal UI starts (the fixtures; the app starts on
@@ -199,6 +218,14 @@ pub struct RoomsLaunch {
     pub save: Option<usize>,
     /// Show its spoilers.
     pub spoilers: bool,
+    /// Select the account's newest message.
+    pub select_own: bool,
+    /// A file of this name and size waiting in the composer.
+    pub file: Option<(String, usize)>,
+    /// Run these commands, in turn, once everything asked for has arrived.
+    pub commands: Vec<crate::commands::Cmd>,
+    /// Then type this, key by key (`\n` is `^J`, `\r` is Enter).
+    pub typed: Option<String>,
 }
 
 /// What [`App::new`] needs.
@@ -267,6 +294,25 @@ pub(crate) enum Prompt {
     },
     /// "Start over?"
     StartOver,
+    /// "Attach a file:", with the path being typed and the names Tab
+    /// found.
+    Attach {
+        /// The path field.
+        input: String,
+        /// The names that match, when more than one does.
+        choices: Vec<String>,
+    },
+    /// The quick reaction picker for this message.
+    React(MessageRef),
+    /// "Delete this message?"
+    Delete {
+        /// The message.
+        target: MessageRef,
+        /// One line of it.
+        preview: String,
+    },
+    /// "Leave ROOM?"
+    Leave(RoomSummary),
 }
 
 /// A command bar entry: its key as shown, its label and its command.
@@ -345,6 +391,10 @@ pub struct App {
     notices: (mpsc::Sender<String>, mpsc::Receiver<String>),
     /// Ticks so far, for the spinner.
     pub(crate) ticks: u64,
+    /// The actions running off the UI thread.
+    pub(crate) tasks: Tasks,
+    /// The verification requests other devices send.
+    verification_requests: Option<tokio_mpsc::Receiver<IncomingVerification>>,
     /// Something changed in the last tick.
     pub(crate) changed: bool,
     quit: bool,
@@ -379,6 +429,8 @@ impl App {
             effects: Vec::new(),
             notices: mpsc::channel(),
             ticks: 0,
+            tasks: Tasks::default(),
+            verification_requests: None,
             changed: false,
             quit: false,
         }
@@ -471,6 +523,16 @@ impl App {
             Screen::Profile(_) => false,
         };
         self.changed |= changed;
+        let mut requests = Vec::new();
+        if let Some(receiver) = self.verification_requests.as_mut() {
+            while let Ok(request) = receiver.try_recv() {
+                requests.push(request);
+            }
+        }
+        for (account, flow) in requests {
+            self.verification_request(account, flow);
+            self.changed = true;
+        }
         while let Ok(notice) = self.notices.1.try_recv() {
             self.status = Some(notice);
             self.changed = true;
@@ -486,6 +548,9 @@ impl App {
                     self.status = Some(sanitize_line(notice));
                 }
                 let accounts = opened.session.accounts();
+                // This frontend hears the verification requests now (the
+                // session declines them while nobody listens).
+                self.verification_requests = Some(opened.session.verification_requests());
                 self.opened = Some(opened);
                 self.accounts = Some(accounts);
                 // The accounts decide the screen, at once.
@@ -535,15 +600,16 @@ impl App {
     }
 
     /// Work asked for whose answer has not arrived.
-    fn pending_work(&self) -> usize {
-        match &self.screen {
-            Screen::Rooms(rooms) => rooms.pending(),
-            Screen::Signin(signin) => usize::from(
-                matches!(signin.step, familychat_core::signin::SigninStep::Starting)
-                    && signin.flow.is_some(),
-            ),
-            Screen::Profile(_) => 0,
-        }
+    pub(crate) fn pending_work(&self) -> usize {
+        self.tasks.running()
+            + match &self.screen {
+                Screen::Rooms(rooms) => rooms.pending(),
+                Screen::Signin(signin) => usize::from(
+                    matches!(signin.step, familychat_core::signin::SigninStep::Starting)
+                        && signin.flow.is_some(),
+                ),
+                Screen::Profile(_) => 0,
+            }
     }
 
     /// The first view the fixture asked for, once the screen allows it.
@@ -611,11 +677,19 @@ impl App {
                 input.extend(pasted.chars().filter(char::is_ascii_digit));
                 return;
             }
+            Some(Prompt::Attach { input, choices }) => {
+                input.push_str(&sanitize_line(&pasted));
+                choices.clear();
+                return;
+            }
             Some(_) => return,
             None => {}
         }
         if matches!(self.screen, Screen::Signin(_)) {
             self.signin_paste(pasted);
+        } else if self.encryption_has_keys() {
+            self.encryption_paste(pasted);
+        } else if self.composer_paste(&pasted) {
         } else {
             self.status = Some("Pasting works in text fields only".to_owned());
         }
@@ -649,6 +723,24 @@ impl App {
         }
         if key.code == KeyCode::Esc && self.selection.take().is_some() {
             return;
+        }
+        // "Confirm it's you" and the encryption dialogs answer first.
+        if self.encryption_has_keys() {
+            if self.encryption_key(key) {
+                return;
+            }
+            if !matches!(key.code, KeyCode::Char('q' | ':')) {
+                return;
+            }
+        } else if self.composer_focused() {
+            // Letters are text in the composer: only its own keys, the
+            // table's Ctrl keys and the arrows' movement are commands.
+            if self.composer_key(key) {
+                return;
+            }
+            if !control {
+                return;
+            }
         }
         if let Some(cmd) = self.command_for(key) {
             self.run(cmd);
@@ -688,6 +780,10 @@ impl App {
                 'l' => Cmd::OpenRef,
                 's' if has(Cmd::StartOver) => Cmd::StartOver,
                 's' => Cmd::SaveFile,
+                'a' => Cmd::Accept,
+                'x' => Cmd::Decline,
+                'S' => Cmd::SendAnyway,
+                'w' => Cmd::Acknowledge,
                 'y' => Cmd::Copy,
                 't' => Cmd::TryAgain,
                 'v' => Cmd::Spoilers,
@@ -713,6 +809,17 @@ impl App {
                 | Cmd::Copy
         );
         (movement || has(cmd)).then_some(cmd)
+    }
+
+    /// Whether the open room's composer has the keys.
+    pub(crate) fn composer_focused(&self) -> bool {
+        self.rooms_ref().is_some_and(|rooms| {
+            rooms.focus == Focus::Composer
+                && rooms
+                    .open
+                    .as_ref()
+                    .is_some_and(|open| open.composer.is_some())
+        })
     }
 
     fn home_end(&self, home: bool) -> Option<Cmd> {
@@ -753,7 +860,43 @@ impl App {
                     CommandEntry::with("N", "No", Cmd::Answer('n')),
                 ];
             }
+            Some(Prompt::Attach { .. }) => {
+                return vec![
+                    CommandEntry::with("Enter", "Attach", Cmd::Select),
+                    CommandEntry::with("Tab", "Complete", Cmd::NextField),
+                    CommandEntry::with("Esc", "Cancel", Cmd::GoBack),
+                ];
+            }
+            Some(Prompt::React(_)) => {
+                let mut entries: Vec<CommandEntry> = (1..=QUICK_REACTIONS.len())
+                    .map(|number| {
+                        let digit = char::from_digit(number as u32, 10).unwrap_or('1');
+                        CommandEntry::with(
+                            &digit.to_string(),
+                            QUICK_REACTION_LABELS[number - 1],
+                            Cmd::Answer(digit),
+                        )
+                    })
+                    .collect();
+                entries.push(CommandEntry::with("Esc", "Cancel", Cmd::GoBack));
+                return entries;
+            }
+            Some(Prompt::Delete { .. }) => {
+                return vec![
+                    CommandEntry::with("Y", "Delete", Cmd::Answer('y')),
+                    CommandEntry::with("N", "Cancel", Cmd::Answer('n')),
+                ];
+            }
+            Some(Prompt::Leave(_)) => {
+                return vec![
+                    CommandEntry::with("Y", "Leave", Cmd::Answer('y')),
+                    CommandEntry::with("N", "Cancel", Cmd::Answer('n')),
+                ];
+            }
             None => {}
+        }
+        if let Some(entries) = self.encryption_commands() {
+            return entries;
         }
         match &self.screen {
             Screen::Profile(ProfileScreen::Opening) => vec![CommandEntry::of(Cmd::Quit)],
@@ -799,6 +942,7 @@ impl App {
             let key = match cmd {
                 Cmd::Answer(ch) => KeyCode::Char(ch),
                 Cmd::Select => KeyCode::Enter,
+                Cmd::NextField => KeyCode::Tab,
                 _ => KeyCode::Esc,
             };
             self.prompt_key(KeyEvent::new(key, KeyModifiers::NONE));
@@ -821,6 +965,7 @@ impl App {
                 );
             }
             Cmd::TryAgain if matches!(self.screen, Screen::Profile(_)) => self.try_again(),
+            _ if self.encryption_has_keys() && self.encryption_run(cmd) => {}
             Cmd::StartOver => self.prompt = Some(Prompt::StartOver),
             _ => match &self.screen {
                 Screen::Signin(_) => self.signin_run(cmd),
@@ -910,6 +1055,63 @@ impl App {
                 _ if cancel => {}
                 _ => self.prompt = Some(Prompt::Replace { media, path }),
             },
+            Prompt::Attach { mut input, choices } => match key.code {
+                KeyCode::Enter => {
+                    if !input.trim().is_empty() {
+                        self.attach_path(&input);
+                    }
+                }
+                KeyCode::Tab => {
+                    let (completed, choices) = App::complete_attach(&input);
+                    self.prompt = Some(Prompt::Attach {
+                        input: completed,
+                        choices,
+                    });
+                }
+                KeyCode::Backspace => {
+                    input.pop();
+                    self.prompt = Some(Prompt::Attach {
+                        input,
+                        choices: Vec::new(),
+                    });
+                }
+                KeyCode::Char('u') if control => {
+                    input.clear();
+                    self.prompt = Some(Prompt::Attach {
+                        input,
+                        choices: Vec::new(),
+                    });
+                }
+                KeyCode::Char(ch) if !control && !ch.is_control() => {
+                    input.push(ch);
+                    self.prompt = Some(Prompt::Attach {
+                        input,
+                        choices: Vec::new(),
+                    });
+                }
+                _ if cancel => {}
+                _ => self.prompt = Some(Prompt::Attach { input, choices }),
+            },
+            Prompt::React(target) => match answer.and_then(|ch| ch.to_digit(10)) {
+                Some(number @ 1..=6) => {
+                    let (key, _) = QUICK_REACTIONS[number as usize - 1];
+                    self.react_with(target, key);
+                }
+                _ if cancel => {}
+                _ => self.prompt = Some(Prompt::React(target)),
+            },
+            Prompt::Delete { target, preview } => match answer {
+                Some('y') => self.redact(target),
+                Some('n') => {}
+                _ if cancel => {}
+                _ => self.prompt = Some(Prompt::Delete { target, preview }),
+            },
+            Prompt::Leave(room) => match answer {
+                Some('y') => self.leave(room),
+                Some('n') => {}
+                _ if cancel => {}
+                _ => self.prompt = Some(Prompt::Leave(room)),
+            },
             Prompt::StartOver => match answer {
                 Some('y') => {
                     if matches!(self.screen, Screen::Profile(ProfileScreen::LostKey(_))) {
@@ -959,6 +1161,25 @@ impl App {
                     .to_owned(),
                 false,
             ),
+            Prompt::Attach { input, .. } => (format!("Attach a file: {input}"), true),
+            Prompt::React(_) => {
+                let choices: Vec<String> = QUICK_REACTIONS
+                    .iter()
+                    .enumerate()
+                    .map(|(index, (emoji, name))| {
+                        if self.env.unicode && !self.settings.ascii {
+                            format!("{} {emoji}", index + 1)
+                        } else {
+                            format!("{} {name}", index + 1)
+                        }
+                    })
+                    .collect();
+                (
+                    format!("React with: {}  (Esc cancels)", choices.join("  ")),
+                    false,
+                )
+            }
+            Prompt::Delete { .. } | Prompt::Leave(_) => return None,
         })
     }
 
