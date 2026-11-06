@@ -1,0 +1,99 @@
+  FAMILY CHAT 0.0.0-test               @ana:smith.safechat.family  Room 1 of 11
+ Set up recovery so you can read your messages on a new device even if this one
+ is lost. Press ^R to set it up.
+ 1 All  2 Unread  3 People  4 Invites
+────────────────────────────────────────────────────────────────────────────────
+› Cousins                                                         invited 11:40
+    Invitation from Aunt Clare
+  Smith family                                                       @1 3 11:58
+    Mum: Dinner at 7, don't be late! @Ana
+  Mum                                                                     11:25
+    You: Love you too ❤️
+  Grandad                                                               2 09:00
+    Grandad: Sent an image
+  Holiday photos                                                          07:00
+    Dad: Sent an image
+  Summer holiday 2027                                                     03:00
+    Dad: Packing list is in the pinned message
+  Homework help                                                       Yesterday
+    Ben: What's 7 × 8 again?
+  Ben                                                               • Yesterday
+    Ben: can I borrow your charger
+                                                                     Up to date
+Enter Open   : Commands   ^N NextRoom  N PrevNew    2 Unread     4 Invites
+n NextNew    q Quit       ^P PrevRoom  1 All        3 People     O OTHER
+--- styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+ ccccccccccccccccccccccccccccccc
+ kkRRR  kk        kk        kk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRcccccccRkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB rr B kkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+                                                                          kkkkk
+kkkkkkkkkkkkkkkkkkkkkkk kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB B kkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+                                                                          kkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+                                                                          kkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+                                                                      kkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB B kkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+                                                                     kkkkkkkkkkk
+RRRRR        R            RR           R            R            R
+R            R            RR           R            R            R
+--- NO_COLOR styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+
+
+   RRR
+
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB BB B
+
+
+
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB B
+
+
+
+
+
+
+
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB B
+
+
+RRRRR        R            RR           R            R            R
+R            R            RR           R            R            R
+--- ASCII ---
+  FAMILY CHAT 0.0.0-test               @ana:smith.safechat.family  Room 1 of 11
+ Set up recovery so you can read your messages on a new device even if this one
+ is lost. Press ^R to set it up.
+ 1 All  2 Unread  3 People  4 Invites
+--------------------------------------------------------------------------------
+> Cousins                                                         invited 11:40
+    Invitation from Aunt Clare
+  Smith family                                                       @1 3 11:58
+    Mum: Dinner at 7, don't be late! @Ana
+  Mum                                                                     11:25
+    You: Love you too ❤️
+  Grandad                                                               2 09:00
+    Grandad: Sent an image
+  Holiday photos                                                          07:00
+    Dad: Sent an image
+  Summer holiday 2027                                                     03:00
+    Dad: Packing list is in the pinned message
+  Homework help                                                       Yesterday
+    Ben: What's 7 × 8 again?
+  Ben                                                               * Yesterday
+    Ben: can I borrow your charger
+                                                                     Up to date
+Enter Open   : Commands   ^N NextRoom  N PrevNew    2 Unread     4 Invites
+n NextNew    q Quit       ^P PrevRoom  1 All        3 People     O OTHER

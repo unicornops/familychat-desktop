@@ -16,7 +16,11 @@ use ratatui::{
     text::Span,
 };
 
-use super::{Theme, clear, draw_pane, paragraph, timeline};
+use super::{
+    Theme,
+    composer::{self, ComposerParts},
+    draw_pane, encryption, paragraph, timeline,
+};
 use crate::{
     app::{App, Screen},
     pane::{PaneId, PaneLine},
@@ -89,6 +93,19 @@ pub(super) fn draw(app: &mut App, frame: &mut Frame, theme: Theme, body: Rect) {
             usize::from(width),
         ));
     }
+    let takes_over = rooms.encryption.takes_over();
+    if !takes_over && let Some((sentence, caution)) = rooms.encryption.banner() {
+        banner.extend(paragraph(
+            &theme.words(&sentence),
+            if caution {
+                theme.warning()
+            } else {
+                theme.info()
+            },
+            1,
+            usize::from(width),
+        ));
+    }
     let banner_height = (banner.len() as u16).min(body.height / 3);
     let buffer = frame.buffer_mut();
     for (row, line) in banner.iter().take(usize::from(banner_height)).enumerate() {
@@ -105,7 +122,11 @@ pub(super) fn draw(app: &mut App, frame: &mut Frame, theme: Theme, body: Rect) {
         body.width,
         body.height - banner_height,
     );
-    let show_room = rooms.open.is_some() && (side_by_side || rooms.focus == Focus::Room);
+    if takes_over {
+        encryption::draw_screen(app, frame, theme, area);
+        return;
+    }
+    let show_room = rooms.open.is_some() && (side_by_side || rooms.focus != Focus::List);
     let show_list = side_by_side || !show_room;
     let (list_area, room_area) = if side_by_side {
         let left = list_width(width);
@@ -327,6 +348,7 @@ struct RoomParts {
     timeline_top: Option<usize>,
     members: Option<(Vec<PaneLine>, Rect)>,
     separator: Option<(u16, Rect)>,
+    composer: Option<ComposerParts>,
 }
 
 fn room_lines(
@@ -336,6 +358,7 @@ fn room_lines(
     clock: crate::app::Clock,
 ) -> RoomParts {
     let members_shown = rooms.members_shown;
+    let composer_parts = composer::parts(rooms, theme, area.width);
     let Some(open) = rooms.open.as_mut() else {
         return RoomParts {
             header: Vec::new(),
@@ -345,6 +368,7 @@ fn room_lines(
             timeline_top: None,
             members: None,
             separator: None,
+            composer: None,
         };
     };
     let width = usize::from(area.width);
@@ -399,17 +423,48 @@ fn room_lines(
             width,
         ));
     }
+    for (index, warning) in open.warnings.iter().enumerate() {
+        let style = match warning.kind {
+            familychat_core::encryption::IdentityWarningKind::Changed => theme.warning(),
+            familychat_core::encryption::IdentityWarningKind::VerificationLost => theme.danger(),
+        };
+        let answer = if index == 0 {
+            format!(" Press w: {}.", warning.action_label())
+        } else {
+            String::new()
+        };
+        header.extend(paragraph(
+            &theme.words(&format!(
+                "Identity changed: {}{answer}",
+                sanitize_line(&warning.message())
+            )),
+            style,
+            0,
+            width,
+        ));
+    }
     header.push(PaneLine::new(Span::styled(
         theme.horizontal().repeat(width),
         theme.faint(),
     )));
     let header_height = (header.len() as u16).min(area.height / 2);
     let header_area = Rect::new(area.x, area.y, area.width, header_height);
+    // The composer along the bottom, at most half of what is left.
+    let composer = composer_parts.map(|(lines, rows)| {
+        let wanted = lines.len() as u16 + rows;
+        let height = wanted.min((area.height - header_height) / 2).max(1);
+        ComposerParts {
+            lines,
+            rows: rows.min(height.saturating_sub(1).max(1)),
+            area: Rect::new(area.x, area.y + area.height - height, area.width, height),
+        }
+    });
+    let composer_height = composer.as_ref().map_or(0, |parts| parts.area.height);
     let rest = Rect::new(
         area.x,
         area.y + header_height,
         area.width,
-        area.height - header_height,
+        area.height - header_height - composer_height,
     );
     let beside = members_shown && area.width >= MEMBERS_BESIDE_FROM;
     let (timeline_area, members_area, separator) = if beside {
@@ -446,8 +501,8 @@ fn room_lines(
         ));
         lines.push(PaneLine::default());
         lines.extend(paragraph(
-            "Join or decline it in the Family Chat window. Answering invitations in the \
-             terminal arrives in a later release.",
+            "Press a to join it, or x to decline. Until you join, you can't read or write \
+             in it.",
             theme.faint(),
             2,
             usize::from(timeline_area.width),
@@ -460,6 +515,7 @@ fn room_lines(
             timeline_top: None,
             members,
             separator,
+            composer: None,
         };
     }
     if let Some(error) = &open.error {
@@ -481,6 +537,7 @@ fn room_lines(
             timeline_top: None,
             members,
             separator,
+            composer: None,
         };
     }
     if !open.loaded {
@@ -495,6 +552,7 @@ fn room_lines(
             timeline_top: None,
             members,
             separator,
+            composer: None,
         };
     }
     let key = (
@@ -523,6 +581,15 @@ fn room_lines(
     };
     let height = usize::from(timeline_area.height);
     let total = layout.lines.len();
+    // A message just selected with [ or ] comes into view.
+    if std::mem::take(&mut open.reveal_selected)
+        && let Some(line) = layout.selected_line
+    {
+        let top = total.saturating_sub(height + open.from_bottom);
+        if line < top || line >= top + height {
+            open.from_bottom = total.saturating_sub(line + height / 2 + 1);
+        }
+    }
     open.from_bottom = open.from_bottom.min(total.saturating_sub(height));
     let top = total.saturating_sub(height + open.from_bottom);
     let lines = layout.lines.clone();
@@ -543,6 +610,7 @@ fn room_lines(
         timeline_top: Some(top),
         members,
         separator,
+        composer,
     }
 }
 
@@ -635,6 +703,9 @@ fn draw_room(app: &mut App, frame: &mut Frame, parts: RoomParts) {
     if let Some((lines, area)) = parts.members {
         draw_pane(app, frame, PaneId::Members, area, lines, None);
     }
+    if let Some(composer) = parts.composer {
+        composer::draw(app, frame, theme, composer);
+    }
 }
 
 /// The link question over the body: the whole address, what opening it
@@ -692,30 +763,5 @@ pub(super) fn draw_link_dialog(
         ],
         ..PaneLine::default()
     });
-    let height = (lines.len() as u16 + 2).min(body.height);
-    let x = body.x + (body.width.saturating_sub(width)) / 2;
-    let y = body.y + (body.height.saturating_sub(height)) / 2;
-    let area = Rect::new(x, y, width, height);
-    clear(frame, area);
-    let (h, v, corners) = if theme.unicode {
-        ("─", "│", ["┌", "┐", "└", "┘"])
-    } else {
-        ("-", "|", ["+", "+", "+", "+"])
-    };
-    let buffer = frame.buffer_mut();
-    let fill = h.repeat(usize::from(width.saturating_sub(2)));
-    let style = theme.bold();
-    buffer.set_string(x, y, format!("{}{fill}{}", corners[0], corners[1]), style);
-    buffer.set_string(
-        x,
-        y + height - 1,
-        format!("{}{fill}{}", corners[2], corners[3]),
-        style,
-    );
-    for row in 1..height - 1 {
-        buffer.set_string(x, y + row, v, style);
-        buffer.set_string(x + width - 1, y + row, v, style);
-    }
-    let inner_area = Rect::new(x + 2, y + 1, width.saturating_sub(4), height - 2);
-    draw_pane(app, frame, PaneId::Dialog, inner_area, lines, None);
+    super::draw_box(app, frame, theme, body, width, lines);
 }

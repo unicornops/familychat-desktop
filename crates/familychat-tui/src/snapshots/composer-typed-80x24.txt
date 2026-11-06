@@ -1,0 +1,99 @@
+  FAMILY CHAT 0.0.0-test               @ana:smith.safechat.family  Room 2 of 11
+Smith family  Encrypted  5 members
+Plans, photos and who's picking up whom
+────────────────────────────────────────────────────────────────────────────────
+  👍  1  ⚽  3
+Ana  10:03
+  ┃ Dad: Ana: leaving for football at 10. Bring your boots.
+  On it. They're by the door.
+── New messages ────────────────────────────────────────────────────────────────
+Grandad  11:20
+  Good luck today, Ana! Score one for me.
+Ben  11:50
+  can someone bring my water bottle
+Mum  11:58
+  Dinner at 7, don't be late! Ana[2]
+  ❤️  1
+Ana  11:59
+  See you then (sending…)
+────────────────────────────────────────────────────────────────────────────────
+› See you at **six**
+  Bring the `snacks`, please
+                                                                     Up to date
+Enter Send   Esc Messages PgDn Newer   ^P PrevRoom  ^C Quit
+^J NewLine   PgUp Older   ^N NextRoom  ^R Recovery
+--- styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+BBBBBBBBBBBBkkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+  R RR  k kk
+ccc  kkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+kk
+rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr
+BBBBBBB  kkkkk
+kk
+BBB  kkkkk
+kk
+BBB  kkkkk
+kk             IIIIIIIIIIIII  cccccc
+  k kk
+ccc  kkkkk
+kk            kkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+BB
+                            R
+                                                                     kkkkkkkkkkk
+RRRRR        RRR          RRRR         RR           RR
+RR           RRRR         RR           RR
+--- NO_COLOR styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+BBBBBBBBBBBB
+
+
+  R RR
+BBB
+
+
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+BBBBBBB
+
+BBB
+
+BBB
+               IIIIIIIIIIIII  UUUUUU
+
+BBB
+
+
+BB
+                            R
+
+RRRRR        RRR          RRRR         RR           RR
+RR           RRRR         RR           RR
+--- ASCII ---
+  FAMILY CHAT 0.0.0-test               @ana:smith.safechat.family  Room 2 of 11
+Smith family  Encrypted  5 members
+Plans, photos and who's picking up whom
+--------------------------------------------------------------------------------
+  👍  1  ⚽  3
+Ana  10:03
+  | Dad: Ana: leaving for football at 10. Bring your boots.
+  On it. They're by the door.
+-- New messages ----------------------------------------------------------------
+Grandad  11:20
+  Good luck today, Ana! Score one for me.
+Ben  11:50
+  can someone bring my water bottle
+Mum  11:58
+  Dinner at 7, don't be late! Ana[2]
+  ❤️  1
+Ana  11:59
+  See you then (sending...)
+--------------------------------------------------------------------------------
+> See you at **six**
+  Bring the `snacks`, please
+                                                                     Up to date
+Enter Send   Esc Messages PgDn Newer   ^P PrevRoom  ^C Quit
+^J NewLine   PgUp Older   ^N NextRoom  ^R Recovery

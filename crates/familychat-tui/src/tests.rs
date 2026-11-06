@@ -19,9 +19,16 @@ use std::{
 };
 
 use chrono::{Datelike, TimeZone, Utc};
-use familychat_core::{signin::SigninStep, sync::SyncState};
+use familychat_core::{
+    encryption::{DeviceTrust, EncryptionStatus, IdentitySetup, RecoveryState, VerificationStep},
+    messaging::MediaLimits,
+    signin::SigninStep,
+    sync::SyncState,
+    timeline::SendProblem,
+};
 use familychat_test_support::fixtures::{
-    FixtureProfile, FixtureRooms, FixtureSetup, FixtureStartup, steps,
+    FixtureProfile, FixtureRooms, FixtureSetup, FixtureStartup, encryption as fixture_encryption,
+    rooms, steps,
 };
 use ratatui::{
     Terminal,
@@ -32,12 +39,17 @@ use ratatui::{
 
 use crate::{
     app::{App, AppOptions, Clock, Environment, InitialView, Settings},
-    fixture_views::{FixtureView, VIEWS, ViewProfile, ViewRooms, ViewStep, fixture_view},
+    fixture_views::{
+        FixtureView, VIEWS, ViewEncryption, ViewProfile, ViewRooms, ViewStep, ViewVerification,
+        fixture_view,
+    },
     view::draw,
 };
 
 mod behaviour;
+mod encryption;
 mod hostile;
+mod writing;
 
 /// Thursday 5 November 2026, 12:00 UTC: the fixtures' times count back
 /// from it.
@@ -165,11 +177,77 @@ pub(crate) fn app_over(
     })
 }
 
+/// What a fixture view sets on the session beyond its setup: the
+/// encryption, a verification, identity warnings, a stopped message, the
+/// upload limit (`familychat-app`'s launcher does the same).
+pub(crate) fn apply(view: &FixtureView, startup: &FixtureStartup) {
+    let session = startup.session();
+    let account = familychat_core::session::SessionApi::accounts(session.as_ref())
+        .borrow()
+        .first()
+        .map(|account| account.key.clone());
+    if let Some(limit) = view.upload_limit {
+        session.set_media_limits(Some(MediaLimits {
+            max_upload_bytes: Some(limit),
+        }));
+    }
+    if view.identity_warnings {
+        session.set_identity_warnings(rooms::FAMILY_ROOM, fixture_encryption::family_warnings());
+    }
+    if view.send_problem {
+        session.stop_own_message(rooms::FAMILY_ROOM, SendProblem::UnconfirmedDevices);
+    }
+    let Some(account) = account else {
+        return;
+    };
+    if let Some(state) = view.encryption {
+        let settled = fixture_encryption::settled();
+        session.set_encryption(
+            &account,
+            match state {
+                ViewEncryption::Unconfirmed => EncryptionStatus {
+                    device: DeviceTrust::Unverified,
+                    ..settled
+                },
+                ViewEncryption::NeedsPassword => EncryptionStatus {
+                    device: DeviceTrust::Unverified,
+                    identity: IdentitySetup::NeedsPassword,
+                    recovery: RecoveryState::Disabled,
+                    other_devices: false,
+                },
+                ViewEncryption::SetupFailed => EncryptionStatus {
+                    device: DeviceTrust::Unverified,
+                    identity: IdentitySetup::Failed(
+                        familychat_core::encryption::wording::SETUP_FAILED.to_owned(),
+                    ),
+                    recovery: RecoveryState::Disabled,
+                    other_devices: false,
+                },
+                ViewEncryption::NoRecovery => EncryptionStatus {
+                    recovery: RecoveryState::Disabled,
+                    ..settled
+                },
+            },
+        );
+    }
+    match view.verification {
+        Some(ViewVerification::Incoming) => {
+            session.request_verification(&account);
+        }
+        Some(ViewVerification::Emoji) => session.start_verification_at(
+            VerificationStep::CompareEmoji(fixture_encryption::fixture_emoji()),
+        ),
+        Some(ViewVerification::Done) => session.start_verification_at(VerificationStep::Done),
+        None => {}
+    }
+}
+
 /// A terminal UI on a fixture view, and its startup (for the session and
 /// the sign-in's records).
 pub(crate) fn app_for(view: &str, variant: Variant) -> (App, Arc<FixtureStartup>) {
     let fixture = fixture_view(view).unwrap_or_else(|| panic!("no fixture view {view}"));
     let startup = setup(&fixture).startup();
+    apply(&fixture, &startup);
     (app_over(startup.clone(), fixture.initial, variant), startup)
 }
 
@@ -212,6 +290,9 @@ impl Screen {
             assert!(Instant::now() < deadline, "the screen never settled");
             std::thread::sleep(Duration::from_millis(5));
         }
+        // Drawn whole: the test backend keeps what an earlier frame left
+        // in the cell after a wide character, which a terminal never shows.
+        self.terminal.clear().expect("the test terminal clears");
         self.draw(app)
     }
 }
@@ -421,6 +502,36 @@ snapshots! {
     snapshot_room_large => "room-large",
     snapshot_hostile => "hostile",
     snapshot_hostile_room => "hostile-room",
+    snapshot_composer_typed => "composer-typed",
+    snapshot_composer_mentions => "composer-mentions",
+    snapshot_composer_reply => "composer-reply",
+    snapshot_composer_edit => "composer-edit",
+    snapshot_composer_file => "composer-file",
+    snapshot_composer_file_too_large => "composer-file-too-large",
+    snapshot_composer_paused => "composer-paused",
+    snapshot_attach_prompt => "attach-prompt",
+    snapshot_message_selected => "message-selected",
+    snapshot_react_picker => "react-picker",
+    snapshot_delete_prompt => "delete-prompt",
+    snapshot_leave_prompt => "leave-prompt",
+    snapshot_send_problem => "send-problem",
+    snapshot_identity_warnings => "identity-warnings",
+    snapshot_confirm_identity => "confirm-identity",
+    snapshot_confirm_recovery_key => "confirm-recovery-key",
+    snapshot_confirm_recovery_key_wrong => "confirm-recovery-key-wrong",
+    snapshot_confirm_skip_warning => "confirm-skip-warning",
+    snapshot_confirm_skipped => "confirm-skipped",
+    snapshot_confirm_password => "confirm-password",
+    snapshot_verify_waiting => "verify-waiting",
+    snapshot_verify_incoming => "verify-incoming",
+    snapshot_verify_ready => "verify-ready",
+    snapshot_verify_emoji => "verify-emoji",
+    snapshot_verify_done => "verify-done",
+    snapshot_verify_mismatch => "verify-mismatch",
+    snapshot_recovery_offer => "recovery-offer",
+    snapshot_recovery_setup => "recovery-setup",
+    snapshot_recovery_key_shown => "recovery-key-shown",
+    snapshot_encryption_setup_failed => "encryption-setup-failed",
 }
 
 /// A screen drawn in the default variant, settled.

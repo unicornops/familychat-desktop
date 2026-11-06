@@ -1,7 +1,7 @@
 # Family Chat Desktop
 
 > [!WARNING]
-> **Family Chat Desktop is alpha software and is in no way ready for real use.** Right now the window signs you in and lets you read and write in your rooms (without device verification or key backup yet), and the terminal UI signs you in and lets you read them. Expect bugs, missing features and breaking changes between releases. Use the Family Chat apps for iOS, Android or the web in the meantime.
+> **Family Chat Desktop is alpha software and is in no way ready for real use.** Right now the window signs you in and lets you read and write in your rooms (without device verification or key backup yet), and the terminal UI signs you in and lets you read and write in them too. Expect bugs, missing features and breaking changes between releases. Use the Family Chat apps for iOS, Android or the web in the meantime.
 
 Family Chat Desktop (`familychat`) is a native desktop chat client for macOS, Linux and Windows, written in Rust, with a graphical UI built on GPUI and a terminal UI built on ratatui. It is a standards-compliant Matrix client that works with any homeserver supporting what modern Matrix clients need, and its first job is to be the best way to use [Family Chat](https://safechat.family), the family-safe hosted Matrix service, including easy sign-in with a code from a parent.
 
@@ -69,7 +69,7 @@ Phase 7, writing ([#8](https://github.com/unicornops/familychat-desktop/issues/8
 - a message written while offline waits and goes when the connection is back; what you were writing in a room is kept (encrypted) until you come back to it
 - during a Family Chat curfew the window says "Chat is paused" and the composer is read-only until the pause ends
 - the room hears when you are typing and how far you have read; new rooms and direct chats are encrypted unless your server says otherwise
-- all of it through `familychat-actions`, which the terminal UI will use too
+- all of it through `familychat-actions`, which the terminal UI uses too (Phase 11)
 
 Phase 8, end-to-end encryption ([#9](https://github.com/unicornops/familychat-desktop/issues/9), [ADR 0009](./docs/adr/0009-end-to-end-encryption.md)):
 
@@ -99,6 +99,16 @@ Phase 10, the terminal UI: sign-in and reading ([#11](https://github.com/unicorn
 - the mouse (click, scroll, drag to select and copy, as in Zellij), new messages in the status line with an optional bell (`--bell`), `NO_COLOR` and ASCII drawing (`--ascii`)
 - every name, message and file name from a server is filtered for escape sequences before it reaches your terminal
 
+Phase 11, the terminal UI: writing and encryption ([#12](https://github.com/unicornops/familychat-desktop/issues/12), [ADR 0008](./docs/adr/0008-terminal-ui.md)):
+
+- a composer under each room, with the keys as soon as the room opens: Enter sends, `^J` (or Alt-Enter) starts a new line, `@` suggests the room's members, and Markdown works as in the window; Esc moves to the room's commands, where `[` and `]` pick a message and `R` replies, `E` edits, `+` reacts and `D` deletes (after asking), and `i` goes back to writing
+- files by path (`A`, with Tab completion), checked against your server's size limit before they are read, and sent without a picture's location
+- invitations answered in the room (`a` joins, `x` declines), and `L` to leave a room
+- "Chat is paused" with a read-only composer while your account is paused
+- your own editor for long messages, if you ask for it with `familychat tui --editor` (`^_` opens `$VISUAL` or `$EDITOR`; the message sits in a private temporary file meanwhile, wiped afterwards)
+- "Confirm it's you" in the terminal: compare emoji with another of your devices (each emoji shown with its name, names only in ASCII), or type your recovery key into a masked field; requests from your other devices to verify them; setting up recovery with the key shown once; identity warnings and why a message can't be read
+- the devices list and room key export and import stay in the window for now
+
 Phase 12, packaging, signing and distribution ([#13](https://github.com/unicornops/familychat-desktop/issues/13), [ADR 0014](./docs/adr/0014-packaging-signing-and-distribution.md), [`docs/release.md`](./docs/release.md)):
 
 - installers for each system: a DMG for macOS (signed with Developer ID and notarised by Apple), a per-user MSI for Windows and a `.deb` for Debian and Ubuntu, next to the archives
@@ -121,7 +131,6 @@ Phase 14, sign-in in the browser and with a QR code, for servers that offer them
 - for a Family Chat family, every address these use must be one of Family Chat's own; Family Chat's servers don't offer them yet (family-chat #239 plans it), so families see the same sign-in as before
 - the terminal UI signs in through the browser too (Ctrl-B); QR codes are the window's
 
-Writing and encryption from the terminal (Phase 11) and the rest follow in the later phases.
 
 ## Building
 
@@ -138,7 +147,7 @@ GPUI renders through Vulkan (`libvulkan1`) or EGL/GL (`libegl1`) at runtime. On 
 ```bash
 cargo build -p familychat-app --release --locked
 target/release/familychat             # the window
-target/release/familychat tui         # the terminal UI (--bell, --ascii, --no-mouse); q quits
+target/release/familychat tui         # the terminal UI (--bell, --ascii, --no-mouse, --editor); q quits
 target/release/familychat accounts    # the accounts registry
 target/release/familychat open-link   # paste a sign-in link; it goes to the open window, or opens one
 target/release/familychat --version

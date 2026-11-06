@@ -23,8 +23,6 @@
                                             │                                                                                       │
                                             │                                                                                       │
                                             │                                                                                       │
-                                            │                                                                                       │
-                                            │                                                                                       │
                                             │ ─────────────────────────────────────── Today ────────────────────────────────────────│
                                             │ Mum Dad  11:30                                                                        │
                                             │   Hello red                                                                           │
@@ -43,9 +41,11 @@
                                             │   · Eve joined                                                                        │
                                             │ Family Chat  11:35                                                                    │
                                             │   Notice end                                                                          │
+                                            │ ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                            │ ›  Message Smith family
                                                                                                                                                      Up to date
-< Rooms             PgDn Newer          l Link#             u FirstNew          m Members           : Commands          ^N NextRoom         N PrevNew
-PgUp Older          Tab NextLink        s Save              G Latest            n NextNew           q Quit              ^P PrevRoom         O OTHER
+Enter Send          Esc Messages        PgDn Newer          ^P PrevRoom         ^C Quit
+^J NewLine          PgUp Older          ^N NextRoom         ^R Recovery
 --- styles ---
 RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
  kkRRR  kk        kk        kk              k BBBBBBBBBBBBkkkkkkkkkkkkkkkkkkkkkk
@@ -56,8 +56,6 @@ kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk                                   
 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk                                                                                       k                          k
   BBBBBBBBBBBBBBBBBBBBBBBBBBB ccccccc kkkkk k                                                                                       k                          k
 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk                                                                                       k
-                                            k                                                                                       k
-                                            k                                                                                       k
                                             k                                                                                       k
                                             k                                                                                       k
                                             k                                                                                       k
@@ -92,9 +90,11 @@ kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk                                   
                                             k   kkkkkkkkkkkk                                                                        k
                                             k BBBBBBBBBBB  kkkkk                                                                    k
                                             k kkkkkkkkkkkk                                                                          k
+                                            k kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+                                            k BBkkkkkkkkkkkkkkkkkkkkk
                                                                                                                                                      kkkkkkkkkkk
-R                   RRRR                R                   R                   R                   R                   RR                  R
-RRRR                RRR                 R                   R                   R                   R                   RR                  R
+RRRRR               RRR                 RRRR                RR                  RR
+RR                  RRRR                RR                  RR
 --- NO_COLOR styles ---
 RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
    RRR                                        BBBBBBBBBBBB
@@ -104,8 +104,6 @@ BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB                                    
 
 
   BBBBBBBBBBBBBBBBBBBBBBBBBBB
-
-
 
 
 
@@ -142,8 +140,10 @@ BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB                                    
                                               BBBBBBBBBBB
 
 
-R                   RRRR                R                   R                   R                   R                   RR                  R
-RRRR                RRR                 R                   R                   R                   R                   RR                  R
+                                              BBR
+
+RRRRR               RRR                 RRRR                RR                  RR
+RR                  RRRR                RR                  RR
 --- ASCII ---
   FAMILY CHAT 0.0.0-test                                                     ROOMS                                      @ana:smith.safechat.family  Room 1 of 3
  1 All  2 Unread  3 People  4 Invites       | Smith family  Encrypted  3 members
@@ -154,8 +154,6 @@ RRRR                RRR                 R                   R                   
     Ben: ok                                 |                                                                                       | Ben
   Cousins                     invited 11:50 |                                                                                       | Ana (you)
     Invitation from Aunt Clare              |                                                                                       |
-                                            |                                                                                       |
-                                            |                                                                                       |
                                             |                                                                                       |
                                             |                                                                                       |
                                             |                                                                                       |
@@ -190,6 +188,8 @@ RRRR                RRR                 R                   R                   
                                             |   - Eve joined                                                                        |
                                             | Family Chat  11:35                                                                    |
                                             |   Notice end                                                                          |
+                                            | ------------------------------------------------------------------------------------------------------------------
+                                            | >  Message Smith family
                                                                                                                                                      Up to date
-< Rooms             PgDn Newer          l Link#             u FirstNew          m Members           : Commands          ^N NextRoom         N PrevNew
-PgUp Older          Tab NextLink        s Save              G Latest            n NextNew           q Quit              ^P PrevRoom         O OTHER
+Enter Send          Esc Messages        PgDn Newer          ^P PrevRoom         ^C Quit
+^J NewLine          PgUp Older          ^N NextRoom         ^R Recovery

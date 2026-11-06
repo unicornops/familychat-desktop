@@ -12,6 +12,11 @@
 //! A new row in the table fails `every_table_command_has_a_terminal_command`
 //! until it is mapped in [`SHARED`] (or listed in [`LATER`] with the phase
 //! that brings it to the terminal), so the two frontends cannot drift.
+//!
+//! In the composer (ADR 0008, "Writing"; PLAN.md decision 10) letters are
+//! text: Esc leaves it for the room's commands, where the table's single
+//! letters work (`R` reply, `E` edit, `+` react, `D` delete) and `i` goes
+//! back.
 
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use familychat_core::commands::command;
@@ -54,6 +59,28 @@ pub enum Cmd {
     ShowPeople,
     /// `ShowInvites`.
     ShowInvites,
+    /// `FocusComposer`.
+    FocusComposer,
+    /// `AttachFile`.
+    AttachFile,
+    /// `SelectPreviousMessage`.
+    SelectPreviousMessage,
+    /// `SelectNextMessage`.
+    SelectNextMessage,
+    /// `ReplyToMessage`.
+    ReplyToMessage,
+    /// `EditMessage`.
+    EditMessage,
+    /// `ReactToMessage`.
+    ReactToMessage,
+    /// `DeleteMessage`.
+    DeleteMessage,
+    /// `LeaveRoom`.
+    LeaveRoom,
+    /// `ConfirmIdentity`.
+    ConfirmIdentity,
+    /// `SetUpRecovery`.
+    SetUpRecovery,
     /// `Quit`.
     Quit,
 
@@ -92,6 +119,28 @@ pub enum Cmd {
     NextField,
     /// `O`: the command bar's next page.
     OtherCmds,
+    /// Enter in the composer: send.
+    Send,
+    /// `^J` (or Alt-Enter) in the composer: a new line.
+    NewLine,
+    /// `^_` in the composer: the external editor (`--editor`).
+    Editor,
+    /// Esc in the composer: the room's commands.
+    ToTimeline,
+    /// `a` on an invitation: join.
+    Accept,
+    /// `x` on an invitation: decline.
+    Decline,
+    /// `S`: send a message the encryption stopped, anyway.
+    SendAnyway,
+    /// `w`: answer the room's identity warning.
+    Acknowledge,
+    /// `d` on "Confirm it's you": another device.
+    UseDevice,
+    /// `r` on "Confirm it's you": the recovery key.
+    UseRecoveryKey,
+    /// `s` on "Confirm it's you": skip, after a warning.
+    Skip,
     /// A question's answer: the key it stands for.
     Answer(char),
 }
@@ -115,37 +164,38 @@ pub const SHARED: &[(&str, Cmd)] = &[
     ("ShowUnreadRooms", Cmd::ShowUnreadRooms),
     ("ShowPeople", Cmd::ShowPeople),
     ("ShowInvites", Cmd::ShowInvites),
+    ("FocusComposer", Cmd::FocusComposer),
+    ("AttachFile", Cmd::AttachFile),
+    ("SelectPreviousMessage", Cmd::SelectPreviousMessage),
+    ("SelectNextMessage", Cmd::SelectNextMessage),
+    ("ReplyToMessage", Cmd::ReplyToMessage),
+    ("EditMessage", Cmd::EditMessage),
+    ("ReactToMessage", Cmd::ReactToMessage),
+    ("DeleteMessage", Cmd::DeleteMessage),
+    ("LeaveRoom", Cmd::LeaveRoom),
+    ("ConfirmIdentity", Cmd::ConfirmIdentity),
+    ("SetUpRecovery", Cmd::SetUpRecovery),
     ("Quit", Cmd::Quit),
 ];
 
-/// Table commands the terminal does not offer yet, with the phase that
-/// brings them (PLAN.md, section 13.11: writing in the terminal).
+/// Table commands the terminal does not offer yet, with why and when
+/// (ADR 0008, "What the terminal leaves to the window").
 #[cfg_attr(not(test), allow(dead_code))]
 pub const LATER: &[(&str, &str)] = &[
-    // The window's Settings (ADR 0015); the terminal's own settings page
-    // is not phased yet (PLAN.md, section 14).
+    // The window's Settings (ADR 0015), its notification settings dialog
+    // (ADR 0013), the devices dialog (verify another device, sign one out
+    // with the password the server may ask for) and room key files (a
+    // passphrase typed twice, a file chosen): the terminal's own settings
+    // page is not phased yet (PLAN.md, section 14).
     ("OpenSettings", "later"),
     ("NotificationSettings", "later"),
-    ("FocusComposer", "Phase 11"),
-    ("AttachFile", "Phase 11"),
-    ("SelectPreviousMessage", "Phase 11"),
-    ("SelectNextMessage", "Phase 11"),
-    ("ReplyToMessage", "Phase 11"),
-    ("EditMessage", "Phase 11"),
-    ("ReactToMessage", "Phase 11"),
-    ("DeleteMessage", "Phase 11"),
-    ("LeaveRoom", "Phase 11"),
-    // The window's encryption screens and dialogs (ADR 0009); the terminal
-    // gets emoji verification and the recovery key with Phase 11.
-    ("ConfirmIdentity", "Phase 11"),
-    ("SetUpRecovery", "Phase 11"),
-    ("ManageDevices", "Phase 11"),
+    ("ManageDevices", "later"),
+    ("ExportRoomKeys", "later"),
+    ("ImportRoomKeys", "later"),
     // A new phone scans the window's QR code (ADR 0010); a QR code a phone
     // can scan from a terminal (half-block drawing, sized to the terminal
     // and its font) is later work.
     ("LinkDevice", "later work"),
-    ("ExportRoomKeys", "Phase 11"),
-    ("ImportRoomKeys", "Phase 11"),
 ];
 
 /// The terminal's own commands: the key the bar shows, the bar's label
@@ -223,6 +273,52 @@ pub const LOCAL: &[(Cmd, &str, &str, &str)] = &[
         "OTHER",
         "Show the command bar's other commands.",
     ),
+    (Cmd::Send, "Enter", "Send", "Send the message."),
+    (
+        Cmd::NewLine,
+        "^J",
+        "NewLine",
+        "Start a new line (Alt-Enter too, and Shift-Enter where the terminal tells it apart).",
+    ),
+    (
+        Cmd::Editor,
+        "^_",
+        "Editor",
+        "Write the message in your editor ($VISUAL or $EDITOR).",
+    ),
+    (
+        Cmd::ToTimeline,
+        "Esc",
+        "Messages",
+        "Leave the message field for the room's commands.",
+    ),
+    (Cmd::Accept, "a", "Join", "Join the room you're invited to."),
+    (Cmd::Decline, "x", "Decline", "Decline the invitation."),
+    (
+        Cmd::SendAnyway,
+        "S",
+        "SendAnyw",
+        "Send the selected message the encryption stopped, anyway.",
+    ),
+    (
+        Cmd::Acknowledge,
+        "w",
+        "Identity",
+        "Answer the room's identity warning: OK, or withdraw the old verification.",
+    ),
+    (
+        Cmd::UseDevice,
+        "d",
+        "Device",
+        "Confirm it's you with another device, comparing emoji.",
+    ),
+    (
+        Cmd::UseRecoveryKey,
+        "r",
+        "RecovKey",
+        "Confirm it's you with your recovery key.",
+    ),
+    (Cmd::Skip, "s", "Skip", "Skip confirming for now."),
 ];
 
 impl Cmd {
@@ -271,6 +367,17 @@ impl Cmd {
             Cmd::ShowUnreadRooms => "Unread",
             Cmd::ShowPeople => "People",
             Cmd::ShowInvites => "Invites",
+            Cmd::FocusComposer => "Write",
+            Cmd::AttachFile => "Attach",
+            Cmd::SelectPreviousMessage => "PrevMsg",
+            Cmd::SelectNextMessage => "NextMsg",
+            Cmd::ReplyToMessage => "Reply",
+            Cmd::EditMessage => "Edit",
+            Cmd::ReactToMessage => "React",
+            Cmd::DeleteMessage => "Delete",
+            Cmd::LeaveRoom => "Leave",
+            Cmd::ConfirmIdentity => "Confirm",
+            Cmd::SetUpRecovery => "Recovery",
             Cmd::Quit => "Quit",
             Cmd::Answer(_) => "",
             other => other.local().map(|(_, _, label, _)| *label).unwrap_or(""),

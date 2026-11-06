@@ -1,0 +1,99 @@
+  FAMILY CHAT 0.0.0-test               @ana:smith.safechat.family  Room 2 of 11
+ Paused: Chat is paused for now. It starts again when the pause ends.
+Smith family  Encrypted  5 members
+Plans, photos and who's picking up whom
+────────────────────────────────────────────────────────────────────────────────
+Ana  10:03
+  ┃ Dad: Ana: leaving for football at 10. Bring your boots.
+  On it. They're by the door.
+── New messages ────────────────────────────────────────────────────────────────
+Grandad  11:20
+  Good luck today, Ana! Score one for me.
+Ben  11:50
+  can someone bring my water bottle
+Mum  11:58
+  Dinner at 7, don't be late! Ana[2]
+  ❤️  1
+Ana  11:59
+  See you then (sending…)
+────────────────────────────────────────────────────────────────────────────────
+ Chat is paused
+ Messages can't be sent until the pause ends.
+                                                                         Paused
+< Rooms      ] NextMsg    PgDn Newer   l Link#      u FirstNew   m Members
+[ PrevMsg    PgUp Older   Tab NextLink s Save       G Latest     O OTHER
+--- styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+BBBBBBBBBBBBkkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+ccc  kkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+kk
+rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr
+BBBBBBB  kkkkk
+kk
+BBB  kkkkk
+kk
+BBB  kkkkk
+kk             IIIIIIIIIIIII  cccccc
+  k kk
+ccc  kkkkk
+kk            kkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+ccccccccccccccc
+ kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+                                                                         ccccccc
+R            R            RRRR         R            R            R
+R            RRRR         RRR          R            R            R
+--- NO_COLOR styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+ BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+BBBBBBBBBBBB
+
+
+BBB
+
+
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+BBBBBBB
+
+BBB
+
+BBB
+               IIIIIIIIIIIII  UUUUUU
+
+BBB
+
+
+BBBBBBBBBBBBBBB
+
+
+R            R            RRRR         R            R            R
+R            RRRR         RRR          R            R            R
+--- ASCII ---
+  FAMILY CHAT 0.0.0-test               @ana:smith.safechat.family  Room 2 of 11
+ Paused: Chat is paused for now. It starts again when the pause ends.
+Smith family  Encrypted  5 members
+Plans, photos and who's picking up whom
+--------------------------------------------------------------------------------
+Ana  10:03
+  | Dad: Ana: leaving for football at 10. Bring your boots.
+  On it. They're by the door.
+-- New messages ----------------------------------------------------------------
+Grandad  11:20
+  Good luck today, Ana! Score one for me.
+Ben  11:50
+  can someone bring my water bottle
+Mum  11:58
+  Dinner at 7, don't be late! Ana[2]
+  ❤️  1
+Ana  11:59
+  See you then (sending...)
+--------------------------------------------------------------------------------
+ Chat is paused
+ Messages can't be sent until the pause ends.
+                                                                         Paused
+< Rooms      ] NextMsg    PgDn Newer   l Link#      u FirstNew   m Members
+[ PrevMsg    PgUp Older   Tab NextLink s Save       G Latest     O OTHER

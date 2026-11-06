@@ -9,11 +9,13 @@
 //! room follows the list's cursor, as Zmail's preview pane follows its
 //! index.
 
-use std::{collections::HashMap, path::PathBuf};
+use std::{collections::HashMap, path::PathBuf, time::Instant};
 
+use familychat_actions::{ActionEvent, Actions};
 use familychat_core::{
     OwnedRoomId,
     diff::{ListDiff, apply_all},
+    encryption::IdentityWarning,
     links::{LinkAction, MatrixLink, classify},
     media::{MediaError, MediaInfo},
     rooms::{RoomListFilter, RoomListLoading, RoomMember, RoomSummary, sort_members},
@@ -22,10 +24,12 @@ use familychat_core::{
         TimelineControls, TimelineSubscription,
     },
     sync::{AccountStatus, SyncState},
-    timeline::{PaginationState, TimelineItem, TimelineUpdate},
+    timeline::{PaginationState, TimelineItem, TimelineItemId, TimelineUpdate},
 };
 use familychat_security::{file_names::sanitize_filename, terminal::sanitize_line};
 use tokio::sync::{mpsc, oneshot, watch};
+
+use crate::{composer::Composer, encryption::EncryptionState};
 
 use crate::{
     app::{App, CommandEntry, Effect, Prompt, RoomsLaunch, SIDE_BY_SIDE_FROM, Screen},
@@ -41,8 +45,11 @@ const PAGE_EVENTS: u16 = 20;
 pub(crate) enum Focus {
     /// The room list.
     List,
-    /// The open room.
+    /// The open room's commands (the timeline): single letters are
+    /// commands.
     Room,
+    /// The open room's composer: letters are text (PLAN.md decision 10).
+    Composer,
 }
 
 /// A link or a file in the open room, by the number it shows as.
@@ -75,6 +82,8 @@ pub(crate) struct Layout {
     pub(crate) read_marker: Option<usize>,
     /// The last item's id when it was laid out.
     pub(crate) last_item: Option<String>,
+    /// The selected message's first line.
+    pub(crate) selected_line: Option<usize>,
 }
 
 /// The open room's members.
@@ -111,6 +120,18 @@ pub(crate) struct OpenRoom {
     /// Counts the timeline's changes, for the layout cache.
     pub(crate) generation: u64,
     pub(crate) layout: Option<Layout>,
+    /// Where the person writes (none for an invitation).
+    pub(crate) composer: Option<Composer>,
+    /// The message the room's commands are about (`[` and `]`).
+    pub(crate) selected_item: Option<TimelineItemId>,
+    /// The selected message is to be scrolled into view.
+    pub(crate) reveal_selected: bool,
+    warnings_reply: Option<Reply<watch::Receiver<Vec<IdentityWarning>>>>,
+    warnings_rx: Option<watch::Receiver<Vec<IdentityWarning>>>,
+    /// The room's identity warnings.
+    pub(crate) warnings: Vec<IdentityWarning>,
+    /// The warning being answered.
+    pub(crate) acknowledging: Option<(familychat_core::OwnedUserId, Reply<()>)>,
 }
 
 /// The signed-in screens' state.
@@ -139,12 +160,33 @@ pub(crate) struct RoomsState {
     pub(crate) timeline_height: usize,
     /// The list pane's height at the last frame.
     pub(crate) list_height: usize,
+    /// The account's messaging actions (ADR 0012), and what they report.
+    pub(crate) actions: Option<Actions>,
+    pub(crate) action_events: Option<mpsc::UnboundedReceiver<ActionEvent>>,
+    /// The account's encryption (ADR 0009).
+    pub(crate) encryption: EncryptionState,
+    /// When the open room was last marked as read.
+    pub(crate) last_read: Option<Instant>,
 }
 
 impl RoomsState {
+    /// Shows `filter`; `true` when the list took it.
+    pub(crate) fn controls_set_filter(&mut self, filter: RoomListFilter) -> bool {
+        if self
+            .controls
+            .as_ref()
+            .is_some_and(|controls| controls.set_filter(filter))
+        {
+            self.filter = filter;
+            true
+        } else {
+            false
+        }
+    }
+
     /// Whether the room has the keys.
     pub(crate) fn room_focused(&self) -> bool {
-        self.focus == Focus::Room && self.open.is_some()
+        self.focus != Focus::List && self.open.is_some()
     }
 
     /// Answers asked for that have not arrived.
@@ -154,8 +196,11 @@ impl RoomsState {
                 + usize::from(open.members_reply.is_some())
                 + usize::from(!open.loaded && open.error.is_none() && !open.room.is_invite())
                 + usize::from(open.pagination == PaginationState::Loading)
+                + usize::from(open.warnings_reply.is_some())
+                + usize::from(open.acknowledging.is_some())
+                + open.composer.as_ref().map_or(0, Composer::pending)
         });
-        usize::from(self.list_reply.is_some()) + open + self.saves.len()
+        usize::from(self.list_reply.is_some()) + open + self.saves.len() + self.encryption.pending()
     }
 
     /// The room under the list's cursor.
@@ -218,6 +263,14 @@ impl App {
         let list_reply = session
             .as_ref()
             .map(|session| session.room_list(&account.key, RoomListFilter::All));
+        let (actions, action_events) = match &session {
+            Some(session) => {
+                let (actions, events) = Actions::channel(session.clone(), account.key.clone());
+                (Some(actions), Some(events))
+            }
+            None => (None, None),
+        };
+        let encryption = EncryptionState::new(session.as_deref(), &account.key);
         Screen::Rooms(Box::new(RoomsState {
             account,
             status_rx,
@@ -238,6 +291,10 @@ impl App {
             saves: Vec::new(),
             timeline_height: 10,
             list_height: 10,
+            actions,
+            action_events,
+            encryption,
+            last_read: None,
         }))
     }
 
@@ -337,6 +394,11 @@ impl App {
         if let Some(open) = rooms.open.as_mut() {
             changed |= open_room_tick(open);
         }
+        changed |= self.writing_tick();
+        changed |= self.encryption_tick();
+        let Some(rooms) = self.rooms_state() else {
+            return changed;
+        };
         let mut saved = Vec::new();
         rooms
             .saves
@@ -411,22 +473,83 @@ impl App {
             }
             launch.room = None;
         }
-        if launch.reference.is_none() && launch.save.is_none() {
+        if launch.reference.is_some() || launch.save.is_some() {
+            let refs = self
+                .rooms_ref()
+                .and_then(|rooms| rooms.open.as_ref())
+                .and_then(|open| open.layout.as_ref())
+                .map_or(0, |layout| layout.refs.len());
+            if refs == 0 {
+                return Some(launch);
+            }
+            if let Some(number) = launch.reference.take() {
+                self.open_reference(number.saturating_sub(1));
+            }
+            if let Some(number) = launch.save.take() {
+                self.open_reference(number.saturating_sub(1));
+            }
             return None;
         }
-        let refs = self
-            .rooms_ref()
-            .and_then(|rooms| rooms.open.as_ref())
-            .and_then(|open| open.layout.as_ref())
-            .map_or(0, |layout| layout.refs.len());
-        if refs == 0 {
+        // The writing and encryption views: one step a tick, each once the
+        // answers to the last have arrived.
+        if self.pending_work() > 0 {
             return Some(launch);
         }
-        if let Some(number) = launch.reference.take() {
-            self.open_reference(number.saturating_sub(1));
+        if std::mem::take(&mut launch.select_own) {
+            let loaded = self
+                .rooms_ref()
+                .and_then(|rooms| rooms.open.as_ref())
+                .is_some_and(|open| open.loaded);
+            if !loaded {
+                launch.select_own = true;
+                return Some(launch);
+            }
+            if let Some(open) = self.rooms_state().and_then(|rooms| rooms.open.as_mut()) {
+                open.selected_item = crate::writing::actionable(open)
+                    .into_iter()
+                    .rev()
+                    .find(|choice| choice.own)
+                    .map(|choice| choice.target.item);
+                open.reveal_selected = true;
+                open.generation += 1;
+            }
+            if let Some(rooms) = self.rooms_state() {
+                rooms.focus = Focus::Room;
+            }
+            return Some(launch);
         }
-        if let Some(number) = launch.save.take() {
-            self.open_reference(number.saturating_sub(1));
+        if let Some((name, size)) = launch.file.take() {
+            self.add_file(familychat_actions::FileSource::Bytes {
+                name,
+                data: std::sync::Arc::from(vec![0_u8; size]),
+            });
+            return Some(launch);
+        }
+        if !launch.commands.is_empty() {
+            let cmd = launch.commands.remove(0);
+            self.run(cmd);
+            return Some(launch);
+        }
+        if let Some(typed) = launch.typed.take() {
+            for ch in typed.chars() {
+                let key = if ch == '\r' {
+                    crossterm::event::KeyEvent::new(
+                        crossterm::event::KeyCode::Enter,
+                        crossterm::event::KeyModifiers::NONE,
+                    )
+                } else if ch == '\n' {
+                    crossterm::event::KeyEvent::new(
+                        crossterm::event::KeyCode::Char('j'),
+                        crossterm::event::KeyModifiers::CONTROL,
+                    )
+                } else {
+                    crossterm::event::KeyEvent::new(
+                        crossterm::event::KeyCode::Char(ch),
+                        crossterm::event::KeyModifiers::NONE,
+                    )
+                };
+                self.handle_event(crossterm::event::Event::Key(key));
+            }
         }
         None
     }
@@ -435,6 +558,7 @@ impl App {
     /// `focus`.
     pub(crate) fn open_room(&mut self, index: usize, focus: bool) {
         let session = self.opened().map(|opened| opened.session.clone());
+        let tasks = self.tasks.clone();
         let Some(rooms) = self.rooms_state() else {
             return;
         };
@@ -442,15 +566,38 @@ impl App {
             return;
         };
         rooms.cursor = index;
+        // The composer has the keys in a room that can be written in
+        // (PLAN.md decision 10); otherwise the room's commands do.
+        let writable = familychat_actions::ComposerState::of(&rooms.status, &room)
+            == familychat_actions::ComposerState::Writable;
+        let same = rooms.open.as_ref().is_some_and(|open| {
+            open.room.room_id == room.room_id && open.room.is_invite() == room.is_invite()
+        });
         if focus {
-            rooms.focus = Focus::Room;
+            rooms.focus = if writable {
+                Focus::Composer
+            } else {
+                Focus::Room
+            };
         }
-        if rooms
-            .open
-            .as_ref()
-            .is_some_and(|open| open.room.room_id == room.room_id)
-        {
+        if same {
             return;
+        }
+        // The draft of the room being left is kept now.
+        if let Some(composer) = rooms.open.as_mut().and_then(|open| open.composer.as_mut())
+            && let Some(draft) = composer.draft_now()
+            && let Some(actions) = &rooms.actions
+        {
+            tasks.run(actions.save_draft(&composer.room, draft));
+        }
+        if let Some((typing, room_id)) = rooms
+            .open
+            .as_mut()
+            .and_then(|open| open.composer.as_mut())
+            .and_then(|composer| Some((composer.typing.stopped()?, composer.room.clone())))
+            && let Some(actions) = &rooms.actions
+        {
+            tasks.run(actions.typing(&room_id, typing));
         }
         let reply = (!room.is_invite())
             .then(|| {
@@ -472,6 +619,24 @@ impl App {
         } else {
             MembersState::NotAsked
         };
+        let composer = (!room.is_invite()).then(|| {
+            let reply = session
+                .as_ref()
+                .map(|session| session.members(&rooms.account.key, &room.room_id));
+            Composer::new(room.room_id.clone(), reply)
+        });
+        if composer.is_some()
+            && let Some(actions) = &rooms.actions
+        {
+            tasks.run(actions.load_draft(&room.room_id));
+        }
+        let warnings_reply = (!room.is_invite())
+            .then(|| {
+                session
+                    .as_ref()
+                    .map(|session| session.identity_warnings(&rooms.account.key, &room.room_id))
+            })
+            .flatten();
         rooms.open = Some(OpenRoom {
             room,
             reply,
@@ -488,6 +653,13 @@ impl App {
             spoilers: false,
             generation: 0,
             layout: None,
+            composer,
+            selected_item: None,
+            reveal_selected: false,
+            warnings_reply,
+            warnings_rx: None,
+            warnings: Vec::new(),
+            acknowledging: None,
         });
         self.selection = None;
     }
@@ -564,6 +736,9 @@ impl App {
 
     /// A command in the rooms.
     pub(crate) fn rooms_run(&mut self, cmd: Cmd) {
+        if self.writing_run(cmd) || (cmd == Cmd::TryAgain && self.retry_identity()) {
+            return;
+        }
         let session = self.opened().map(|opened| opened.session.clone());
         let side_by_side = self.side_by_side();
         let Some(rooms) = self.rooms_state() else {
@@ -637,13 +812,20 @@ impl App {
                     let cursor = rooms.cursor;
                     self.open_room(cursor, true);
                 }
-                Focus::Room => {
+                Focus::Room | Focus::Composer => {
                     if let Some(selected) = rooms.open.as_ref().and_then(|open| open.selected_ref) {
                         self.open_reference(selected);
                     }
                 }
             },
             Cmd::Back | Cmd::GoBack => {
+                // A selected message is let go first.
+                if let Some(open) = rooms.open.as_mut()
+                    && open.selected_item.take().is_some()
+                {
+                    open.generation += 1;
+                    return;
+                }
                 if let Some(open) = rooms.open.as_mut() {
                     open.selected_ref = None;
                 }
@@ -885,23 +1067,93 @@ impl App {
         self.open_room(target, true);
     }
 
-    /// The command bar in the rooms.
+    /// The command bar in the rooms: the composer's keys while it has
+    /// them, the room's commands while they do, the list's otherwise.
     pub(crate) fn rooms_commands(&self, rooms: &RoomsState) -> Vec<CommandEntry> {
         let mut entries = Vec::new();
-        let retry = rooms.can_retry();
+        let retry = rooms.can_retry()
+            || matches!(
+                rooms.encryption.status.identity,
+                familychat_core::encryption::IdentitySetup::Failed(_)
+            );
+        let writable =
+            App::composer_state(rooms) == Some(familychat_actions::ComposerState::Writable);
+        let invite = rooms
+            .open
+            .as_ref()
+            .is_some_and(|open| open.room.is_invite());
+        if rooms.focus == Focus::Composer && rooms.room_focused() {
+            entries.extend([
+                CommandEntry::of(Cmd::Send),
+                CommandEntry::of(Cmd::NewLine),
+                CommandEntry::of(Cmd::ToTimeline),
+            ]);
+            if self.settings.external_editor {
+                entries.push(CommandEntry::of(Cmd::Editor));
+            }
+            entries.extend([
+                CommandEntry::of(Cmd::PageUp),
+                CommandEntry::of(Cmd::PageDown),
+                CommandEntry::of(Cmd::NextRoom),
+                CommandEntry::of(Cmd::PreviousRoom),
+                CommandEntry::of(Cmd::SetUpRecovery),
+                CommandEntry::with("^C", "Quit", Cmd::Quit),
+            ]);
+            return entries;
+        }
         if rooms.room_focused() {
-            let invite = rooms
-                .open
-                .as_ref()
-                .is_some_and(|open| open.room.is_invite());
             entries.push(CommandEntry::of(Cmd::Back));
-            if !invite {
+            if invite {
+                entries.extend([
+                    CommandEntry::of(Cmd::Accept),
+                    CommandEntry::of(Cmd::Decline),
+                ]);
+            } else {
+                if writable {
+                    entries.push(CommandEntry::of(Cmd::FocusComposer));
+                }
+                entries.extend([
+                    CommandEntry::of(Cmd::SelectPreviousMessage),
+                    CommandEntry::of(Cmd::SelectNextMessage),
+                ]);
+                if writable {
+                    entries.extend([
+                        CommandEntry::of(Cmd::ReplyToMessage),
+                        CommandEntry::of(Cmd::ReactToMessage),
+                    ]);
+                    let selected = self.selected_choice();
+                    if selected.as_ref().is_none_or(|choice| choice.editable) {
+                        entries.push(CommandEntry::of(Cmd::EditMessage));
+                    }
+                    if selected.as_ref().is_some_and(|choice| choice.own) {
+                        entries.push(CommandEntry::of(Cmd::DeleteMessage));
+                    }
+                    if selected.as_ref().is_some_and(|choice| {
+                        choice
+                            .problem
+                            .is_some_and(familychat_core::timeline::SendProblem::can_send_anyway)
+                    }) {
+                        entries.push(CommandEntry::of(Cmd::SendAnyway));
+                    }
+                }
+                if rooms
+                    .open
+                    .as_ref()
+                    .is_some_and(|open| !open.warnings.is_empty())
+                {
+                    entries.push(CommandEntry::of(Cmd::Acknowledge));
+                }
                 entries.extend([
                     CommandEntry::of(Cmd::PageUp),
                     CommandEntry::of(Cmd::PageDown),
                     CommandEntry::of(Cmd::NextRef),
                     CommandEntry::of(Cmd::OpenRef),
                     CommandEntry::of(Cmd::SaveFile),
+                ]);
+                if writable {
+                    entries.push(CommandEntry::of(Cmd::AttachFile));
+                }
+                entries.extend([
                     CommandEntry::of(Cmd::JumpToOldestUnread),
                     CommandEntry::of(Cmd::JumpToLatest),
                 ]);
@@ -930,8 +1182,16 @@ impl App {
         }
         if rooms.room_focused() {
             entries.push(CommandEntry::of(Cmd::Spoilers));
+            if rooms.open.is_some() {
+                entries.push(CommandEntry::of(Cmd::LeaveRoom));
+            }
         }
-        entries.extend([CommandEntry::of(Cmd::Copy), CommandEntry::of(Cmd::Bell)]);
+        entries.extend([
+            CommandEntry::of(Cmd::ConfirmIdentity),
+            CommandEntry::of(Cmd::SetUpRecovery),
+            CommandEntry::of(Cmd::Copy),
+            CommandEntry::of(Cmd::Bell),
+        ]);
         entries
     }
 }
@@ -975,6 +1235,24 @@ fn open_room_tick(open: &mut OpenRoom) -> bool {
                 }
             }
         }
+    }
+    match poll(&mut open.warnings_reply) {
+        Some(Some(Ok(warnings))) => {
+            open.warnings = warnings.borrow().clone();
+            open.warnings_rx = Some(warnings);
+            changed = true;
+        }
+        Some(_) => changed = true,
+        None => {}
+    }
+    if let Some(warnings) = open.warnings_rx.as_mut()
+        && warnings.has_changed().unwrap_or(false)
+    {
+        open.warnings = warnings.borrow_and_update().clone();
+        changed = true;
+    }
+    if let Some(composer) = open.composer.as_mut() {
+        changed |= composer.poll();
     }
     match poll(&mut open.members_reply) {
         Some(Some(Ok(mut members))) => {

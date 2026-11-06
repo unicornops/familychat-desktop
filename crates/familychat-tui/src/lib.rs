@@ -11,7 +11,13 @@
 //! rooms side by side from 120 columns, timelines drawn from
 //! `familychat-core`'s rows and rich text, numbered links that ask first
 //! with the whole address, files saved where the person types, and new
-//! messages in the status line with an optional bell.
+//! messages in the status line with an optional bell. It writes too
+//! (Phase 11): a composer with Markdown, mentions and files by path,
+//! replies, edits, reactions and deletions through `familychat-actions`,
+//! invitations answered, "Chat is paused" while the account is, and an
+//! opt-in external editor; and its encryption: "Confirm it's you" by
+//! emoji or the recovery key, requests from other devices, and recovery
+//! set up with the key shown once.
 //!
 //! - **Terminal safety.** Every string from a server goes through
 //!   [`familychat_security::terminal`] before it is drawn. The only escape
@@ -26,6 +32,9 @@
 mod app;
 mod clipboard;
 mod commands;
+mod composer;
+mod editor;
+mod encryption;
 #[cfg(any(test, feature = "fixture-views"))]
 pub mod fixture_views;
 mod links;
@@ -33,9 +42,11 @@ mod palette;
 mod pane;
 mod rooms;
 mod signin;
+mod tasks;
 pub mod terminal;
 mod text;
 mod view;
+mod writing;
 
 #[cfg(test)]
 mod tests;
@@ -117,13 +128,18 @@ fn event_loop(app: &mut App, terminal: &mut Terminal<CrosstermBackend<io::Stdout
 fn run_effects(app: &mut App, terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Result<()> {
     for effect in app.take_effects() {
         match effect {
-            Effect::Copy(text) => {
+            Effect::Copy(mut text) => {
                 let env = Environment::detect();
                 match copy_target(&app.settings().copy, env.macos, env.over_ssh) {
                     CopyTarget::Osc52(clipboard) => {
                         let backend = terminal.backend_mut();
-                        backend.write_all(osc52(&text, clipboard).as_bytes())?;
+                        let mut sequence = osc52(&text, clipboard);
+                        backend.write_all(sequence.as_bytes())?;
                         backend.flush()?;
+                        // A copy may be the recovery key: no copy of it
+                        // stays behind in memory.
+                        zeroize::Zeroize::zeroize(&mut sequence);
+                        zeroize::Zeroize::zeroize(&mut text);
                     }
                     CopyTarget::Command(command) => {
                         let notices = app.notice_sender();
@@ -150,6 +166,17 @@ fn run_effects(app: &mut App, terminal: &mut Terminal<CrosstermBackend<io::Stdou
                 }
             }
             Effect::Redraw => terminal.clear()?,
+            Effect::Edit { command, text } => {
+                // The editor gets the terminal to itself, then the TUI
+                // takes it back and draws everything again (Zmail's).
+                terminal::restore();
+                let result = editor::edit(&std::env::temp_dir(), &text, &command);
+                let mut text = text;
+                zeroize::Zeroize::zeroize(&mut text);
+                terminal::resume(app.settings().mouse)?;
+                terminal.clear()?;
+                app.external_edit_done(result);
+            }
         }
     }
     Ok(())

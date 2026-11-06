@@ -77,6 +77,8 @@ fn hostile_room_names_display_names_and_bodies_draw_clean() {
             let mut screen = Screen::new(width, height);
             let buffer = screen.settle(&mut app);
             assert_hostile_screen("the hostile room and its members", &buffer);
+            // The room's commands, not the composer, take the keys below.
+            app.handle_event(Event::Key(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE)));
             let text = text_of(&buffer);
             assert!(text.contains("Mum Dad"), "{text}");
             if width < 120 {
@@ -90,8 +92,16 @@ fn hostile_room_names_display_names_and_bodies_draw_clean() {
             let buffer = screen.settle(&mut app);
             assert_hostile_screen("the hostile room", &buffer);
             let text = text_of(&buffer);
-            assert!(text.contains("Hello red"), "{text}");
             assert!(text.contains("Visit bank"), "{text}");
+            // The oldest message, above the composer's rows.
+            app.handle_event(Event::Key(KeyEvent::new(
+                KeyCode::PageUp,
+                KeyModifiers::NONE,
+            )));
+            let buffer = screen.settle(&mut app);
+            assert_hostile_screen("the hostile room, older", &buffer);
+            let text = text_of(&buffer);
+            assert!(text.contains("Hello red"), "{text}");
 
             // The link's question, with its address.
             app.handle_event(Event::Key(KeyEvent::new(KeyCode::Tab, KeyModifiers::NONE)));

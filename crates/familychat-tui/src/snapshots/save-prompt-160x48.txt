@@ -23,8 +23,6 @@
     Dad: Message deleted                    │
   Book club                          Sunday │
     No messages yet                         │
-                                            │
-                                            │
                                             │ ───────────────────────────────────────────────────── Today ──────────────────────────────────────────────────────
                                             │ Dad  06:00
                                             │   [file] Cottage booking.pdf [1]  184 KB
@@ -43,6 +41,8 @@
                                             │   [image] sunset.jpg [7]  1600×1067, 2.4 MB
                                             │   Beach at sunset
                                             │   😍  3
+                                            │ ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                            │ ›  Message Holiday photos
 Save sunset.jpg to: /home/ana/Downloads/sunset.jpg
 Enter OK
 Esc Cancel
@@ -72,8 +72,6 @@ kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
                                      kkkkkk k
 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
-                                            k
-                                            k
                                             k kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
                                             k BBB  kkkkk
                                             k kkkkkkkkkccccccccccccccccccccccckkkkkkkk
@@ -92,6 +90,8 @@ kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
                                             k kkkkkkkkkkcccccccccccccckkkkkkkkkkkkkkkkkkk
                                             k kk
                                             k   R RR
+                                            k kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+                                            k BBkkkkkkkkkkkkkkkkkkkkkkk
 BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 RRRRR
 RRR
@@ -122,8 +122,6 @@ BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 
 
 
-
-
                                               BBB
                                                        UUUUUUUUUUUUUUUUUUUUUUU
                                               BBB
@@ -141,6 +139,8 @@ BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
                                                         RRRRRRRRRRRRRR
 
                                                 R RR
+
+                                              BBR
 BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 RRRRR
 RRR
@@ -170,8 +170,6 @@ RRR
     Dad: Message deleted                    |
   Book club                          Sunday |
     No messages yet                         |
-                                            |
-                                            |
                                             | ----------------------------------------------------- Today ------------------------------------------------------
                                             | Dad  06:00
                                             |   [file] Cottage booking.pdf [1]  184 KB
@@ -190,6 +188,8 @@ RRR
                                             |   [image] sunset.jpg [7]  1600x1067, 2.4 MB
                                             |   Beach at sunset
                                             |   😍  3
+                                            | ------------------------------------------------------------------------------------------------------------------
+                                            | >  Message Holiday photos
 Save sunset.jpg to: /home/ana/Downloads/sunset.jpg
 Enter OK
 Esc Cancel

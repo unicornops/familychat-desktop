@@ -20,18 +20,18 @@ use crate::{
     signin::Page,
 };
 
-fn key(app: &mut App, code: KeyCode) {
+pub(super) fn key(app: &mut App, code: KeyCode) {
     app.handle_event(Event::Key(KeyEvent::new(code, KeyModifiers::NONE)));
 }
 
-fn ctrl(app: &mut App, ch: char) {
+pub(super) fn ctrl(app: &mut App, ch: char) {
     app.handle_event(Event::Key(KeyEvent::new(
         KeyCode::Char(ch),
         KeyModifiers::CONTROL,
     )));
 }
 
-fn typed(app: &mut App, text: &str) {
+pub(super) fn typed(app: &mut App, text: &str) {
     for ch in text.chars() {
         key(app, KeyCode::Char(ch));
     }
@@ -47,7 +47,7 @@ fn mouse(app: &mut App, kind: MouseEventKind, column: u16, row: u16) {
 }
 
 /// Ticks and draws until `done`.
-fn until(app: &mut App, screen: &mut Screen, what: &str, done: impl Fn(&App) -> bool) {
+pub(super) fn until(app: &mut App, screen: &mut Screen, what: &str, done: impl Fn(&App) -> bool) {
     let deadline = Instant::now() + Duration::from_secs(10);
     while !done(app) {
         assert!(Instant::now() < deadline, "never: {what}");
@@ -384,7 +384,17 @@ fn the_keys_move_through_the_rooms_and_their_filters() {
         session.record().timelines.last().map(|room| room.as_str()),
         Some(rooms::FAMILY_ROOM)
     );
-    // Esc goes back to the list.
+    // The composer has the keys (PLAN.md decision 10): Esc hands them to
+    // the room's commands, and Esc again goes back to the list.
+    assert!(
+        app.rooms_ref()
+            .is_some_and(|rooms| rooms.focus == Focus::Composer)
+    );
+    key(&mut app, KeyCode::Esc);
+    assert!(
+        app.rooms_ref()
+            .is_some_and(|rooms| rooms.focus == Focus::Room)
+    );
     key(&mut app, KeyCode::Esc);
     assert!(
         app.rooms_ref()
@@ -524,6 +534,7 @@ fn links_ask_with_the_whole_address_and_open_only_on_y() {
             "https://cottages.example/booking/4471".to_owned()
         )]
     );
+    key(&mut app, KeyCode::Esc);
     key(&mut app, KeyCode::Char('l'));
     typed(&mut app, "1");
     key(&mut app, KeyCode::Enter);
@@ -545,6 +556,8 @@ fn links_ask_with_the_whole_address_and_open_only_on_y() {
 #[test]
 fn matrix_links_navigate_in_the_app() {
     let (mut app, _startup, mut screen) = settled("room-rich", 80, 24);
+    // Esc leaves the composer for the room's commands.
+    key(&mut app, KeyCode::Esc);
     // The fourth link is #family, an alias the list doesn't name.
     key(&mut app, KeyCode::Char('l'));
     typed(&mut app, "4");
@@ -565,6 +578,7 @@ fn matrix_links_navigate_in_the_app() {
         .map(|layout| layout.refs.len())
         .unwrap_or(0);
     assert!(refs >= 1);
+    key(&mut app, KeyCode::Esc);
     key(&mut app, KeyCode::Char('l'));
     typed(&mut app, "1");
     key(&mut app, KeyCode::Enter);
@@ -594,6 +608,7 @@ fn files_are_saved_where_the_person_types_and_replacing_asks() {
 
     // A file already there: asked first.
     std::fs::write(folder.join("sunset.jpg"), b"x").expect("a file");
+    key(&mut app, KeyCode::Esc);
     key(&mut app, KeyCode::Char('s'));
     let Some(Prompt::Save { .. }) = app.prompt else {
         panic!("s saves the selected file");
@@ -668,8 +683,18 @@ fn the_sync_banner_offers_try_again_where_it_helps() {
 #[test]
 fn pastes_go_into_fields_only() {
     let (mut app, _startup, _screen) = settled("room", 80, 24);
-    app.handle_event(Event::Paste("q".to_owned()));
+    // The composer is a text field.
+    app.handle_event(Event::Paste("q\x1b[2J".to_owned()));
     assert!(!app.should_quit(), "a paste never runs as commands");
+    let text = app
+        .rooms_ref()
+        .and_then(|rooms| rooms.open.as_ref())
+        .and_then(|open| open.composer.as_ref())
+        .map(crate::composer::Composer::text);
+    assert_eq!(text.as_deref(), Some("q"), "pasted, filtered");
+    key(&mut app, KeyCode::Esc);
+    app.handle_event(Event::Paste("q".to_owned()));
+    assert!(!app.should_quit());
     assert_eq!(app.status(), Some("Pasting works in text fields only"));
 }
 
