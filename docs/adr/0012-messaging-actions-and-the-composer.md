@@ -118,7 +118,12 @@ New rooms and direct chats are encrypted unless the server's
 server name (the homeserver's own origin when it is the same host) with
 the account's HTTP client; one it can't read says nothing, and the room is
 encrypted. The rule itself (`encrypt_new_room`) is the actions'. A live
-test makes a direct chat on Palpo and sees it encrypted.
+test makes a direct chat on Palpo and sees it encrypted. A room made
+encrypted is recorded as encrypted in the SDK's room info before the
+session hands it back, and a room the sync left looking not encrypted is
+checked with the server before anything is queued in it, so a message
+sent at once never goes out in plaintext (ADR 0009, "A room that looks
+not encrypted").
 
 ### Paused accounts
 
