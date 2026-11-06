@@ -184,7 +184,7 @@ pub fn run(
     // `Application::new_inaccessible`, which turns screen readers off.
     let application = gpui_platform::application().with_assets(asset_source);
     // macOS hands a running app the links it opens as Apple Events
-    // (`familychat://…` once Phase 12 registers the scheme), and passes a
+    // (`familychat://…`, which the bundle's Info.plist registers), and passes a
     // link that starts the app the same way. They join the second
     // launches' requests; the window starts a sign-in with each, which
     // always asks first.
@@ -194,10 +194,19 @@ pub fn run(
         .map(|inbox| inbox.sender().clone())
     {
         application.on_open_urls(move |urls| {
+            let mut links = 0_usize;
             for url in urls {
                 if looks_like_signin_link(&url) {
+                    links += 1;
                     let _ = sender.try_send(AppRequest::OpenLink(SecretText::new(url)));
                 }
+            }
+            // How many, never what: a link holds a sign-in code. (The
+            // release workflow's link-handler check looks for this line.)
+            if links > 0 {
+                tracing::info!(links, "the OS handed the window a sign-in link");
+            } else {
+                tracing::info!("the OS opened a URL the window ignores");
             }
         });
     }
@@ -254,9 +263,9 @@ pub(crate) fn window_options(bounds: Bounds<gpui::Pixels>) -> WindowOptions {
         window_decorations: Some(window_decorations()),
         window_bounds: Some(WindowBounds::Windowed(bounds)),
         window_min_size: Some(size(px(WINDOW_MIN_WIDTH), px(WINDOW_MIN_HEIGHT))),
-        // Matches the macOS bundle id and, from Phase 12, the packaged
-        // desktop file, so Linux docks (StartupWMClass / Wayland app id)
-        // find the window.
+        // Matches the macOS bundle id and the packaged desktop entry
+        // (family.safechat.desktop.desktop, ADR 0014), so Linux docks
+        // (StartupWMClass / Wayland app id) find the window.
         app_id: Some(APP_ID.to_owned()),
         ..Default::default()
     }

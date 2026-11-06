@@ -11,6 +11,57 @@ description = "Family Chat desktop client"
 name = "familychat"
 path = "src/main.rs"
 
+# Windows only (ADR 0014): what the MSI's Start-menu shortcut and its
+# familychat: URL handler start, so Family Chat never opens a console
+# window. Elsewhere it only says it isn't used there.
+[[bin]]
+name = "familychat-launcher"
+path = "src/bin/familychat-launcher.rs"
+
+# The .deb (ADR 0014; `cargo deb -p familychat-app --no-build`, which the
+# release workflow runs after the release build, scripts/stage-licences.sh
+# and `scripts/generate-app-icon.sh linux target/dist/icons`). The
+# package and its binary are `familychat`; the desktop entry and the icons
+# are named after the app id, family.safechat.desktop.
+[package.metadata.deb]
+name = "familychat"
+maintainer = "UnicornOps <noreply@unicornops.ie>"
+copyright = "2026, UnicornOps"
+license-file = ["../../LICENSE", "0"]
+# $auto reads the libraries the binary links (dpkg-shlibdeps); wgpu loads
+# Vulkan, or EGL, at run time.
+depends = "$auto, libvulkan1 | libegl1"
+# The keychain needs a Secret Service in the session (ADR 0003), and links
+# open through xdg-open.
+recommends = "gnome-keyring | kwalletmanager | keepassxc, xdg-utils"
+section = "net"
+priority = "optional"
+extended-description = """\
+Family Chat is a native desktop client for Family Chat and any other \
+Matrix server, with a window and a terminal UI (familychat tui). It signs \
+in with a code from a parent, keeps its secrets in the system keychain and \
+talks only to the account's homeserver."""
+assets = [
+    ["target/release/familychat", "usr/bin/", "755"],
+    # The desktop entry registers familychat:// links (MimeType); the
+    # desktop-file-utils and icon cache triggers pick it and the icons up.
+    ["../../packaging/linux/family.safechat.desktop.desktop", "usr/share/applications/", "644"],
+    ["../../target/dist/icons/hicolor/16x16/apps/family.safechat.desktop.png", "usr/share/icons/hicolor/16x16/apps/", "644"],
+    ["../../target/dist/icons/hicolor/24x24/apps/family.safechat.desktop.png", "usr/share/icons/hicolor/24x24/apps/", "644"],
+    ["../../target/dist/icons/hicolor/32x32/apps/family.safechat.desktop.png", "usr/share/icons/hicolor/32x32/apps/", "644"],
+    ["../../target/dist/icons/hicolor/48x48/apps/family.safechat.desktop.png", "usr/share/icons/hicolor/48x48/apps/", "644"],
+    ["../../target/dist/icons/hicolor/64x64/apps/family.safechat.desktop.png", "usr/share/icons/hicolor/64x64/apps/", "644"],
+    ["../../target/dist/icons/hicolor/128x128/apps/family.safechat.desktop.png", "usr/share/icons/hicolor/128x128/apps/", "644"],
+    ["../../target/dist/icons/hicolor/256x256/apps/family.safechat.desktop.png", "usr/share/icons/hicolor/256x256/apps/", "644"],
+    ["../../target/dist/icons/hicolor/512x512/apps/family.safechat.desktop.png", "usr/share/icons/hicolor/512x512/apps/", "644"],
+    ["../../target/dist/icons/hicolor/scalable/apps/family.safechat.desktop.svg", "usr/share/icons/hicolor/scalable/apps/", "644"],
+    # THIRD_PARTY.html (cargo about) and the licences of what the binary
+    # embeds: Inter (SIL OFL 1.1), Lucide (ISC/MIT) and the code ported
+    # from Zed (Apache-2.0).
+    ["../../target/dist/licences/THIRD_PARTY.html", "usr/share/doc/familychat/", "644"],
+    ["../../target/dist/licences/licenses/*", "usr/share/doc/familychat/licenses/", "644"],
+]
+
 [dependencies]
 anyhow.workspace = true
 familychat-assets = { path = "../familychat-assets" }

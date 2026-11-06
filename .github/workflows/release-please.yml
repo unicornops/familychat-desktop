@@ -1,12 +1,18 @@
 name: Release Please
 
 # Merging to main opens or updates the release pull request; merging that
-# tags the release, and the asset jobs attach the platform archives.
+# tags the release, and the asset jobs attach the packages (ADR 0014;
+# docs/release.md): the platform archives, the .deb, the DMG and the MSI,
+# each with LICENSE, THIRD_PARTY.html and the bundled licences, a release
+# screenshot, SHA256SUMS, build provenance attestations, and a section of
+# the release notes saying which files are signed.
 #
-# Pull requests that change this workflow or the notices run the asset
-# jobs as a dry run: the archives are built and uploaded as workflow
-# artefacts, never attached to a release. A manual run builds a given tag
-# (or, with dry_run, any ref) the same way.
+# Pull requests that change this workflow, the notices or the packaging run
+# the asset jobs as a dry run: everything is built, signed where the secrets
+# allow, installed and checked (a familychat:// link opened through each
+# OS reaches the installed app) and uploaded as workflow artefacts, never
+# attached to a release. A manual run builds a given tag (or, with dry_run,
+# any ref) the same way.
 on:
   push:
     branches:
@@ -16,6 +22,17 @@ on:
       - .github/workflows/release-please.yml
       - about.toml
       - about.hbs
+      - packaging/**
+      - crates/familychat-app/wix/**
+      - crates/familychat-app/build.rs
+      - crates/familychat-app/src/bin/**
+      - scripts/create-dmg.sh
+      - scripts/create-macos-bundle.sh
+      - scripts/generate-app-icon.sh
+      - scripts/link-handler-smoke.*
+      - scripts/notarize-macos.sh
+      - scripts/release-signing-notes.sh
+      - scripts/stage-licences.sh
   workflow_dispatch:
     inputs:
       tag_name:
@@ -32,6 +49,12 @@ permissions:
   contents: write
   issues: write
   pull-requests: write
+
+# A newer push to a pull request cancels its older dry run; runs on main
+# and manual runs never wait for or cancel one another.
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('release-dry-run-{0}', github.event.pull_request.number) || format('release-{0}', github.run_id) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   release_please:
@@ -75,7 +98,7 @@ jobs:
 
   # THIRD_PARTY.html: the licences of every crate in the binary, for all
   # three platforms (about.toml's targets), generated once and packed into
-  # each archive.
+  # every artefact.
   third_party_notices:
     name: Third-Party Notices
     needs: release_please
@@ -123,6 +146,81 @@ jobs:
           path: THIRD_PARTY.html
           if-no-files-found: error
 
+  # The release screenshot: the window on the screenshot fixtures (a room of
+  # the Smith family, no network or account), captured under Xvfb the way
+  # CI's UI Screenshots job captures the matrix. The fixture build is never
+  # shipped.
+  release_screenshot:
+    name: Release Screenshot
+    needs: release_please
+    if: |
+      always() &&
+      (needs.release_please.outputs.release_created == 'true' ||
+       github.event_name == 'workflow_dispatch' ||
+       github.event_name == 'pull_request')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout release commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.release_please.outputs.release_sha || inputs.tag_name || github.sha }}
+
+      # GPUI renders through wgpu, which loads the Vulkan loader (libvulkan1)
+      # and, failing that, EGL/GL at runtime; mesa-vulkan-drivers supplies
+      # the lavapipe software Vulkan driver the headless capture uses.
+      - name: Install Linux build and capture dependencies
+        run: sudo apt-get update && sudo apt-get install -y pkg-config libdbus-1-dev libasound2-dev libxcb1-dev libxkbcommon-dev libxkbcommon-x11-dev libfontconfig1-dev libfreetype6-dev libvulkan1 libgl1 libegl1 libgl1-mesa-dri mesa-vulkan-drivers xvfb openbox xdotool imagemagick fonts-noto-color-emoji fonts-dejavu-core
+
+      - name: Read the pinned Rust toolchain
+        id: toolchain
+        shell: bash
+        run: echo "channel=$(sed -n 's/^channel = "\(.*\)"/\1/p' rust-toolchain.toml)" >> "$GITHUB_OUTPUT"
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@89b12181fb390509a0842a86cc55eeb8eb928c1d # stable
+        with:
+          toolchain: ${{ steps.toolchain.outputs.channel }}
+
+      - name: Cache Cargo git dependencies
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cargo/git/db
+          key: cargo-git-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: cargo-git-${{ runner.os }}-
+
+      - name: Build the release binary with the UI fixtures
+        run: cargo build -p familychat-app --release --locked --features ui-fixture
+
+      - name: Capture the release screenshot
+        env:
+          FAMILYCHAT_CAPTURE_LOG_DIR: ${{ runner.temp }}/release-screenshot-logs
+        run: |
+          xvfb-run -a --server-args="-screen 0 1920x1080x24" bash scripts/capture-ui-screenshots.sh --matrix artifacts/release-screenshot room-dark
+          mv artifacts/release-screenshot/room-dark.png familychat-screenshot.png
+          identify familychat-screenshot.png
+
+      - name: Upload the screenshot
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-screenshot
+          path: familychat-screenshot.png
+          if-no-files-found: error
+
+      - name: Upload capture logs
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-screenshot-logs
+          path: ${{ runner.temp }}/release-screenshot-logs
+          if-no-files-found: ignore
+
+  # One job per OS: the archive and the installer, signed where the secrets
+  # allow, inspected, installed and checked with a familychat:// link opened
+  # through the OS (scripts/link-handler-smoke.*). Each job also writes
+  # signing-<OS>.txt, one line per file (scripts/release-signing-notes.sh),
+  # which the publish job turns into the release notes' signing section.
   build_release_assets:
     needs:
       - release_please
@@ -142,14 +240,17 @@ jobs:
           - os: ubuntu-latest
             archive_name: familychat-linux-x86_64
             artifact_path: familychat-linux-x86_64.tar.gz
+            installer_path: familychat-linux-x86_64.deb
             binary_name: familychat
           - os: macos-latest
             archive_name: familychat-macos
             artifact_path: familychat-macos.tar.gz
+            installer_path: familychat-macos.dmg
             binary_name: familychat
           - os: windows-latest
             archive_name: familychat-windows-x86_64
             artifact_path: familychat-windows-x86_64.zip
+            installer_path: familychat-windows-x86_64.msi
             binary_name: familychat.exe
     steps:
       - name: Checkout release commit
@@ -159,14 +260,23 @@ jobs:
           # its own head; otherwise the release tag's commit.
           ref: ${{ needs.release_please.outputs.release_sha || inputs.tag_name || github.sha }}
 
-      - name: Install Linux build dependencies
+      # The build packages, librsvg (the icons), desktop-file-utils (the
+      # desktop entry's check and the MIME cache), and what the installed
+      # package's link check runs on: Xvfb, xdotool, ImageMagick, Mesa's
+      # lavapipe Vulkan driver, a throwaway Secret Service (dbus,
+      # gnome-keyring) and xdg-utils.
+      - name: Install Linux build and packaging dependencies
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y pkg-config libdbus-1-dev libasound2-dev libxcb1-dev libxkbcommon-dev libxkbcommon-x11-dev libfontconfig1-dev libfreetype6-dev
+        # A stalled mirror once held this step for hours; fail fast instead.
+        timeout-minutes: 15
+        run: sudo apt-get update && sudo apt-get install -y pkg-config libdbus-1-dev libasound2-dev libxcb1-dev libxkbcommon-dev libxkbcommon-x11-dev libfontconfig1-dev libfreetype6-dev librsvg2-bin desktop-file-utils libvulkan1 libgl1 libegl1 libgl1-mesa-dri mesa-vulkan-drivers xvfb xdotool imagemagick dbus gnome-keyring xdg-utils
 
-      - name: Read the pinned Rust toolchain
+      - name: Read the pinned Rust toolchain and the version
         id: toolchain
         shell: bash
-        run: echo "channel=$(sed -n 's/^channel = "\(.*\)"/\1/p' rust-toolchain.toml)" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "channel=$(sed -n 's/^channel = "\(.*\)"/\1/p' rust-toolchain.toml)" >> "$GITHUB_OUTPUT"
+          echo "VERSION=$(sed -n 's/^version = "\(.*\)"/\1/p' crates/familychat-app/Cargo.toml | head -n 1)" >> "$GITHUB_ENV"
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@89b12181fb390509a0842a86cc55eeb8eb928c1d # stable
@@ -186,7 +296,9 @@ jobs:
         if: runner.os == 'Linux'
         run: scripts/check-release-features.sh
 
-      - name: Build release binary
+      # familychat, and on Windows familychat-launcher too (the MSI's
+      # shortcut and link handler).
+      - name: Build release binaries
         run: cargo build -p familychat-app --release --locked
 
       - name: Download the notices
@@ -194,50 +306,599 @@ jobs:
         with:
           name: third-party-notices
 
-      # The archives carry Family Chat's licence, THIRD_PARTY.html (the
-      # crates' licences) and the notices that must travel with every copy
-      # of what the binary embeds: the Inter font's SIL OFL 1.1 (Linux
-      # builds) and Lucide's ISC/MIT.
-      - name: Create Unix archive
-        if: runner.os != 'Windows'
+      # LICENSE, THIRD_PARTY.html and licenses/ (Inter's SIL OFL 1.1,
+      # Lucide's ISC/MIT, the Apache-2.0 of the code ported from Zed): every
+      # archive and installer copies them from target/dist/licences.
+      - name: Stage the licences
+        shell: bash
+        run: scripts/stage-licences.sh target/dist/licences
+
+      # ---------------------------------------------------------------- Linux
+
+      - name: Create the Linux archive and package
+        if: runner.os == 'Linux'
         run: |
-          mkdir -p archive/licenses
-          cp "target/release/${{ matrix.binary_name }}" LICENSE THIRD_PARTY.html archive/
-          cp assets/fonts/inter/LICENSE.txt archive/licenses/Inter-OFL.txt
-          cp assets/icons/LICENSE.txt archive/licenses/Lucide-LICENSE.txt
+          set -euo pipefail
+          mkdir -p archive
+          cp target/release/familychat archive/
+          cp -R target/dist/licences/. archive/
           tar -czf "${{ matrix.artifact_path }}" -C archive .
           tar -tzvf "${{ matrix.artifact_path }}"
 
-      - name: Create Windows archive
+          scripts/generate-app-icon.sh linux target/dist/icons
+          desktop-file-validate packaging/linux/family.safechat.desktop.desktop
+          cargo install cargo-deb --version 3.8.0 --locked
+          cargo deb -p familychat-app --no-build --locked --output "${{ matrix.installer_path }}"
+
+      - name: Inspect the Linux package
+        if: runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          deb="${{ matrix.installer_path }}"
+          dpkg-deb --info "$deb"
+          dpkg-deb --contents "$deb"
+          # dpkg-shlibdeps found the libraries the binary links.
+          dpkg-deb --field "$deb" Depends | tee depends.txt
+          grep -q 'libc6' depends.txt
+          for path in ./usr/bin/familychat ./usr/share/applications/family.safechat.desktop.desktop \
+              ./usr/share/icons/hicolor/256x256/apps/family.safechat.desktop.png \
+              ./usr/share/icons/hicolor/scalable/apps/family.safechat.desktop.svg \
+              ./usr/share/doc/familychat/copyright ./usr/share/doc/familychat/THIRD_PARTY.html \
+              ./usr/share/doc/familychat/licenses/Inter-OFL.txt ./usr/share/doc/familychat/licenses/Lucide-LICENSE.txt \
+              ./usr/share/doc/familychat/licenses/GPUI-Apache-2.0.txt; do
+            dpkg-deb --contents "$deb" | awk '{print $6}' | grep -qx "$path" || { echo "::error::$deb lacks $path"; exit 1; }
+          done
+          rm depends.txt
+
+      - name: Install the Linux package
+        if: runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          sudo apt-get install -y "./${{ matrix.installer_path }}"
+          familychat --version
+          desktop-file-validate /usr/share/applications/family.safechat.desktop.desktop
+          grep 'x-scheme-handler/familychat' /usr/share/applications/mimeinfo.cache
+          handler="$(xdg-mime query default x-scheme-handler/familychat)"
+          echo "familychat:// opens with: $handler"
+          [[ "$handler" == family.safechat.desktop.desktop ]]
+
+      - name: Open a familychat:// link through Linux
+        if: runner.os == 'Linux'
+        timeout-minutes: 5
+        run: scripts/keychain-session.sh xvfb-run -a --server-args="-screen 0 1280x800x24" bash scripts/link-handler-smoke.sh /usr/bin/familychat artifacts/link-handler
+
+      - name: Remove the Linux package
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get remove -y familychat
+          if [[ -e /usr/bin/familychat || -e /usr/share/applications/family.safechat.desktop.desktop ]]; then
+            echo "::error::removing the package left files behind"
+            exit 1
+          fi
+
+      - name: Record the Linux signatures
+        if: runner.os == 'Linux'
+        run: |
+          printf '%s\n' \
+            "${{ matrix.artifact_path }}|unsigned|Linux packages are not signed during the alpha" \
+            "${{ matrix.installer_path }}|unsigned|Linux packages are not signed during the alpha" > signing-Linux.txt
+
+      # ---------------------------------------------------------------- macOS
+
+      # The Developer ID certificate goes into a throwaway keychain; with no
+      # certificate configured everything falls back to an ad hoc signature
+      # and the release never blocks on absent credentials. Adapted from
+      # Zmail's release workflow.
+      - name: Set up macOS code signing
+        if: runner.os == 'macOS'
+        env:
+          CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -z "$CERTIFICATE_BASE64" ]; then
+            echo "SIGNING_IDENTITY=-" >> "$GITHUB_ENV"
+            echo "::notice::No Developer ID certificate configured; the macOS app and DMG fall back to an ad hoc signature."
+            exit 0
+          fi
+
+          KEYCHAIN_NAME="familychat-build.keychain"
+          KEYCHAIN_PASSWORD="$(uuidgen)$(uuidgen)"
+          echo "::add-mask::$KEYCHAIN_PASSWORD"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_NAME"
+          security set-keychain-settings "$KEYCHAIN_NAME"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_NAME"
+          # shellcheck disable=SC2046 # one keychain path per word
+          security list-keychains -d user -s "$KEYCHAIN_NAME" $(security list-keychains -d user | sed s/\"//g)
+
+          CERTIFICATE_PATH="$RUNNER_TEMP/certificate.p12"
+          echo "$CERTIFICATE_BASE64" | base64 --decode > "$CERTIFICATE_PATH"
+          security import "$CERTIFICATE_PATH" \
+            -P "$CERTIFICATE_PASSWORD" \
+            -A -t cert -f pkcs12 \
+            -k "$KEYCHAIN_NAME" \
+            -T /usr/bin/codesign \
+            -T /usr/bin/security
+          rm -f "$CERTIFICATE_PATH"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_NAME" > /dev/null
+
+          IDENTITY="$(security find-identity -v -p codesigning "$KEYCHAIN_NAME" | grep "Developer ID Application" | head -1 | sed -n 's/.*"\(.*\)".*/\1/p')"
+          if [ -z "$IDENTITY" ]; then
+            echo "::error::No Developer ID Application certificate found after import"
+            exit 1
+          fi
+          {
+            echo "SIGNING_IDENTITY=$IDENTITY"
+            echo "KEYCHAIN_NAME=$KEYCHAIN_NAME"
+            echo "KEYCHAIN_PASSWORD=$KEYCHAIN_PASSWORD"
+          } >> "$GITHUB_ENV"
+          echo "Developer ID certificate installed"
+
+      - name: Generate the macOS app icon
+        if: runner.os == 'macOS'
+        run: |
+          brew install librsvg
+          scripts/generate-app-icon.sh macos target/dist/FamilyChat.icns target/dist/Assets.car
+
+      # "Family Chat.app" (packaging/macos/Info.plist: the bundle id and the
+      # familychat URL scheme), and a copy of the binary for the archive.
+      # Developer ID signatures carry the hardened runtime and a secure
+      # timestamp so Apple notarises them.
+      - name: Create and sign the macOS app
+        if: runner.os == 'macOS'
+        run: |
+          set -euo pipefail
+          app="target/dist/Family Chat.app"
+          scripts/create-macos-bundle.sh "$app" target/release/familychat "$VERSION" target/dist target/dist/licences
+          cp target/release/familychat target/dist/familychat
+          if [ "$SIGNING_IDENTITY" != "-" ]; then
+            security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_NAME"
+            codesign --force --sign "$SIGNING_IDENTITY" --keychain "$KEYCHAIN_NAME" --options runtime --timestamp target/dist/familychat
+            codesign --force --sign "$SIGNING_IDENTITY" --keychain "$KEYCHAIN_NAME" --options runtime --timestamp "$app"
+          else
+            codesign --force --sign - target/dist/familychat
+            codesign --force --sign - "$app"
+          fi
+          codesign --verify --deep --strict --verbose=2 "$app"
+          codesign --display --verbose=2 "$app"
+
+      # The app and the archive's binary go to Apple in one submission; the
+      # app's ticket is stapled (the binary's is checked online).
+      - name: Notarise the macOS app
+        if: runner.os == 'macOS'
+        env:
+          APPLE_ID: ${{ secrets.APPLE_DEVELOPER_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          if [ "$SIGNING_IDENTITY" = "-" ]; then
+            echo "::notice::Skipping notarisation: the app has no Developer ID signature."
+            exit 0
+          fi
+          if [ -z "$APPLE_ID" ] || [ -z "$APPLE_PASSWORD" ] || [ -z "$TEAM_ID" ]; then
+            echo "::notice::Skipping notarisation: APPLE_DEVELOPER_ID, APPLE_APP_PASSWORD or APPLE_TEAM_ID is not configured."
+            exit 0
+          fi
+          mkdir -p target/dist/notarize
+          ditto "target/dist/Family Chat.app" "target/dist/notarize/Family Chat.app"
+          cp target/dist/familychat target/dist/notarize/familychat
+          ditto -c -k --sequesterRsrc target/dist/notarize target/dist/notarize.zip
+          scripts/notarize-macos.sh target/dist/notarize.zip "target/dist/Family Chat.app"
+          spctl --assess --type execute --verbose=4 "target/dist/Family Chat.app"
+          rm -rf target/dist/notarize target/dist/notarize.zip
+          echo "NOTARISED=true" >> "$GITHUB_ENV"
+
+      - name: Create the macOS archive and DMG
+        if: runner.os == 'macOS'
+        run: |
+          set -euo pipefail
+          mkdir -p archive
+          cp target/dist/familychat archive/
+          cp -R target/dist/licences/. archive/
+          tar -czf "${{ matrix.artifact_path }}" -C archive .
+          tar -tzvf "${{ matrix.artifact_path }}"
+          scripts/create-dmg.sh "target/dist/Family Chat.app" "${{ matrix.installer_path }}" "Family Chat $VERSION"
+
+      # The DMG itself is signed and notarised too, so Gatekeeper accepts
+      # it before it is opened.
+      - name: Sign and notarise the DMG
+        if: runner.os == 'macOS'
+        env:
+          APPLE_ID: ${{ secrets.APPLE_DEVELOPER_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          dmg="${{ matrix.installer_path }}"
+          if [ "$SIGNING_IDENTITY" = "-" ]; then
+            echo "::notice::The DMG is not signed: no Developer ID certificate is configured."
+            exit 0
+          fi
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_NAME"
+          codesign --force --sign "$SIGNING_IDENTITY" --keychain "$KEYCHAIN_NAME" --timestamp "$dmg"
+          codesign --verify --verbose=2 "$dmg"
+          if [ "${NOTARISED:-}" = true ]; then
+            scripts/notarize-macos.sh "$dmg" "$dmg"
+            spctl --assess --type open --context context:primary-signature --verbose=4 "$dmg"
+          fi
+
+      - name: Inspect and install the DMG
+        if: runner.os == 'macOS'
+        run: |
+          set -euo pipefail
+          mount="$RUNNER_TEMP/familychat-dmg"
+          mkdir -p "$mount"
+          hdiutil attach -readonly -nobrowse -mountpoint "$mount" "${{ matrix.installer_path }}"
+          ls -la "$mount"
+          app="$mount/Family Chat.app"
+          find "$app" -print | sed "s|^$mount/||"
+          plutil -p "$app/Contents/Info.plist"
+          plutil -extract CFBundleIdentifier raw "$app/Contents/Info.plist" | grep -qx family.safechat.desktop
+          plutil -extract CFBundleURLTypes.0.CFBundleURLSchemes.0 raw "$app/Contents/Info.plist" | grep -qx familychat
+          codesign --display --verbose=2 "$app"
+          spctl --assess --type execute --verbose=4 "$app" || echo "::notice::Gatekeeper does not accept the app (expected without a Developer ID signature and notarisation)"
+          "$app/Contents/MacOS/familychat" --version
+          # "Installing": the app into /Applications, as a person drags it.
+          ditto "$app" "/Applications/Family Chat.app"
+          hdiutil detach "$mount"
+          lsregister=/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
+          "$lsregister" -f "/Applications/Family Chat.app"
+          "$lsregister" -dump | grep -i -B2 -A2 'familychat:' | head -40
+
+      - name: Open a familychat:// link through macOS
+        if: runner.os == 'macOS'
+        timeout-minutes: 5
+        run: bash scripts/link-handler-smoke.sh "/Applications/Family Chat.app/Contents/MacOS/familychat" artifacts/link-handler
+
+      - name: Record the macOS signatures
+        if: runner.os == 'macOS'
+        run: |
+          set -euo pipefail
+          if [ "${NOTARISED:-}" = true ]; then
+            printf '%s\n' \
+              "${{ matrix.installer_path }}|signed|Developer ID, notarised and stapled (the app inside too)" \
+              "${{ matrix.artifact_path }}|signed|Developer ID and notarised (the ticket is checked online)" > signing-macOS.txt
+          elif [ "$SIGNING_IDENTITY" != "-" ]; then
+            printf '%s\n' \
+              "${{ matrix.installer_path }}|adhoc|Developer ID but not notarised, so Gatekeeper refuses it" \
+              "${{ matrix.artifact_path }}|adhoc|Developer ID but not notarised, so Gatekeeper refuses it" > signing-macOS.txt
+          else
+            printf '%s\n' \
+              "${{ matrix.installer_path }}|adhoc|no Developer ID certificate was configured" \
+              "${{ matrix.artifact_path }}|adhoc|no Developer ID certificate was configured" > signing-macOS.txt
+          fi
+
+      - name: Clean up the macOS keychain
+        if: always() && runner.os == 'macOS'
+        run: |
+          if [ -n "${KEYCHAIN_NAME:-}" ]; then
+            security delete-keychain "$KEYCHAIN_NAME" 2>/dev/null || true
+          fi
+
+      # -------------------------------------------------------------- Windows
+
+      # Azure Artifact Signing (PLAN.md section 10) runs only when all of its
+      # secrets exist; until then the Windows files are unsigned and the
+      # release notes say so. Some but not all of them is a mistake.
+      - name: Check for Azure Artifact Signing
+        id: azure
+        if: runner.os == 'Windows'
+        shell: bash
+        env:
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          SIGNING_ENDPOINT: ${{ secrets.AZURE_ARTIFACT_SIGNING_ENDPOINT }}
+          SIGNING_ACCOUNT: ${{ secrets.AZURE_ARTIFACT_SIGNING_ACCOUNT }}
+          SIGNING_PROFILE: ${{ secrets.AZURE_ARTIFACT_SIGNING_PROFILE }}
+        run: |
+          set -euo pipefail
+          present=0
+          for value in "$AZURE_TENANT_ID" "$AZURE_CLIENT_ID" "$AZURE_CLIENT_SECRET" "$SIGNING_ENDPOINT" "$SIGNING_ACCOUNT" "$SIGNING_PROFILE"; do
+            [ -n "$value" ] && present=$((present + 1))
+          done
+          if [ "$present" -eq 6 ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+            echo "Azure Artifact Signing is configured: the executables and the MSI are signed"
+          elif [ "$present" -eq 0 ]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Azure Artifact Signing is not configured; the Windows files are unsigned."
+          else
+            echo "::error::Only $present of the six Azure Artifact Signing secrets are set (see docs/release.md)"
+            exit 1
+          fi
+
+      - name: Sign the Windows executables
+        if: runner.os == 'Windows' && steps.azure.outputs.enabled == 'true'
+        uses: azure/artifact-signing-action@c7ab2a863ab5f9a846ddb8265964877ef296ee82 # v2.0.0
+        with:
+          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          endpoint: ${{ secrets.AZURE_ARTIFACT_SIGNING_ENDPOINT }}
+          signing-account-name: ${{ secrets.AZURE_ARTIFACT_SIGNING_ACCOUNT }}
+          certificate-profile-name: ${{ secrets.AZURE_ARTIFACT_SIGNING_PROFILE }}
+          files: |
+            ${{ github.workspace }}\target\release\familychat.exe
+            ${{ github.workspace }}\target\release\familychat-launcher.exe
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+
+      - name: Create the Windows archive and MSI
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force archive/licenses | Out-Null
-          Copy-Item "target/release/${{ matrix.binary_name }}", LICENSE, THIRD_PARTY.html archive/
-          Copy-Item assets/fonts/inter/LICENSE.txt archive/licenses/Inter-OFL.txt
-          Copy-Item assets/icons/LICENSE.txt archive/licenses/Lucide-LICENSE.txt
+          New-Item -ItemType Directory -Force archive | Out-Null
+          Copy-Item "target/release/${{ matrix.binary_name }}" archive/
+          Copy-Item -Recurse target/dist/licences/* archive/
           Compress-Archive -Path archive/* -DestinationPath "${{ matrix.artifact_path }}"
           Add-Type -AssemblyName System.IO.Compression.FileSystem
           [System.IO.Compression.ZipFile]::OpenRead((Resolve-Path "${{ matrix.artifact_path }}")).Entries |
             ForEach-Object { "{0,12}  {1}" -f $_.Length, $_.FullName }
+
+          Copy-Item packaging/windows/familychat.ico target/dist/
+          cargo install cargo-wix --version 0.3.9 --locked
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cargo wix -p familychat-app --no-build --nocapture --output "${{ matrix.installer_path }}"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Sign the MSI
+        if: runner.os == 'Windows' && steps.azure.outputs.enabled == 'true'
+        uses: azure/artifact-signing-action@c7ab2a863ab5f9a846ddb8265964877ef296ee82 # v2.0.0
+        with:
+          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          endpoint: ${{ secrets.AZURE_ARTIFACT_SIGNING_ENDPOINT }}
+          signing-account-name: ${{ secrets.AZURE_ARTIFACT_SIGNING_ACCOUNT }}
+          certificate-profile-name: ${{ secrets.AZURE_ARTIFACT_SIGNING_PROFILE }}
+          files: ${{ github.workspace }}\${{ matrix.installer_path }}
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+          description: Family Chat
+          description-url: https://github.com/unicornops/familychat-desktop
+
+      # With Azure Artifact Signing every signature must check out; without
+      # it the files must say NotSigned (nothing claims a signature).
+      - name: Check the Windows signatures
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          SIGNING_ENABLED: ${{ steps.azure.outputs.enabled }}
+        run: |
+          $expected = if ($env:SIGNING_ENABLED -eq 'true') { 'Valid' } else { 'NotSigned' }
+          $files = @('target/release/familychat.exe', 'target/release/familychat-launcher.exe', '${{ matrix.installer_path }}')
+          foreach ($file in $files) {
+            $signature = Get-AuthenticodeSignature $file
+            Write-Host ("{0}: {1} {2}" -f $file, $signature.Status, $signature.SignerCertificate.Subject)
+            if ("$($signature.Status)" -ne $expected) {
+              Write-Error "$file is $($signature.Status), expected $expected"
+            }
+          }
+          $state = if ($env:SIGNING_ENABLED -eq 'true') { 'signed|Authenticode through Azure Artifact Signing' } else { 'unsigned|Azure Artifact Signing is not set up yet' }
+          @("${{ matrix.installer_path }}|$state", "${{ matrix.artifact_path }}|$state") |
+            Set-Content -Encoding ascii signing-Windows.txt
+
+      # The MSI's tables, read back through Windows Installer itself.
+      - name: Inspect the MSI
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $installer = New-Object -ComObject WindowsInstaller.Installer
+          $database = $installer.GetType().InvokeMember('OpenDatabase', 'InvokeMethod', $null, $installer, @((Resolve-Path '${{ matrix.installer_path }}').Path, 0))
+          function Show-Table([string]$Query, [int]$Columns) {
+            Write-Host "== $Query"
+            $view = $database.GetType().InvokeMember('OpenView', 'InvokeMethod', $null, $database, @($Query))
+            $view.GetType().InvokeMember('Execute', 'InvokeMethod', $null, $view, $null) | Out-Null
+            while ($null -ne ($record = $view.GetType().InvokeMember('Fetch', 'InvokeMethod', $null, $view, $null))) {
+              # A plain [int], not the pipeline's PSObject-wrapped $_, which COM refuses (DISP_E_TYPEMISMATCH).
+              $fields = for ($column = 1; $column -le $Columns; $column++) {
+                [string]$record.GetType().InvokeMember('StringData', 'GetProperty', $null, $record, [object[]]@([int]$column))
+              }
+              Write-Host ('  ' + ($fields -join ' | '))
+            }
+            $view.GetType().InvokeMember('Close', 'InvokeMethod', $null, $view, $null) | Out-Null
+          }
+          Show-Table "SELECT Property, Value FROM Property WHERE Property = 'ProductName' OR Property = 'ProductVersion' OR Property = 'Manufacturer' OR Property = 'ARPPRODUCTICON' OR Property = 'ALLUSERS' OR Property = 'UpgradeCode'" 2
+          Show-Table 'SELECT Directory, Directory_Parent, DefaultDir FROM Directory' 3
+          Show-Table 'SELECT File, FileName, FileSize FROM File' 3
+          # `Key` is reserved in Windows Installer SQL, so the names are quoted.
+          Show-Table 'SELECT `Root`, `Key`, `Name`, `Value` FROM `Registry`' 4
+          Show-Table 'SELECT Shortcut, Name, Target FROM Shortcut' 3
+          Show-Table 'SELECT Name, Value FROM Environment' 2
+          $summary = $database.GetType().InvokeMember('SummaryInformation', 'GetProperty', $null, $database, @(0))
+          # Word count 8: per-user, no elevation (UAC compliant).
+          Write-Host ("Summary: template {0}, word count {1}" -f `
+            $summary.GetType().InvokeMember('Property', 'GetProperty', $null, $summary, @(7)), `
+            $summary.GetType().InvokeMember('Property', 'GetProperty', $null, $summary, @(15)))
+
+      - name: Install the MSI
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $log = Join-Path $env:RUNNER_TEMP 'msi-install.log'
+          $process = Start-Process msiexec.exe -ArgumentList @('/i', '${{ matrix.installer_path }}', '/qn', '/l*v', $log) -Wait -PassThru
+          if ($process.ExitCode -ne 0) { Get-Content $log -Tail 80; Write-Error "msiexec exited $($process.ExitCode)" }
+          $dir = Join-Path $env:LOCALAPPDATA 'Programs\Family Chat'
+          Get-ChildItem -Recurse $dir | ForEach-Object { "{0,12}  {1}" -f $_.Length, $_.FullName.Substring($dir.Length + 1) }
+          foreach ($file in 'familychat.exe', 'familychat-launcher.exe', 'LICENSE', 'THIRD_PARTY.html', 'licenses\Inter-OFL.txt', 'licenses\Lucide-LICENSE.txt', 'licenses\GPUI-Apache-2.0.txt') {
+            if (-not (Test-Path (Join-Path $dir $file))) { Write-Error "the MSI did not install $file" }
+          }
+          $key = 'HKCU:\Software\Classes\familychat'
+          $command = (Get-ItemProperty "$key\shell\open\command").'(default)'
+          Write-Host "HKCU\Software\Classes\familychat: $((Get-ItemProperty $key).'(default)'); URL Protocol present: $($null -ne (Get-ItemProperty $key).'URL Protocol')"
+          Write-Host "shell\open\command: $command"
+          $expected = '"' + (Join-Path $dir 'familychat-launcher.exe') + '" "%1"'
+          if ($command -ne $expected) { Write-Error "the link handler runs $command, expected $expected" }
+          if ($null -eq (Get-ItemProperty $key).'URL Protocol') { Write-Error 'familychat is not marked as a URL protocol' }
+          if (Test-Path 'HKLM:\Software\Classes\familychat') { Write-Error 'the per-user MSI wrote to HKLM' }
+          $shortcut = Join-Path ([Environment]::GetFolderPath('Programs')) 'Family Chat.lnk'
+          if (-not (Test-Path $shortcut)) { Write-Error "no Start-menu shortcut at $shortcut" }
+          $userPath = [Environment]::GetEnvironmentVariable('PATH', 'User')
+          if (-not ($userPath -split ';' | Where-Object { $_.TrimEnd('\') -eq $dir })) { Write-Error "the user's PATH lacks $dir" }
+          & (Join-Path $dir 'familychat.exe') --version
+          if ($LASTEXITCODE -ne 0) { Write-Error 'the installed familychat.exe does not run' }
+
+      - name: Open a familychat link through Windows
+        if: runner.os == 'Windows'
+        timeout-minutes: 5
+        shell: pwsh
+        run: ./scripts/link-handler-smoke.ps1 -App (Join-Path $env:LOCALAPPDATA 'Programs\Family Chat\familychat.exe') -OutputDir artifacts/link-handler
+
+      - name: Uninstall the MSI
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $process = Start-Process msiexec.exe -ArgumentList @('/x', '${{ matrix.installer_path }}', '/qn') -Wait -PassThru
+          if ($process.ExitCode -ne 0) { Write-Error "msiexec /x exited $($process.ExitCode)" }
+          if (Test-Path 'HKCU:\Software\Classes\familychat') { Write-Error 'uninstalling left the familychat: handler behind' }
+          if (Test-Path (Join-Path $env:LOCALAPPDATA 'Programs\Family Chat')) { Write-Error 'uninstalling left the install folder behind' }
+          Write-Host 'Uninstalled: the handler, the files and the folder are gone'
+
+      # ----------------------------------------------------------- every OS
 
       # The archived binary runs and names its version.
       - name: Check the archived binary
         shell: bash
         run: archive/${{ matrix.binary_name }} --version
 
+      - name: Upload the link check
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: link-handler-${{ runner.os }}
+          path: artifacts/link-handler
+          if-no-files-found: ignore
+
       - name: Upload workflow artifact
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ${{ matrix.archive_name }}
-          path: ${{ matrix.artifact_path }}
+          path: |
+            ${{ matrix.artifact_path }}
+            ${{ matrix.installer_path }}
+          if-no-files-found: error
 
-      - name: Upload release asset
+      - name: Upload the signing record
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: signing-${{ runner.os }}
+          path: signing-${{ runner.os }}.txt
+          if-no-files-found: error
+
+      - name: Upload release assets
         if: ${{ github.event_name != 'pull_request' && !inputs.dry_run }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
+        run: gh release upload "${{ needs.release_please.outputs.tag_name || inputs.tag_name }}" "${{ matrix.artifact_path }}" "${{ matrix.installer_path }}" --clobber
+
+  # Once every package is built: SHA256SUMS over all of them, one build
+  # provenance attestation covering each file, the screenshot, and the
+  # release notes' signing section. A dry run builds and attests the same
+  # and shows the section in the job summary instead of on a release.
+  publish_release:
+    name: Checksums, Attestations and Notes
+    needs:
+      - release_please
+      - release_screenshot
+      - build_release_assets
+    if: |
+      always() &&
+      needs.build_release_assets.result == 'success' &&
+      needs.release_screenshot.result == 'success' &&
+      (needs.release_please.outputs.release_created == 'true' ||
+       github.event_name == 'workflow_dispatch' ||
+       github.event_name == 'pull_request')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - name: Checkout release commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.release_please.outputs.release_sha || inputs.tag_name || github.sha }}
+
+      - name: Download the packages
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: familychat-*
+          path: dist
+          merge-multiple: true
+
+      - name: Download the screenshot
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-screenshot
+          path: dist
+
+      - name: Download the signing records
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: signing-*
+          path: signing
+          merge-multiple: true
+
+      - name: Write SHA256SUMS
         run: |
-          assets="${{ matrix.artifact_path }}"
-          sha256sum $assets > "SHA256SUMS-${{ runner.os }}"
-          gh release upload "${{ needs.release_please.outputs.tag_name || inputs.tag_name }}" $assets "SHA256SUMS-${{ runner.os }}" --clobber
+          set -euo pipefail
+          cd dist
+          expected=(familychat-linux-x86_64.tar.gz familychat-linux-x86_64.deb familychat-macos.tar.gz familychat-macos.dmg familychat-windows-x86_64.zip familychat-windows-x86_64.msi familychat-screenshot.png)
+          for file in "${expected[@]}"; do
+            [[ -f "$file" ]] || { echo "::error::no $file to publish"; exit 1; }
+          done
+          [[ "$(find . -maxdepth 1 -type f | wc -l)" -eq "${#expected[@]}" ]] || { ls -la; echo "::error::unexpected files to publish"; exit 1; }
+          sha256sum "${expected[@]}" > SHA256SUMS
+          ls -la
+          cat SHA256SUMS
+          {
+            echo "### Release files"
+            echo
+            echo '```'
+            for file in "${expected[@]}"; do
+              echo "$(( $(wc -c < "$file") / 1024 )) KiB  $file"
+            done
+            echo
+            cat SHA256SUMS
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # Sigstore-signed SLSA provenance for each file, verifiable with
+      # `gh attestation verify FILE --repo unicornops/familychat-desktop`.
+      # Pull requests from forks and Dependabot cannot mint the OIDC token,
+      # so their dry runs skip it.
+      - name: Attest build provenance
+        if: |
+          github.event_name != 'pull_request' ||
+          (github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]')
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-checksums: dist/SHA256SUMS
+
+      - name: Render the signing notes
+        run: |
+          set -euo pipefail
+          scripts/release-signing-notes.sh signing/signing-Linux.txt signing/signing-macOS.txt signing/signing-Windows.txt > signing-notes.md
+          cat signing-notes.md
+          cat signing-notes.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publish to the release
+        if: ${{ github.event_name != 'pull_request' && !inputs.dry_run }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.release_please.outputs.tag_name || inputs.tag_name }}
+        run: |
+          set -euo pipefail
+          gh release upload "$TAG" dist/SHA256SUMS dist/familychat-screenshot.png --clobber
+          gh release view "$TAG" --json body --jq .body > notes.md
+          if grep -qF '<!-- familychat-signing -->' notes.md; then
+            # A rerun replaces the section it added before.
+            sed -i '/<!-- familychat-signing -->/,$d' notes.md
+          fi
+          { printf '\n'; cat signing-notes.md; } >> notes.md
+          gh release edit "$TAG" --notes-file notes.md
