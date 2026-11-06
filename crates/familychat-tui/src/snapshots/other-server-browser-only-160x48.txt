@@ -1,0 +1,195 @@
+  FAMILY CHAT 0.0.0-test                                             ANOTHER MATRIX SERVER
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                           Use another Matrix server
+                                           Choose how to sign in. Only the ways this server offers are shown.
+
+                                           Homeserver             example.org
+
+                                           Ctrl-B Continue in your browser
+                                           You sign in at https://account.example.org/
+                                           Ctrl-E Change server
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+^B Browser          Esc Back
+^E Server           ^C Quit
+--- styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                           BBBBBBBBBBBBBBBBBBBBBBBBB
+                                           kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+
+                                           BBBBBBBBBBBBBBBBBBBBBBB
+
+                                           RRRRRR
+                                           kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+                                           RRRRRR
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+RR                  RRR
+RR                  RR
+--- NO_COLOR styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                           BBBBBBBBBBBBBBBBBBBBBBBBB
+
+
+                                           BBBBBBBBBBBBBBBBBBBBBBB
+
+                                           RRRRRR
+
+                                           RRRRRR
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+RR                  RRR
+RR                  RR
+--- ASCII ---
+  FAMILY CHAT 0.0.0-test                                             ANOTHER MATRIX SERVER
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                           Use another Matrix server
+                                           Choose how to sign in. Only the ways this server offers are shown.
+
+                                           Homeserver             example.org
+
+                                           Ctrl-B Continue in your browser
+                                           You sign in at https://account.example.org/
+                                           Ctrl-E Change server
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+^B Browser          Esc Back
+^E Server           ^C Quit

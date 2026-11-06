@@ -12,6 +12,7 @@
       "secondary-alt-v": "familychat::ConfirmIdentity",
       "secondary-alt-r": "familychat::SetUpRecovery",
       "secondary-shift-d": "familychat::ManageDevices",
+      "secondary-alt-l": "familychat::LinkDevice",
       "secondary-alt-e": "familychat::ExportRoomKeys",
       "secondary-alt-i": "familychat::ImportRoomKeys"
     }

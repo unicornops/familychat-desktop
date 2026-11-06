@@ -18,13 +18,12 @@
 
 
                                            Use another Matrix server
-                                           Sign in to any Matrix homeserver with your username and password.
+                                           Type the server's address. Family Chat then shows the ways it offers to
+                                           sign in.
 
                                            Homeserver             matrix.org
-                                           Username or Matrix ID
-                                           Password
 
-                                           Tab moves between the fields. Enter signs in from the password.
+                                           Enter finds the server.
 
 
 
@@ -44,8 +43,9 @@
 
 
 
-Enter Next          Esc Back
-Tab NextFld         ^C Quit
+
+Enter Find          ^C Quit
+Esc Back
 --- styles ---
 RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
 
@@ -67,13 +67,12 @@ RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
 
 
                                            BBBBBBBBBBBBBBBBBBBBBBBBB
-                                           kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+                                           kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+                                           kkkkkkkk
 
                                            BBBBBBBBBBBBBBBBBBBBBBBkkkkkkkkkkR
-                                           BBBBBBBBBBBBBBBBBBBBBBB
-                                           BBBBBBBBBBBBBBBBBBBBBBB
 
-                                           kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+                                           kkkkkkkkkkkkkkkkkkkkkkk
 
 
 
@@ -93,8 +92,9 @@ RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
 
 
 
-RRRRR               RRR
-RRR                 RR
+
+RRRRR               RR
+RRR
 --- NO_COLOR styles ---
 RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
 
@@ -118,9 +118,8 @@ RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
                                            BBBBBBBBBBBBBBBBBBBBBBBBB
 
 
+
                                            BBBBBBBBBBBBBBBBBBBBBBB          R
-                                           BBBBBBBBBBBBBBBBBBBBBBB
-                                           BBBBBBBBBBBBBBBBBBBBBBB
 
 
 
@@ -142,8 +141,9 @@ RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
 
 
 
-RRRRR               RRR
-RRR                 RR
+
+RRRRR               RR
+RRR
 --- ASCII ---
   FAMILY CHAT 0.0.0-test                                             ANOTHER MATRIX SERVER
 
@@ -165,13 +165,12 @@ RRR                 RR
 
 
                                            Use another Matrix server
-                                           Sign in to any Matrix homeserver with your username and password.
+                                           Type the server's address. Family Chat then shows the ways it offers to
+                                           sign in.
 
                                            Homeserver             matrix.org
-                                           Username or Matrix ID
-                                           Password
 
-                                           Tab moves between the fields. Enter signs in from the password.
+                                           Enter finds the server.
 
 
 
@@ -191,5 +190,6 @@ RRR                 RR
 
 
 
-Enter Next          Esc Back
-Tab NextFld         ^C Quit
+
+Enter Find          ^C Quit
+Esc Back
