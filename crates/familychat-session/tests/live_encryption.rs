@@ -19,7 +19,9 @@
 //!   (MSC3967, or a demand for the password that the password answers), for
 //!   family-chat #257;
 //! - room keys exported from one device and imported on another decrypt
-//!   the history there, and a wrong passphrase is refused.
+//!   the history there, and a wrong passphrase is refused;
+//! - a message sent the moment a room is made encrypted is stored on the
+//!   server as `m.room.encrypted`, without its text, on Palpo and Synapse.
 
 mod common;
 
@@ -76,6 +78,29 @@ impl Device {
         auth_kind: AuthKind,
         password: Option<&str>,
     ) -> Result<Self> {
+        Self::open_on(
+            harness,
+            harness.hs1_url(),
+            name,
+            user_id,
+            session,
+            auth_kind,
+            password,
+        )
+        .await
+    }
+
+    /// [`Device::open`] on the homeserver at `homeserver_url` (hs1 or
+    /// Synapse).
+    async fn open_on(
+        harness: &HomeserverHarness,
+        homeserver_url: &str,
+        name: &str,
+        user_id: &str,
+        session: &Session,
+        auth_kind: AuthKind,
+        password: Option<&str>,
+    ) -> Result<Self> {
         let profile = TestProfile::new(name);
         let manager = Arc::new(profile.manager(harness.client().clone())?);
         let id = manager
@@ -83,7 +108,7 @@ impl Device {
                 AccountSession {
                     user_id: user_id.to_owned(),
                     device_id: session.device_id.clone(),
-                    homeserver_url: harness.hs1_url().to_owned(),
+                    homeserver_url: homeserver_url.to_owned(),
                     access_token: Secret::new(session.access_token().to_owned()),
                     refresh_token: session
                         .refresh_token()
@@ -745,6 +770,13 @@ async fn room_keys_exported_on_one_device_decrypt_history_on_another() -> Result
     let room = first
         .room_with_history(&["Moving to our own domain"])
         .await?;
+    let stored = first_message_on_server(&harness, harness.hs1_url(), &user.session, &room).await?;
+    ensure!(
+        stored["type"] == "m.room.encrypted"
+            && !stored.to_string().contains("Moving to our own domain"),
+        "the history went out without encryption: the server stored {}",
+        stored["type"]
+    );
     let dir = std::env::temp_dir().join(format!(
         "familychat-keyfile-{}",
         HomeserverHarness::unique_localpart("x")
@@ -794,7 +826,12 @@ async fn room_keys_exported_on_one_device_decrypt_history_on_another() -> Result
         .await
         .context("import answers")??;
     ensure!(
-        imported.total >= 1 && imported.imported >= 1,
+        imported.total >= 1,
+        "the export held no room keys ({imported:?}): the history was sent without \
+         encryption, as no Megolm session was ever made for it"
+    );
+    ensure!(
+        imported.imported >= 1,
         "the keys were imported: {imported:?}"
     );
     eprintln!("room key round trip: {}", imported.message());
@@ -809,5 +846,141 @@ async fn room_keys_exported_on_one_device_decrypt_history_on_another() -> Result
     let _ = std::fs::remove_dir_all(&dir);
     first.shutdown().await;
     second.shutdown().await;
+    Ok(())
+}
+
+/// The first message-like event in `room` as the server at
+/// `homeserver_url` stores it (`m.room.message` or `m.room.encrypted`),
+/// waited for: the send queue sends a moment after the request returns.
+async fn first_message_on_server(
+    harness: &HomeserverHarness,
+    homeserver_url: &str,
+    session: &Session,
+    room: &OwnedRoomId,
+) -> Result<serde_json::Value> {
+    let deadline = tokio::time::Instant::now() + WAIT;
+    loop {
+        let events = harness
+            .recent_events_on(homeserver_url, session, room.as_str())
+            .await?;
+        if let Some(event) = events.into_iter().rev().find(|event| {
+            event.get("state_key").is_none()
+                && matches!(
+                    event["type"].as_str(),
+                    Some("m.room.message" | "m.room.encrypted")
+                )
+        }) {
+            return Ok(event);
+        }
+        if tokio::time::Instant::now() >= deadline {
+            bail!("no message reached the server in {room} within {WAIT:?}");
+        }
+        tokio::time::sleep(Duration::from_millis(250)).await;
+    }
+}
+
+/// How many rooms each server gets: the plaintext send was a race with
+/// the sync, so one room may miss it.
+const FRESH_ROOMS: usize = 5;
+
+/// On the server at `homeserver_url`, `user` makes [`FRESH_ROOMS`]
+/// encrypted rooms through `SessionApi` and sends into each at once, as
+/// the window does. Returns what went wrong, one line per room.
+async fn sends_at_once(
+    harness: &HomeserverHarness,
+    homeserver_url: &str,
+    server: &str,
+    user: &TestUser,
+) -> Result<Vec<String>> {
+    let device = Device::open_on(
+        harness,
+        homeserver_url,
+        &format!("fresh-{}", server.to_ascii_lowercase()),
+        &user.user_id,
+        &user.session,
+        AuthKind::Password,
+        Some(&user.password),
+    )
+    .await?;
+    let client = device.client()?;
+    // The server is read as another sign-in without a refresh token: the
+    // device's own access token rotates (Synapse's last 20 seconds).
+    let reader = harness
+        .login_password_on(homeserver_url, &user.user_id, &user.password, false)
+        .await?;
+    let mut problems = Vec::new();
+    for round in 1..=FRESH_ROOMS {
+        let text = format!(
+            "a secret for a fresh room {}",
+            HomeserverHarness::unique_localpart("text")
+        );
+        let room = device
+            .session
+            .create_room(
+                &device.key,
+                NewRoom {
+                    name: Some(format!("Fresh room {round}")),
+                    invite: Vec::new(),
+                    direct: false,
+                    encrypted: true,
+                },
+            )
+            .await
+            .context("create_room answers")??;
+        let before = client.get_room(&room).map(|room| room.encryption_state());
+        device
+            .session
+            .room_action(
+                &device.key,
+                &room,
+                RoomRequest::Send {
+                    message: OutgoingMessage::plain(&text),
+                    reply_to: None,
+                },
+            )
+            .await
+            .context("room_action answers")??;
+        let stored = first_message_on_server(harness, homeserver_url, &reader, &room).await?;
+        let after = client.get_room(&room).map(|room| room.encryption_state());
+        let kind = stored["type"].as_str().unwrap_or("no type").to_owned();
+        eprintln!(
+            "{server}, room {round}: the SDK said {before:?} as the message was queued and \
+             {after:?} once it was on the server; the server stored {kind}"
+        );
+        if kind != "m.room.encrypted" {
+            problems.push(format!(
+                "{server}, room {round}: the server stored {kind} (the SDK said {before:?})"
+            ));
+        }
+        if stored.to_string().contains(&text) {
+            problems.push(format!(
+                "{server}, room {round}: the server has the message's text"
+            ));
+        }
+    }
+    device.shutdown().await;
+    Ok(problems)
+}
+
+/// A message sent the moment an encrypted room is made goes out encrypted.
+/// A sync answer that comes while the server is still making the room can
+/// lack its `m.room.encryption`, and matrix-sdk then takes the room as not
+/// encrypted until a later answer says otherwise; a message sent in
+/// between went out in plaintext (the key export test's empty export).
+/// The server is asked what it stored, on Palpo and on Synapse.
+#[tokio::test]
+#[ignore = "needs the homeserver harness: scripts/homeserver-harness.sh up"]
+async fn messages_sent_at_once_into_a_new_encrypted_room_are_encrypted() -> Result<()> {
+    let _logs = captured_logs();
+    let harness = harness()?;
+    let palpo = harness.new_user("fresh-room").await?;
+    let mut problems = sends_at_once(&harness, harness.hs1_url(), "Palpo", &palpo).await?;
+    let synapse = harness.new_synapse_user("fresh-room").await?;
+    problems.extend(sends_at_once(&harness, harness.synapse_url(), "Synapse", &synapse).await?);
+    ensure!(
+        problems.is_empty(),
+        "messages went out without encryption:\n{}",
+        problems.join("\n")
+    );
     Ok(())
 }

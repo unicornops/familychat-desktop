@@ -809,8 +809,22 @@ impl HomeserverHarness {
     /// The latest timeline events of `room_id` as `session` sees them, newest
     /// first.
     pub async fn recent_events(&self, session: &Session, room_id: &str) -> Result<Vec<Value>> {
+        self.recent_events_on(&self.env.hs1_url, session, room_id)
+            .await
+    }
+
+    /// The latest timeline events of `room_id` on the homeserver at
+    /// `homeserver_url` (hs1 or Synapse) as `session` sees them, newest
+    /// first, exactly as the server stores them: an encrypted message is
+    /// `m.room.encrypted` here, whatever its sender's client shows.
+    pub async fn recent_events_on(
+        &self,
+        homeserver_url: &str,
+        session: &Session,
+        room_id: &str,
+    ) -> Result<Vec<Value>> {
         let mut url = Self::url(
-            &self.env.hs1_url,
+            homeserver_url,
             &["_matrix", "client", "v3", "rooms", room_id, "messages"],
         )?;
         url.query_pairs_mut()
