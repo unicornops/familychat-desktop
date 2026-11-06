@@ -84,6 +84,7 @@ pub fn account_session(
         access_token: Secret::new(access_token.to_owned()),
         refresh_token: refresh_token.map(|token| Secret::new(token.to_owned())),
         auth_kind: AuthKind::Password,
+        oauth_client_id: None,
     }
 }
 

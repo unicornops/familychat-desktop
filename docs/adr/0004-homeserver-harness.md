@@ -38,6 +38,8 @@ The tests need, from one command on a developer machine and in CI:
 | `postgres` | `postgres:18-alpine` | Palpo's sidecar, as family-chat's `PalpoType` runs it (trust auth, PGDATA in a subdirectory) |
 | `palpo` | `ghcr.io/unicornops/palpo:sha-b188d47` | family-chat's `PALPO_IMAGE`; config rendered like `render_palpo_config` |
 | `synapse` | `matrixdotorg/synapse:v1.164.2` | "any homeserver" coverage; config from the image's `generate` mode |
+| `synapse-mas` | `matrixdotorg/synapse:v1.164.2` | Synapse delegating its sign-in to MAS, with the MSC4108 rendezvous (Phase 14) |
+| `mas` | `ghcr.io/element-hq/matrix-authentication-service:1.28.0` | MAS, the OAuth 2.0 authorization server (Phase 14) |
 | `edge` | `nginx:1.30.6-alpine` | the TLS front end on `127.0.0.1:18443` |
 
 Every image is pinned by tag and digest; `docs/upstream/homeservers.md`
@@ -63,6 +65,14 @@ The front end serves, with one certificate signed by a throwaway CA:
   so a client that followed redirects would send a token or a password
   outside the allowlist (ADR 0006).
 - `synapse.test`: Synapse.
+- `synapse-mas.familychat.test` (Phase 14, ADR 0010): Synapse with MAS,
+  allowlisted, so its sign-ins get the Family Chat rules, as a family will
+  when family-chat #239 gives it a MAS. The client API's `login`,
+  `logout` and `refresh` go to MAS's compatibility layer, everything else
+  (the auth metadata, the MSC4108 rendezvous and its sessions under
+  `/_synapse/client/`) to Synapse.
+- `mas.familychat.test`: MAS, the issuer: its login and consent pages,
+  the OAuth endpoints and its admin API.
 
 The front end also writes every request to an access log the tests read
 (Phase 4): `edge-logs/access.log` in the state directory
@@ -196,5 +206,25 @@ every service's log on failure and runs `down` always. They prove:
   names `smith.test` or another member, and the offline flow tests cover a
   custom-domain code end to end (ADR 0006). A second Palpo is the way to
   add a live custom-domain code sign-in later.
-- MAS for OAuth sign-in is not in the harness; Phase 14 adds Synapse with
-  MAS.
+- Phase 14 added Synapse with MAS (below). Its tests play the person's
+  browser over MAS's HTML forms (`MasBrowser`), so a MAS upgrade that
+  changes a form fails them; `docs/upstream/homeservers.md` records the
+  forms at the pin.
+
+### Synapse with MAS (Phase 14)
+
+`up` makes MAS's config in the state directory (`mas/config.yaml`, fresh
+secrets and signing keys, files only the harness reads), the shared
+secret both sides use, and an admin client (client credentials, its
+secret in the env file as `FAMILYCHAT_HARNESS_MAS_ADMIN_*`); appends to
+`synapse-mas`'s generated config MAS's section, `msc4108_enabled` and its
+public base URL; and waits until Synapse names MAS as its authorization
+server. MAS's database is on the Postgres sidecar (`postgres-init/mas.sql`,
+run when its data directory is made). MAS's rate limits are raised (every
+request comes from the front end), its access tokens last a minute (its
+least, so the session sees the SDK refresh them), and the device grant's
+address carries its code (`verification_uri_complete`), as QR code
+sign-in uses it. `create-mas-user` and `HomeserverHarness::new_mas_user`
+make users through MAS's admin API; MAS makes them on Synapse. Neither
+Synapse with MAS nor MAS publishes a port: the tests reach both through
+the front end.

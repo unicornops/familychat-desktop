@@ -143,11 +143,8 @@ fn the_command_bar_shows_the_tables_keys_and_the_palette_its_names() {
     );
     key(&mut app, KeyCode::Enter);
     let mut screen = Screen::new(80, 24);
-    until(&mut app, &mut screen, "the other server's form", |app| {
-        matches!(
-            signin_step(app),
-            Some(SigninStep::Password(form)) if form.kind == familychat_core::signin::PasswordKind::OtherServer
-        )
+    until(&mut app, &mut screen, "the other server's step", |app| {
+        matches!(signin_step(app), Some(SigninStep::Server(_)))
     });
 }
 
@@ -698,4 +695,75 @@ fn the_large_fixture_lays_out_once_per_change() {
         started.elapsed()
     );
     let _ = NOW;
+}
+
+#[test]
+fn another_servers_browser_sign_in_opens_only_after_y_and_prints_no_address_query() {
+    use familychat_test_support::fixtures::{FIXTURE_BROWSER_URL, FIXTURE_ISSUER};
+
+    let startup = signed_out().startup();
+    let signin = startup.signin().clone();
+    let mut app = app_over(startup, InitialView::OtherServer, Variant::Default);
+    let mut screen = Screen::new(80, 24);
+    until(&mut app, &mut screen, "the server step", |app| {
+        matches!(signin_step(app), Some(SigninStep::Server(_)))
+    });
+    typed(&mut app, "example.org");
+    key(&mut app, KeyCode::Enter);
+    until(
+        &mut app,
+        &mut screen,
+        "the server's methods",
+        |app| matches!(signin_step(app), Some(SigninStep::Password(form)) if form.methods.is_some()),
+    );
+    // Letters on a fixed server go to the username, not to commands.
+    typed(&mut app, "y");
+    ctrl(&mut app, 'b');
+    until(&mut app, &mut screen, "the browser question", |app| {
+        matches!(signin_step(app), Some(SigninStep::ConfirmBrowser(_)))
+    });
+    let text = text_of(&screen.draw(&mut app));
+    assert!(text.contains(FIXTURE_ISSUER), "{text}");
+    assert!(app.take_effects().is_empty(), "nothing opens before y");
+    key(&mut app, KeyCode::Enter);
+    key(&mut app, KeyCode::Char('x'));
+    assert!(matches!(
+        signin_step(&app),
+        Some(SigninStep::ConfirmBrowser(_))
+    ));
+    key(&mut app, KeyCode::Char('y'));
+    until(&mut app, &mut screen, "the browser step", |app| {
+        matches!(signin_step(app), Some(SigninStep::Browser(_)))
+    });
+    let text = text_of(&screen.draw(&mut app));
+    assert!(
+        !text.contains("state="),
+        "the address's query is never drawn:\n{text}"
+    );
+    assert_eq!(
+        app.take_effects(),
+        [Effect::Open(FIXTURE_BROWSER_URL.to_owned())]
+    );
+    // Drawing again opens nothing more; `o` opens it again on request.
+    screen.draw(&mut app);
+    app.tick();
+    assert!(app.take_effects().is_empty());
+    key(&mut app, KeyCode::Char('o'));
+    assert_eq!(
+        app.take_effects(),
+        [Effect::Open(FIXTURE_BROWSER_URL.to_owned())]
+    );
+    key(&mut app, KeyCode::Esc);
+    until(&mut app, &mut screen, "back to the methods", |app| {
+        matches!(signin_step(app), Some(SigninStep::Password(_)))
+    });
+    assert!(signin.answers().contains(&FixtureAnswer::UseBrowser));
+    assert_eq!(
+        signin
+            .answers()
+            .iter()
+            .filter(|answer| **answer == FixtureAnswer::Continue)
+            .count(),
+        1
+    );
 }

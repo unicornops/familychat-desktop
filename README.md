@@ -105,6 +105,15 @@ Phase 12, packaging, signing and distribution ([#13](https://github.com/unicorno
 - `familychat://` sign-in links from your browser open in Family Chat on every system: the window you have open asks "Sign in as …?"
 - every download listed in `SHA256SUMS` with a build provenance attestation, and the release notes say which files are signed
 
+
+Phase 14, sign-in in the browser and with a QR code, for servers that offer them ([#15](https://github.com/unicornops/familychat-desktop/issues/15), [ADR 0010](./docs/adr/0010-browser-and-qr-code-sign-in.md)):
+
+- "Use another Matrix server" asks for the server first and shows only the ways it offers: your password, "Continue in your browser" (OAuth 2.0, as servers with Matrix Authentication Service use, or single sign-on), and "Sign in with a QR code"
+- the browser opens only after you say Continue to its whole address, and comes back to Family Chat on your own computer; the app registers itself as Family Chat Desktop, and signing out ends the session at the server
+- sign this computer in by scanning its QR code with a phone that's signed in, or sign a new phone in from here ("Sign in a new device", Ctrl+Alt+L or Cmd+Option+L): type the two numbers the other device shows, approve it in your browser, and your keys go with it
+- for a Family Chat family, every address these use must be one of Family Chat's own; Family Chat's servers don't offer them yet (family-chat #239 plans it), so families see the same sign-in as before
+- the terminal UI signs in through the browser too (Ctrl-B); QR codes are the window's
+
 Writing and encryption from the terminal (Phase 11) and the rest follow in the later phases.
 
 ## Building

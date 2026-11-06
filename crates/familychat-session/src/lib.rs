@@ -16,6 +16,8 @@
 //! - `encryption`: the client's encryption settings (ADR 0009), the
 //!   account's identity, recovery, verification, devices, room key files
 //!   and identity warnings.
+//! - `qr_login`: sign-in with a QR code (MSC4108, ADR 0010), for this
+//!   computer and for a new device of a signed-in account.
 //! - [`LiveSettings`]: the [`SettingsApi`](familychat_core::settings::SettingsApi)
 //!   over the profile's preferences.
 //!
@@ -38,6 +40,7 @@ mod mapping;
 mod media;
 mod messaging;
 mod notifications;
+mod qr_login;
 mod room_list;
 mod runtime;
 mod settings;
@@ -48,5 +51,6 @@ pub use config::SessionConfig;
 pub use live::LiveSession;
 pub use manager::{AccountManager, AddAccountError, AnyHomeserver, PostLoginCheck, Restored};
 pub use media::{AuthenticatedMediaFetcher, DOWNLOAD_TIMEOUT, MAX_DOWNLOAD_BYTES};
+pub use qr_login::{QrAnswer, QrEvent, QrLoginError, QrLoginRequest, UrlGuard};
 pub use runtime::BackgroundRuntime;
 pub use settings::LiveSettings;

@@ -156,9 +156,25 @@ impl CheckedHomeserver {
     }
 }
 
-/// `url` as a homeserver base: `https://`, a host name, no user info, no
-/// query or fragment, a path ending in `/`.
-fn https_base(url: &Url) -> Result<Url, NotAllowed> {
+impl CheckedHomeserver {
+    /// Checks an address the homeserver names for its sign-in (an OAuth
+    /// issuer or endpoint, a QR code's rendezvous; ADR 0010) by the
+    /// homeserver's own rule: under the allowlist for a Family Chat
+    /// homeserver, `https://` with a host name and no user info for
+    /// another server. The address keeps its path and query, without a
+    /// fragment.
+    pub fn check_related(&self, url: &Url, allowlist: &Allowlist) -> Result<Url, NotAllowed> {
+        check_https_name(url)?;
+        if self.family_chat {
+            allowlist.check(url)?;
+        }
+        let mut url = url.clone();
+        url.set_fragment(None);
+        Ok(url)
+    }
+}
+
+fn check_https_name(url: &Url) -> Result<(), NotAllowed> {
     if url.scheme() != "https" {
         return Err(NotAllowed::NotHttps);
     }
@@ -168,6 +184,13 @@ fn https_base(url: &Url) -> Result<Url, NotAllowed> {
     if !url.username().is_empty() || url.password().is_some() {
         return Err(NotAllowed::UserInfo);
     }
+    Ok(())
+}
+
+/// `url` as a homeserver base: `https://`, a host name, no user info, no
+/// query or fragment, a path ending in `/`.
+fn https_base(url: &Url) -> Result<Url, NotAllowed> {
+    check_https_name(url)?;
     let mut url = url.clone();
     url.set_query(None);
     url.set_fragment(None);
@@ -290,6 +313,52 @@ mod tests {
         );
         let checked = CheckedHomeserver::other_server(&url("https://matrix.org")).expect("allowed");
         assert!(!checked.is_family_chat());
+    }
+
+    #[test]
+    fn related_addresses_follow_the_homeservers_rule() {
+        let allowlist = Allowlist::production();
+        let family = allowlist
+            .check(&url("https://smith.safechat.family"))
+            .expect("allowed");
+        let other = CheckedHomeserver::other_server(&url("https://matrix.org")).expect("allowed");
+        let issuer = url("https://auth.smith.safechat.family/");
+        assert_eq!(
+            family.check_related(&issuer, &allowlist),
+            Ok(issuer.clone())
+        );
+        assert_eq!(
+            family
+                .check_related(&url("https://auth.safechat.family/x?y=1#z"), &allowlist)
+                .map(|url| url.to_string()),
+            Ok("https://auth.safechat.family/x?y=1".to_owned())
+        );
+        for (refused, reason) in [
+            ("https://account.matrix.org/", NotAllowed::NotFamilyChat),
+            ("https://safechat.family/", NotAllowed::NotFamilyChat),
+            ("http://auth.smith.safechat.family/", NotAllowed::NotHttps),
+            ("https://10.0.0.1/", NotAllowed::NotAName),
+            (
+                "https://evil.example@auth.smith.safechat.family/",
+                NotAllowed::UserInfo,
+            ),
+        ] {
+            assert_eq!(
+                family.check_related(&url(refused), &allowlist),
+                Err(reason),
+                "{refused}"
+            );
+        }
+        // Another server's issuer may be anywhere over HTTPS.
+        assert!(
+            other
+                .check_related(&url("https://account.matrix.org/"), &allowlist)
+                .is_ok()
+        );
+        assert_eq!(
+            other.check_related(&url("http://account.matrix.org/"), &allowlist),
+            Err(NotAllowed::NotHttps)
+        );
     }
 
     #[test]

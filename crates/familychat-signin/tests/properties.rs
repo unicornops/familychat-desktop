@@ -5,7 +5,11 @@
 //! the parsers (`src/host.rs`, `src/link.rs`); here they are generalised.
 
 use familychat_core::UserId;
-use familychat_signin::{Allowlist, LoginLink, ServerName, link::user_server};
+use familychat_signin::{
+    Allowlist, CheckedHomeserver, LoginLink, ServerName,
+    link::user_server,
+    oauth::{AuthServer, AuthServerRefusal},
+};
 use proptest::prelude::*;
 
 /// A DNS label.
@@ -48,8 +52,59 @@ fn encode(pairs: &[(&str, String)]) -> String {
     serializer.finish()
 }
 
+/// What an authorization server's metadata names, with `issuer` as every
+/// address's host.
+fn metadata(issuer: &str) -> serde_json::Value {
+    serde_json::json!({
+        "issuer": issuer,
+        "authorization_endpoint": format!("{issuer}authorize"),
+        "token_endpoint": format!("{issuer}token"),
+        "registration_endpoint": format!("{issuer}register"),
+        "response_types_supported": ["code"],
+        "code_challenge_methods_supported": ["S256"],
+    })
+}
+
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(512))]
+
+    // ADR 0010: for a Family Chat homeserver, an OAuth issuer (and so
+    // every address a browser or QR sign-in uses) is accepted only under
+    // the allowlist, over HTTPS, with a name; whatever else it is, it is
+    // refused, and the parse never panics.
+    #[test]
+    fn a_family_chat_issuer_is_accepted_only_under_the_allowlist(
+        name in dns_name(),
+        scheme in prop::sample::select(vec!["https", "http"]),
+        under in any::<bool>(),
+        text in any::<String>(),
+    ) {
+        let allowlist = Allowlist::production();
+        let homeserver = allowlist
+            .check(&reqwest::Url::parse("https://smith.safechat.family").expect("url"))
+            .expect("allowed");
+        let host = if under { format!("{name}.safechat.family") } else { name.clone() };
+        let issuer = format!("{scheme}://{host}/");
+        let result = AuthServer::from_metadata(&metadata(&issuer), &homeserver, &allowlist);
+        let allowed = scheme == "https" && host.ends_with(".safechat.family");
+        prop_assert_eq!(result.is_ok(), allowed, "{}", issuer);
+        if !allowed {
+            prop_assert!(matches!(result, Err(AuthServerRefusal::NotAllowed("issuer", _))));
+        }
+        // Arbitrary text as an issuer is never accepted for a family.
+        if !text.starts_with("https://") {
+            prop_assert!(AuthServer::from_metadata(&metadata(&text), &homeserver, &allowlist).is_err());
+        }
+        // Another server's may be any HTTPS host.
+        let other = CheckedHomeserver::other_server(
+            &reqwest::Url::parse("https://matrix.org").expect("url"),
+        )
+        .expect("allowed");
+        prop_assert_eq!(
+            AuthServer::from_metadata(&metadata(&issuer), &other, &allowlist).is_ok(),
+            scheme == "https"
+        );
+    }
 
     #[test]
     fn the_host_parser_never_panics_and_what_it_accepts_is_bare(text in any::<String>()) {
