@@ -804,18 +804,17 @@ async fn new_direct_chats_are_encrypted() -> Result<()> {
     else {
         bail!("no direct chat: {created:?}");
     };
-    // The room list can show the new room before its encryption state, or
-    // the account's `m.direct` data that makes it a direct chat, has synced
-    // (each arrives in its own sync), so wait for both; the room was made
-    // with `m.room.encryption` in its initial state and marked direct, and
-    // one that never shows as both fails on the timeout.
-    let summary = alice
+    // The room list can show the new room before its encryption state and
+    // the account's `m.direct` data have synced (briefly not encrypted, or
+    // not yet direct), so wait for both; the room was made with
+    // `m.room.encryption` in its initial state and marked direct, and a
+    // room that never shows as both fails on the timeout.
+    alice
         .room(&room, |summary| {
             summary.encryption == Encryption::Encrypted && summary.is_direct
         })
         .await
         .context("the new chat never showed as an encrypted direct chat")?;
-    ensure!(summary.is_direct, "the new chat is not a direct chat");
     alice.shutdown().await;
     Ok(())
 }

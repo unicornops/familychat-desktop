@@ -164,6 +164,21 @@ Only the account's own devices are verified: a request from someone else
 is left alone (Family Chat has no person-to-person verification yet), and
 a request that arrives with no window listening is declined.
 
+A request to confirm this device can be lost on either side at the pinned
+SDK, and nothing reports it:
+- **Sending:** matrix-sdk 0.19.1 sends it only to the account's devices
+  this one knows as signed by the identity. So the session asks the
+  server for the account's keys first (`request_user_identity`, a
+  `/keys/query`), falling back to the stored ones.
+- **Receiving:** a device drops a request from a device it has no keys
+  for yet ("Could not retrieve the device data for the incoming
+  verification request, ignoring it"). It learns a new device's keys only
+  when its sync reports the device-list change.
+
+If the other device shows nothing, Cancel and Use another device again
+sends a new request. The live test does exactly that, every 15 seconds.
+Offering "Send again" in the waiting dialog itself is a follow-up.
+
 ### Recovery
 
 When this device is confirmed and the account has no recovery, a banner
