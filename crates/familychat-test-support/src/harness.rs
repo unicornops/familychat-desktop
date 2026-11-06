@@ -55,7 +55,8 @@ impl Reply {
 }
 
 /// How long [`HomeserverHarness::login_password`] keeps trying a login
-/// the homeserver rate-limits (Palpo's one bucket for the whole harness).
+/// the homeserver rate-limits (Palpo's one bucket for the whole harness),
+/// and [`HomeserverHarness::recent_events_on`] a read.
 const LOGIN_RATE_LIMIT_PATIENCE: Duration = Duration::from_secs(120);
 
 /// A signed-in device. `Debug` never prints the tokens.
@@ -809,17 +810,52 @@ impl HomeserverHarness {
     /// The latest timeline events of `room_id` as `session` sees them, newest
     /// first.
     pub async fn recent_events(&self, session: &Session, room_id: &str) -> Result<Vec<Value>> {
+        self.recent_events_on(&self.env.hs1_url, session, room_id)
+            .await
+    }
+
+    /// The latest timeline events of `room_id` on the homeserver at
+    /// `homeserver_url` (hs1 or Synapse) as `session` sees them, newest
+    /// first, exactly as the server stores them: an encrypted message is
+    /// `m.room.encrypted` here, whatever its sender's client shows.
+    pub async fn recent_events_on(
+        &self,
+        homeserver_url: &str,
+        session: &Session,
+        room_id: &str,
+    ) -> Result<Vec<Value>> {
         let mut url = Self::url(
-            &self.env.hs1_url,
+            homeserver_url,
             &["_matrix", "client", "v3", "rooms", room_id, "messages"],
         )?;
         url.query_pairs_mut()
             .append_pair("dir", "b")
             .append_pair("limit", "20");
-        let reply = send(self.edge.get(url).bearer_auth(session.access_token()))
-            .await?
-            .ok("reading a room's messages")?;
-        Ok(reply.body["chunk"].as_array().cloned().unwrap_or_default())
+        // Palpo rate-limits reads across the whole harness (one peer), and
+        // several live tests read at once: a read it limits is tried again
+        // after the wait it asks for.
+        let started = SystemTime::now();
+        loop {
+            let reply = send(
+                self.edge
+                    .get(url.clone())
+                    .bearer_auth(session.access_token()),
+            )
+            .await?;
+            if reply.errcode() == Some("M_LIMIT_EXCEEDED") {
+                let waited = started.elapsed().unwrap_or_default();
+                let wait = reply.body["retry_after_ms"]
+                    .as_u64()
+                    .map_or(Duration::from_secs(2), Duration::from_millis)
+                    .min(Duration::from_secs(30));
+                if waited + wait <= LOGIN_RATE_LIMIT_PATIENCE {
+                    tokio::time::sleep(wait).await;
+                    continue;
+                }
+            }
+            let reply = reply.ok("reading a room's messages")?;
+            return Ok(reply.body["chunk"].as_array().cloned().unwrap_or_default());
+        }
     }
 }
 

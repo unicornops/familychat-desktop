@@ -233,6 +233,61 @@ its `m.room.encryption` state arrives. `ActionEvent::RoomCreated` now says
 whether the room was made encrypted, and the window shows no "Not
 encrypted" banner for such a room until the list catches up.
 
+### A room that looks not encrypted
+
+The room key export test once exported no keys at all from a device that
+had just made an encrypted room and sent into it: the message had gone
+out in plaintext. matrix-sdk 0.19.1 encrypts only when the room's info
+holds an `m.room.encryption` event, and it marks the encryption state as
+known whenever a sliding sync answer asked for `m.room.encryption`,
+whether the answer carried it or not (`RoomInfo::handle_encryption_state`;
+`Room::latest_encryption_state` asks the server only while the state is
+unknown). Both Palpo and Synapse can answer for a new room before its
+initial state is all there (Palpo appends the creator's join, then each
+initial event in turn, and the join wakes the creator's sync), so an
+answer shows the room without its `m.room.encryption`; the SDK then takes the
+room as not encrypted until a later answer brings the event, and a
+message the send queue sends in between goes out in plaintext.
+`Client::create_room` doesn't record the encryption its own request
+asked for. The live test below saw it before the fix: every one of eight
+new rooms on Synapse and one of eight on Palpo looked not encrypted for a
+moment, and four messages (three on Synapse, one on Palpo) were stored
+as `m.room.message` with their text. Palpo also remembers per connection
+which state events it has sent, whether or not the client got the answer,
+so a lost answer can keep an `m.room.encryption` from ever being sent
+again on that connection. The decision, fail-closed, in
+`familychat-session`'s `messaging`:
+
+- A room made encrypted has the `m.room.encryption` content its
+  `createRoom` asked for written into the SDK's room info (saved to the
+  store, or kept in memory if the store refuses) before `create_room`
+  hands the room back. A sync answer without the event never takes one
+  away, so nothing sent into the room can go out in plaintext.
+- Before a message, an edit, a file or Send anyway is queued in a room
+  the SDK takes as not encrypted, the guess is thrown away and the server
+  is asked (`GET /rooms/{id}/state/m.room.encryption/`). An event the
+  server has sticks in the room's info and the queue encrypts; a 404 is a
+  room that really isn't encrypted. When the server can't be asked
+  (offline), the state stays unknown and the send queue asks the server
+  itself before it sends. This covers any room whose sync left it looking
+  not encrypted, not only new ones; rooms known to be encrypted cost no
+  request, a room that isn't costs one per send. Reactions and
+  redactions are never encrypted by the SDK, as in every Matrix client.
+
+What is left: a send queued offline into a room that wrongly looks not
+encrypted, where the first sync after the connection returns again
+leaves the room looking not encrypted before the queue sends. That needs
+a room the sync wrongly left looking not encrypted and an outage at
+once; new rooms are never in it. Upstream, `Client::create_room` could
+record the encryption it asked for, and Palpo could tie the state it
+remembers as sent to the client's `pos` (an issue for the unicornops/palpo
+fork). The live test
+`messages_sent_at_once_into_a_new_encrypted_room_are_encrypted` makes
+eight encrypted rooms on Palpo and on Synapse, sends into each at once and
+reads what the server stored: `m.room.encrypted`, without the text. The
+window's held-back "Not encrypted" banner (above) stays, for the room
+list's first sight of a room before `create_room` answers.
+
 ### Commands
 
 Confirm it's you (Secondary+Alt+V), Set up recovery (Secondary+Alt+R),

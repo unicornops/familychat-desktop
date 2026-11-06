@@ -27,7 +27,7 @@ use familychat_core::{
     session::SessionError,
 };
 use matrix_sdk::{
-    Client, Room,
+    Client, EncryptionState, Room,
     attachment::{AttachmentConfig, AttachmentInfo, BaseFileInfo, BaseImageInfo},
     room::{
         Receipts,
@@ -40,7 +40,9 @@ use matrix_sdk::{
         events::{
             AnyMessageLikeEventContent, InitialStateEvent, Mentions,
             room::{
-                encryption::RoomEncryptionEventContent,
+                encryption::{
+                    PossiblyRedactedRoomEncryptionEventContent, RoomEncryptionEventContent,
+                },
                 message::{
                     AddMentions, RoomMessageEventContent, RoomMessageEventContentWithoutRelation,
                 },
@@ -48,7 +50,9 @@ use matrix_sdk::{
         },
     },
 };
-use matrix_sdk_base::{crypto::LocalTrust, store::QueueWedgeError};
+use matrix_sdk_base::{
+    RoomInfo, RoomInfoNotableUpdateReasons, crypto::LocalTrust, store::QueueWedgeError,
+};
 use matrix_sdk_ui::{
     Timeline,
     timeline::{EventSendState, RoomExt as _, TimelineEventItemId},
@@ -145,6 +149,9 @@ pub(crate) async fn room_action(
     timelines: &OpenTimelines,
     request: RoomRequest,
 ) -> Result<RoomDone, SessionError> {
+    if request_sends_event(&request) {
+        confirm_encryption(&room).await;
+    }
     match request {
         RoomRequest::Send { message, reply_to } => {
             let timeline = timelines.for_room(&room).await?;
@@ -262,6 +269,72 @@ pub(crate) async fn room_action(
     }
 }
 
+/// Whether `request` puts a message-like event in the send queue that
+/// would be encrypted in an encrypted room: a message, an edit, a file, or
+/// a stopped message sent anyway. (Reactions and redactions are never
+/// encrypted by the SDK; receipts and typing notices aren't room events.)
+fn request_sends_event(request: &RoomRequest) -> bool {
+    matches!(
+        request,
+        RoomRequest::Send { .. }
+            | RoomRequest::Edit { .. }
+            | RoomRequest::SendFile { .. }
+            | RoomRequest::SendAnyway(_)
+    )
+}
+
+/// Makes sure a room the SDK takes as not encrypted really isn't before
+/// anything is queued in it (ADR 0009, "A room that looks not encrypted").
+///
+/// matrix-sdk 0.19.1 marks a room's encryption state as known whenever a
+/// sliding sync answer asked for `m.room.encryption`, whether or not the
+/// answer carried it, and the send queue then encrypts only if it has
+/// seen that event. A server can answer for a room before its
+/// `m.room.encryption` exists (Palpo, while it is still making the room),
+/// or never send the event again after an answer the client didn't get,
+/// so "not encrypted" here is only the sync's guess. The guess is thrown
+/// away and the server is asked (`GET .../state/m.room.encryption/`); an
+/// encryption event it has sticks in the room's info, so the queue
+/// encrypts. If the server can't be asked now (offline), the state stays
+/// unknown, and the send queue asks the server itself before it sends
+/// anything. Rooms the SDK already knows are encrypted cost nothing.
+pub(crate) async fn confirm_encryption(room: &Room) {
+    if !matches!(room.encryption_state(), EncryptionState::NotEncrypted) {
+        return;
+    }
+    update_room_info(room, |info| info.mark_encryption_state_missing()).await;
+    match room.request_encryption_state().await {
+        Ok(()) => {
+            let encrypted = room.encryption_state().is_encrypted();
+            if encrypted {
+                warn!(
+                    "a room the sync took as not encrypted is encrypted on the server; \
+                     its messages will be encrypted"
+                );
+            } else {
+                info!("the server confirmed the room isn't encrypted");
+            }
+        }
+        Err(error) => info!(
+            %error,
+            "the room's encryption couldn't be checked now; the send queue asks before sending"
+        ),
+    }
+}
+
+/// Changes the room's info, saved to the SDK's store; if the store can't
+/// take it, the change is still made in memory so this session acts on it.
+async fn update_room_info(room: &Room, change: impl Fn(&mut RoomInfo)) {
+    let apply = |mut info: RoomInfo| {
+        change(&mut info);
+        (info, RoomInfoNotableUpdateReasons::empty())
+    };
+    if let Err(error) = room.update_and_save_room_info(apply).await {
+        warn!(%error, "the room's info couldn't be saved; changing it in memory");
+        room.update_room_info(apply).await;
+    }
+}
+
 /// Sends a message the encryption stopped (ADR 0009), as Element X's
 /// "Send anyway" does: a verified person's unconfirmed devices get the
 /// room key too (their local trust is set to "ignored"), or the changed
@@ -367,11 +440,18 @@ async fn send_file(
         })
 }
 
-/// Makes a room or direct chat.
+/// Makes a room or direct chat. A room made encrypted is handed back only
+/// once the SDK's room info holds its `m.room.encryption` (the content
+/// this request put in the initial state), so nothing sent into it can go
+/// out in plaintext, whatever the sync says meanwhile: a sync answer
+/// without the event never removes one the room has (ADR 0009).
 pub(crate) async fn create_room(
     client: &Client,
     room: NewRoom,
 ) -> Result<OwnedRoomId, SessionError> {
+    let encryption = room
+        .encrypted
+        .then(RoomEncryptionEventContent::with_recommended_defaults);
     let mut request = CreateRoomRequest::new();
     request.name = room.name;
     request.invite = room.invite;
@@ -381,22 +461,39 @@ pub(crate) async fn create_room(
     } else {
         RoomPreset::PrivateChat
     });
-    if room.encrypted {
-        request.initial_state = vec![
-            InitialStateEvent::with_empty_state_key(
-                RoomEncryptionEventContent::with_recommended_defaults(),
-            )
-            .to_raw_any(),
-        ];
+    if let Some(content) = &encryption {
+        request.initial_state =
+            vec![InitialStateEvent::with_empty_state_key(content.clone()).to_raw_any()];
     }
-    client
-        .create_room(request)
-        .await
-        .map(|created| created.room_id().to_owned())
-        .map_err(|error| {
-            info!(%error, "making a room failed");
-            session_error(&error, "The room couldn't be made. Try again.")
-        })
+    let created = client.create_room(request).await.map_err(|error| {
+        info!(%error, "making a room failed");
+        session_error(&error, "The room couldn't be made. Try again.")
+    })?;
+    if let Some(content) = encryption {
+        match possibly_redacted(&content) {
+            Some(content) => {
+                update_room_info(&created, |info| {
+                    info.set_encryption_event(Some(content.clone()));
+                    info.mark_encryption_state_synced();
+                })
+                .await;
+            }
+            // Never expected; the guard before every send still asks the
+            // server.
+            None => warn!("the new room's encryption couldn't be recorded"),
+        }
+    }
+    Ok(created.room_id().to_owned())
+}
+
+/// The form of an `m.room.encryption` content the SDK's room info keeps
+/// (the same JSON; the type is non-exhaustive, so it is read back).
+fn possibly_redacted(
+    content: &RoomEncryptionEventContent,
+) -> Option<PossiblyRedactedRoomEncryptionEventContent> {
+    serde_json::to_value(content)
+        .and_then(serde_json::from_value)
+        .ok()
 }
 
 /// The server's upload limit (`/_matrix/client/v1/media/config`), which the
@@ -515,5 +612,190 @@ mod tests {
             panic!("a text message");
         };
         assert!(text.formatted.is_none());
+    }
+
+    // --- A room's encryption before anything is sent (ADR 0009) ---------
+
+    use matrix_sdk::{SessionMeta, SessionTokens, authentication::matrix::MatrixSession};
+    use wiremock::{
+        Mock, MockServer, ResponseTemplate,
+        matchers::{method, path, path_regex},
+    };
+
+    const ROOM: &str = "!fresh:mock.test";
+
+    /// A signed-in client of a mocked server (in-memory stores), which
+    /// answers `createRoom` with [`ROOM`].
+    async fn mocked_client(server: &MockServer) -> Client {
+        Mock::given(method("GET"))
+            .and(path("/_matrix/client/versions"))
+            .respond_with(
+                ResponseTemplate::new(200)
+                    .set_body_json(serde_json::json!({"versions": ["v1.11"]})),
+            )
+            .mount(server)
+            .await;
+        Mock::given(method("POST"))
+            .and(path("/_matrix/client/v3/createRoom"))
+            .respond_with(
+                ResponseTemplate::new(200).set_body_json(serde_json::json!({"room_id": ROOM})),
+            )
+            .mount(server)
+            .await;
+        let http = reqwest::Client::builder()
+            .no_proxy()
+            .build()
+            .expect("a plain client");
+        let client = Client::builder()
+            .homeserver_url(server.uri())
+            .http_client(http)
+            .build()
+            .await
+            .expect("a client");
+        client
+            .restore_session(MatrixSession {
+                meta: SessionMeta {
+                    user_id: "@alice:mock.test".try_into().expect("a user id"),
+                    device_id: "MOCKDEVICE".into(),
+                },
+                tokens: SessionTokens {
+                    access_token: "access".to_owned(),
+                    refresh_token: None,
+                },
+            })
+            .await
+            .expect("a session");
+        client
+    }
+
+    fn new_room(encrypted: bool) -> NewRoom {
+        NewRoom {
+            name: Some("Fresh".to_owned()),
+            invite: Vec::new(),
+            direct: false,
+            encrypted,
+        }
+    }
+
+    /// What a sliding sync answer that asked for `m.room.encryption` and
+    /// didn't get it does to the room (matrix-sdk-base's
+    /// `RoomInfo::handle_encryption_state`): the state counts as known.
+    async fn sync_answer_without_the_event(room: &Room) {
+        update_room_info(room, |info| info.mark_encryption_state_synced()).await;
+    }
+
+    /// The `GET .../state/m.room.encryption/` the guard makes.
+    fn encryption_state_request() -> wiremock::MockBuilder {
+        Mock::given(method("GET")).and(path_regex(r"/state/m\.room\.encryption/?$"))
+    }
+
+    #[tokio::test]
+    async fn a_room_made_encrypted_is_encrypted_before_any_sync_and_stays_so() {
+        let server = MockServer::start().await;
+        let client = mocked_client(&server).await;
+        let made = create_room(&client, new_room(true)).await.expect("made");
+        let room = client.get_room(&made).expect("the room");
+        assert!(
+            room.encryption_state().is_encrypted(),
+            "the room is encrypted as it is handed back: {:?}",
+            room.encryption_state()
+        );
+        sync_answer_without_the_event(&room).await;
+        assert!(
+            room.encryption_state().is_encrypted(),
+            "a sync answer without the event leaves it encrypted"
+        );
+        // The guard has nothing to ask about.
+        confirm_encryption(&room).await;
+        let asked = server.received_requests().await.unwrap_or_default();
+        assert!(
+            !asked
+                .iter()
+                .any(|request| request.url.path().contains("m.room.encryption")),
+            "an encrypted room costs no request"
+        );
+        let create = asked
+            .iter()
+            .find(|request| request.url.path().ends_with("/createRoom"))
+            .expect("the createRoom request");
+        let body: serde_json::Value = serde_json::from_slice(&create.body).expect("JSON");
+        assert_eq!(body["initial_state"][0]["type"], "m.room.encryption");
+    }
+
+    #[tokio::test]
+    async fn a_room_the_sync_took_as_not_encrypted_is_asked_about_before_a_send() {
+        let server = MockServer::start().await;
+        let client = mocked_client(&server).await;
+        encryption_state_request()
+            .respond_with(
+                ResponseTemplate::new(200)
+                    .set_body_json(serde_json::json!({"algorithm": "m.megolm.v1.aes-sha2"})),
+            )
+            .expect(1)
+            .mount(&server)
+            .await;
+        // A room this client didn't make encrypted, which the sync then
+        // took as not encrypted while the server has its encryption.
+        let made = create_room(&client, new_room(false)).await.expect("made");
+        let room = client.get_room(&made).expect("the room");
+        sync_answer_without_the_event(&room).await;
+        assert!(matches!(
+            room.encryption_state(),
+            EncryptionState::NotEncrypted
+        ));
+        confirm_encryption(&room).await;
+        assert!(
+            room.encryption_state().is_encrypted(),
+            "the server's answer makes the room encrypted: {:?}",
+            room.encryption_state()
+        );
+        sync_answer_without_the_event(&room).await;
+        assert!(room.encryption_state().is_encrypted(), "and it sticks");
+    }
+
+    #[tokio::test]
+    async fn a_room_the_server_says_is_not_encrypted_stays_so() {
+        let server = MockServer::start().await;
+        let client = mocked_client(&server).await;
+        encryption_state_request()
+            .respond_with(ResponseTemplate::new(404).set_body_json(
+                serde_json::json!({"errcode": "M_NOT_FOUND", "error": "Event not found."}),
+            ))
+            .expect(1)
+            .mount(&server)
+            .await;
+        let made = create_room(&client, new_room(false)).await.expect("made");
+        let room = client.get_room(&made).expect("the room");
+        sync_answer_without_the_event(&room).await;
+        confirm_encryption(&room).await;
+        assert!(matches!(
+            room.encryption_state(),
+            EncryptionState::NotEncrypted
+        ));
+    }
+
+    #[tokio::test]
+    async fn a_room_whose_encryption_cant_be_checked_is_left_for_the_queue_to_ask() {
+        let server = MockServer::start().await;
+        let client = mocked_client(&server).await;
+        encryption_state_request()
+            .respond_with(
+                ResponseTemplate::new(403).set_body_json(
+                    serde_json::json!({"errcode": "M_FORBIDDEN", "error": "Not now."}),
+                ),
+            )
+            .mount(&server)
+            .await;
+        let made = create_room(&client, new_room(false)).await.expect("made");
+        let room = client.get_room(&made).expect("the room");
+        sync_answer_without_the_event(&room).await;
+        confirm_encryption(&room).await;
+        // Unknown: the send queue's `latest_encryption_state` asks the
+        // server again before it sends, rather than sending in plaintext.
+        assert!(
+            room.encryption_state().is_unknown(),
+            "{:?}",
+            room.encryption_state()
+        );
     }
 }
