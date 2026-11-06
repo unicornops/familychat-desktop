@@ -107,6 +107,14 @@ Phase 13, settings, accessibility and hardening ([#14](https://github.com/unicor
 - the accessibility checklist ([`docs/accessibility.md`](./docs/accessibility.md)): names and roles for every control, the keyboard, announcements, 24 px targets, contrast, text size and motion, with the screen-reader check to run on each OS
 - the hardening checklist ([`docs/hardening.md`](./docs/hardening.md)), and in CI: the performance budgets in a release build, an egress test that fails the build if the live tests reach any host but the test homeservers, and a fuzz run of the sign-in link parser and the message sanitiser
 
+Phase 14, sign-in in the browser and with a QR code, for servers that offer them ([#15](https://github.com/unicornops/familychat-desktop/issues/15), [ADR 0010](./docs/adr/0010-browser-and-qr-code-sign-in.md)):
+
+- "Use another Matrix server" asks for the server first and shows only the ways it offers: your password, "Continue in your browser" (OAuth 2.0, as servers with Matrix Authentication Service use, or single sign-on), and "Sign in with a QR code"
+- the browser opens only after you say Continue to its whole address, and comes back to Family Chat on your own computer; the app registers itself as Family Chat Desktop, and signing out ends the session at the server
+- sign this computer in by scanning its QR code with a phone that's signed in, or sign a new phone in from here ("Sign in a new device", Ctrl+Alt+L or Cmd+Option+L): type the two numbers the other device shows, approve it in your browser, and your keys go with it
+- for a Family Chat family, every address these use must be one of Family Chat's own; Family Chat's servers don't offer them yet (family-chat #239 plans it), so families see the same sign-in as before
+- the terminal UI signs in through the browser too (Ctrl-B); QR codes are the window's
+
 Writing and encryption from the terminal (Phase 11) and the rest follow in the later phases; opening `familychat://` links straight from your browser needs the installers of Phase 12.
 
 ## Building

@@ -37,7 +37,8 @@ use gpui::{
 
 use crate::a11y::AccessibleExt;
 use crate::actions::{
-    NotificationSettings as OpenNotificationSettings, OpenSettings, ToggleCommandPalette,
+    LinkDevice, NotificationSettings as OpenNotificationSettings, OpenSettings,
+    ToggleCommandPalette,
 };
 use crate::command_palette::{CommandPalette, CommandPaletteEvent, PALETTE_WIDTH, PaletteEntry};
 use crate::components::{
@@ -567,6 +568,27 @@ impl ShellView {
         cx.notify();
     }
 
+    /// "Sign in a new device" (ADR 0010): the signed-in account's QR code
+    /// for a new phone, shown over the rooms like a forwarded link's
+    /// sign-in, back to them when it ends.
+    fn link_device(&mut self, _: &LinkDevice, window: &mut Window, cx: &mut Context<Self>) {
+        let Screen::SignedIn(rooms) = &self.screen else {
+            return;
+        };
+        let rooms = rooms.clone();
+        let account = rooms.read(cx).rooms().read(cx).account().key.clone();
+        if self.palette.is_some() {
+            self.close_palette(window, cx);
+        }
+        let Some(signin) = self.new_signin(true, window, cx) else {
+            return;
+        };
+        self.parked = Some(rooms);
+        self.screen = Screen::Signin(signin.clone());
+        signin.update(cx, |signin, cx| signin.link_device(account, window, cx));
+        cx.notify();
+    }
+
     /// Whether a forwarded link's sign-in shows over the rooms.
     #[cfg(test)]
     pub(crate) fn over_rooms(&self) -> bool {
@@ -802,6 +824,7 @@ impl ShellView {
             InitialView::ForwardedLink(text) => {
                 return self.request(AppRequest::OpenLink(SecretText::new(text)), window, cx);
             }
+            InitialView::LinkDevice => return self.link_device(&LinkDevice, window, cx),
             _ => {}
         }
         let Some(signin) = self.signin().cloned() else {
@@ -814,7 +837,8 @@ impl ShellView {
             | InitialView::Rooms(_)
             | InitialView::NotificationSettings
             | InitialView::Settings(_)
-            | InitialView::ForwardedLink(_) => {}
+            | InitialView::ForwardedLink(_)
+            | InitialView::LinkDevice => {}
             InitialView::CodeEntry => signin.show_code(None, window, cx),
             InitialView::CodeEntryNoQrCode => {
                 signin.show_image_problem(QrError::NoCode, window, cx);
@@ -1009,6 +1033,7 @@ impl Render for ShellView {
             .on_action(cx.listener(Self::toggle_palette))
             .on_action(cx.listener(Self::open_notification_settings))
             .on_action(cx.listener(Self::open_settings))
+            .on_action(cx.listener(Self::link_device))
             .accessible(Role::Application, APP_NAME)
             .size_full()
             .flex()

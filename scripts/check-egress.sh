@@ -32,6 +32,8 @@ HARNESS_HOSTS=(
   evil.familychat.example
   redirect.familychat.test
   synapse.test
+  synapse-mas.familychat.test
+  mas.familychat.test
 )
 
 usage() {

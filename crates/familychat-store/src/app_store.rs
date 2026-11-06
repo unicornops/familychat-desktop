@@ -342,11 +342,20 @@ impl AppStore {
 
     /// Adds `account` to the registry under a new random id.
     pub(crate) fn add_account(&self, account: &NewAccount) -> Result<AccountId, StoreError> {
+        let id = AccountId::generate()
+            .map_err(|error| StoreError::Encryption(format!("no random bytes: {error}")))?;
+        self.add_account_with_id(id, account)?;
+        Ok(id)
+    }
+
+    pub(crate) fn add_account_with_id(
+        &self,
+        id: AccountId,
+        account: &NewAccount,
+    ) -> Result<(), StoreError> {
         if !is_matrix_user_id(&account.user_id) {
             return Err(StoreError::InvalidUserId(account.user_id.clone()));
         }
-        let id = AccountId::generate()
-            .map_err(|error| StoreError::Encryption(format!("no random bytes: {error}")))?;
         let hash = self
             .cipher
             .hash_key(ACCOUNTS_USER_ID, account.user_id.as_bytes());
@@ -376,7 +385,7 @@ impl AppStore {
             )
             .map_err(sqlite("add the account"))?;
         transaction.commit().map_err(sqlite("add the account"))?;
-        Ok(id)
+        Ok(())
     }
 
     /// Removes the account from the registry; `false` when it was not there.

@@ -122,6 +122,9 @@ pub enum InitialView {
     /// The signed-in account's rooms, then this link forwarded by a second
     /// launch (the sign-in's confirmation over the rooms).
     ForwardedLink(String),
+    /// The signed-in account's rooms, then "Sign in a new device" over
+    /// them (ADR 0010).
+    LinkDevice,
 }
 
 /// Where requests from outside the window arrive (ADR 0013): a second

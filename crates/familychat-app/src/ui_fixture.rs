@@ -52,6 +52,12 @@ pub(crate) const VIEWS: &[&str] = &[
     "password-not-family-chat",
     "checking-server",
     "other-server",
+    "other-server-methods",
+    "other-server-browser-only",
+    "browser-confirm",
+    "browser-waiting",
+    "qr-sign-in",
+    "qr-check-code",
     "keychain-locked",
     "keychain-unavailable",
     "lost-key",
@@ -127,6 +133,9 @@ pub(crate) const VIEWS: &[&str] = &[
     "settings-notifications-off",
     "settings-diagnostics",
     "room-text-200",
+    "link-device",
+    "link-device-approve",
+    "link-device-done",
 ];
 
 /// The rooms a signed-in fixture has.
@@ -315,6 +324,28 @@ fn fixture(view: &str) -> Result<Fixture> {
             Fixture::signin(InitialView::Password).at(SigninStep::Working(Working::CheckingServer))
         }
         "other-server" => Fixture::signin(InitialView::OtherServer),
+        "other-server-methods" => Fixture::signin(InitialView::OtherServer).at(steps::methods()),
+        "other-server-browser-only" => {
+            Fixture::signin(InitialView::OtherServer).at(steps::browser_only())
+        }
+        "browser-confirm" => Fixture::signin(InitialView::OtherServer).at(steps::confirm_browser()),
+        "browser-waiting" => Fixture::signin(InitialView::OtherServer).at(steps::browser()),
+        "qr-sign-in" => Fixture::signin(InitialView::OtherServer).at(steps::qr_code()),
+        "qr-check-code" => Fixture::signin(InitialView::OtherServer).at(steps::check_code()),
+        "link-device" => Fixture {
+            initial_view: InitialView::LinkDevice,
+            ..Fixture::signed_in(SyncState::Running)
+        },
+        "link-device-approve" => Fixture {
+            initial_view: InitialView::LinkDevice,
+            ..Fixture::signed_in(SyncState::Running)
+        }
+        .at(steps::confirm_approve()),
+        "link-device-done" => Fixture {
+            initial_view: InitialView::LinkDevice,
+            ..Fixture::signed_in(SyncState::Running)
+        }
+        .at(steps::device_linked()),
         "keychain-locked" => Fixture::profile(FixtureProfile::KeychainLocked),
         "keychain-unavailable" => Fixture::profile(FixtureProfile::KeychainUnreachable),
         "lost-key" => Fixture::profile(FixtureProfile::LostKey),

@@ -551,3 +551,77 @@ async fn a_suspended_member_cannot_send() -> Result<()> {
         .ok("a send after the suspension is lifted")?;
     Ok(())
 }
+
+/// Phase 14 (ADR 0010): Palpo at Family Chat's image offers no OAuth server
+/// and no QR code rendezvous; Synapse with MAS names MAS as its
+/// authorization server, with the device grant, turns MSC4108 on, and MAS
+/// makes users on it.
+#[tokio::test]
+#[ignore = "needs the homeserver harness: scripts/homeserver-harness.sh up"]
+async fn only_synapse_with_mas_offers_oauth_and_the_qr_code_rendezvous() -> Result<()> {
+    let harness = harness()?;
+    let palpo = get(
+        &harness,
+        harness.hs1_url(),
+        &["_matrix", "client", "v1", "auth_metadata"],
+    )
+    .await?;
+    ensure!(palpo.status != 200, "Palpo's auth metadata: {palpo:?}");
+    let versions = get(
+        &harness,
+        harness.hs1_url(),
+        &["_matrix", "client", "versions"],
+    )
+    .await?
+    .ok("Palpo's /versions")?;
+    ensure!(
+        versions
+            .body
+            .pointer("/unstable_features/org.matrix.msc4108")
+            != Some(&Value::Bool(true)),
+        "Palpo's rendezvous: {}",
+        versions.body
+    );
+
+    let metadata = get(
+        &harness,
+        harness.synapse_mas_url(),
+        &["_matrix", "client", "v1", "auth_metadata"],
+    )
+    .await?
+    .ok("Synapse with MAS's auth metadata")?;
+    ensure!(
+        metadata.str_field("issuer") == Some(&format!("{}/", harness.mas_url())),
+        "{}",
+        metadata.body
+    );
+    ensure!(
+        strings(&metadata.body["grant_types_supported"])
+            .contains(&"urn:ietf:params:oauth:grant-type:device_code")
+    );
+    let versions = get(
+        &harness,
+        harness.synapse_mas_url(),
+        &["_matrix", "client", "versions"],
+    )
+    .await?
+    .ok("Synapse with MAS's /versions")?;
+    ensure!(
+        versions
+            .body
+            .pointer("/unstable_features/org.matrix.msc4108")
+            == Some(&Value::Bool(true)),
+        "{}",
+        versions.body
+    );
+
+    let user = harness.new_mas_user("mas-smoke").await?;
+    let profile = get(
+        &harness,
+        harness.synapse_mas_url(),
+        &["_matrix", "client", "v3", "profile", &user.user_id],
+    )
+    .await?;
+    ensure!(profile.status == 200, "{user:?} on Synapse: {profile:?}");
+    Ok(())
+}

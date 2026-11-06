@@ -245,6 +245,15 @@ pub const COMMANDS: &[Command] = &[
         icon: "laptop",
     },
     Command {
+        id: "LinkDevice",
+        name: "Sign in a new device",
+        description: "Show a QR code a new phone scans to sign in to your account, with your keys.",
+        gui_keys: &["secondary-alt-l"],
+        tui_key: "ctrl-y",
+        scope: CommandScope::Rooms,
+        icon: "smartphone",
+    },
+    Command {
         id: "ExportRoomKeys",
         name: "Export room keys",
         description: "Save the keys to your encrypted messages in a file with a passphrase.",

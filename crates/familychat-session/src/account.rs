@@ -30,8 +30,11 @@ use familychat_security::{
 };
 use familychat_store::DataDir;
 use matrix_sdk::{
-    Client, SessionChange, SessionMeta, SessionTokens,
-    authentication::matrix::MatrixSession,
+    Client, ClientBuilder, SessionChange, SessionMeta, SessionTokens,
+    authentication::{
+        matrix::MatrixSession,
+        oauth::{ClientId, OAuthSession, UserSession},
+    },
     ruma::{OwnedDeviceId, OwnedUserId},
     sliding_sync::VersionBuilder,
 };
@@ -61,6 +64,10 @@ const OFFLINE_BACKOFF: (Duration, Duration) = (Duration::from_secs(1), Duration:
 const SUSPENDED_BACKOFF: (Duration, Duration) = (Duration::from_secs(30), Duration::from_secs(300));
 /// Other failures: five seconds, doubling to five minutes.
 const ERROR_BACKOFF: (Duration, Duration) = (Duration::from_secs(5), Duration::from_secs(300));
+
+/// How long the supervisor lets the SDK's encryption set-up run on its own
+/// before it starts the sync.
+const E2EE_SETUP_WAIT: Duration = Duration::from_secs(15);
 
 /// What the user sees for a failure the session can't name.
 const SYNC_FAILED: &str = "Family Chat couldn't sync this account. It will try again.";
@@ -177,10 +184,15 @@ impl Account {
     /// `password` is a password sign-in's, for the server's user-interactive
     /// auth when the account's cross-signing identity is made (ADR 0009);
     /// it is wiped once that is done.
+    ///
+    /// `signed_in` is a client that is signed in already, on the account's
+    /// stores: a QR code sign-in's (ADR 0010), which made the device's keys
+    /// in them, so it is used as it is rather than built and restored again.
     pub(crate) async fn open(
         params: OpenParams,
         check: Option<&dyn PostLoginCheck>,
         password: Option<Secret<String>>,
+        signed_in: Option<Client>,
     ) -> Result<Self, OpenError> {
         let id = params.id;
         let user_id = OwnedUserId::try_from(params.session.user_id.clone())
@@ -201,7 +213,7 @@ impl Account {
             encryption: Arc::new(EncryptionShared::default()),
             retry: Notify::new(),
         });
-        let supervisor = match open_client(&params, &shared, check).await {
+        let supervisor = match open_client(&params, &shared, check, signed_in).await {
             Ok((ready, offline)) => {
                 if offline {
                     shared.set_sync(SyncState::Offline {
@@ -300,7 +312,70 @@ async fn open_client(
     params: &OpenParams,
     shared: &Arc<Shared>,
     check: Option<&dyn PostLoginCheck>,
+    signed_in: Option<Client>,
 ) -> Result<(Ready, bool), OpenError> {
+    let (client, offline) = match signed_in {
+        Some(client) => {
+            persist_rotated_tokens(&client, params, shared.clone())
+                .map_err(|error| OpenError::Client(error.to_string()))?;
+            (client, false)
+        }
+        None => restored_client(params, shared).await?,
+    };
+
+    if let Some(check) = check {
+        let homeserver = client.homeserver();
+        let user_id = client.user_id().map(ToOwned::to_owned);
+        let verdict = match &user_id {
+            Some(user_id) => check.check(&homeserver, user_id),
+            None => Err("The sign-in has no user.".to_owned()),
+        };
+        if let Err(refusal) = verdict {
+            warn!(account = %params.id, "the post-login check refused the sign-in; signing the device out");
+            // An OAuth session's sign-out revokes its tokens at the
+            // server's revocation endpoint (ADR 0010).
+            if let Err(error) = client.logout().await {
+                warn!(account = %params.id, %error, "signing the refused device out failed");
+            }
+            return Err(OpenError::Refused(refusal));
+        }
+    }
+
+    // Before the first sync, so nothing it reports is missed.
+    encryption::register_incoming(
+        &client,
+        account_key(params.id),
+        params.verifications.clone(),
+    );
+    notifications::register(
+        &client,
+        account_key(params.id),
+        params.notifications.clone(),
+    )
+    .await;
+
+    let sync = SyncService::builder(client.clone())
+        .build()
+        .await
+        .map_err(|error| OpenError::Client(error.to_string()))?;
+    Ok((
+        Ready {
+            utd_hook: encryption::utd_hook(&client).await,
+            client,
+            sync: Arc::new(sync),
+            timelines: OpenTimelines::default(),
+        },
+        offline,
+    ))
+}
+
+/// Builds the client from the account's stores and restores its session:
+/// through the SDK's OAuth API for an OAuth sign-in (so its refresh and
+/// sign-out use the server's OAuth endpoints), its Matrix API otherwise.
+async fn restored_client(
+    params: &OpenParams,
+    shared: &Arc<Shared>,
+) -> Result<(Client, bool), OpenError> {
     let sdk_dir = params.dir.account_sdk_dir(params.id);
     let cache_dir = params.dir.account_cache_dir(params.id);
     for dir in [&sdk_dir, &cache_dir] {
@@ -348,62 +423,29 @@ async fn open_client(
     let user_id = OwnedUserId::try_from(session.user_id.clone())
         .map_err(|error| OpenError::BadSession(error.to_string()))?;
     let device_id: OwnedDeviceId = session.device_id.clone().into();
-    client
-        .restore_session(MatrixSession {
-            meta: SessionMeta { user_id, device_id },
-            tokens: SessionTokens {
-                access_token: session.access_token.expose().clone(),
-                refresh_token: session
-                    .refresh_token
-                    .as_ref()
-                    .map(|token| token.expose().clone()),
-            },
-        })
-        .await
-        .map_err(|error| OpenError::Client(error.to_string()))?;
-
-    if let Some(check) = check {
-        let homeserver = client.homeserver();
-        let user_id = client.user_id().map(ToOwned::to_owned);
-        let verdict = match &user_id {
-            Some(user_id) => check.check(&homeserver, user_id),
-            None => Err("The sign-in has no user.".to_owned()),
-        };
-        if let Err(refusal) = verdict {
-            warn!(account = %params.id, "the post-login check refused the sign-in; signing the device out");
-            if let Err(error) = client.logout().await {
-                warn!(account = %params.id, %error, "signing the refused device out failed");
-            }
-            return Err(OpenError::Refused(refusal));
-        }
-    }
-
-    // Before the first sync, so nothing it reports is missed.
-    encryption::register_incoming(
-        &client,
-        account_key(params.id),
-        params.verifications.clone(),
-    );
-    notifications::register(
-        &client,
-        account_key(params.id),
-        params.notifications.clone(),
-    )
-    .await;
-
-    let sync = SyncService::builder(client.clone())
-        .build()
-        .await
-        .map_err(|error| OpenError::Client(error.to_string()))?;
-    Ok((
-        Ready {
-            utd_hook: encryption::utd_hook(&client).await,
-            client,
-            sync: Arc::new(sync),
-            timelines: OpenTimelines::default(),
-        },
-        offline,
-    ))
+    let meta = SessionMeta { user_id, device_id };
+    let tokens = SessionTokens {
+        access_token: session.access_token.expose().clone(),
+        refresh_token: session
+            .refresh_token
+            .as_ref()
+            .map(|token| token.expose().clone()),
+    };
+    let restored = if session.auth_kind.is_oauth() {
+        let client_id = session.oauth_client_id.clone().ok_or_else(|| {
+            OpenError::BadSession("an OAuth sign-in without its client id".into())
+        })?;
+        client
+            .restore_session(OAuthSession {
+                client_id: ClientId::new(client_id),
+                user: UserSession { meta, tokens },
+            })
+            .await
+    } else {
+        client.restore_session(MatrixSession { meta, tokens }).await
+    };
+    restored.map_err(|error| OpenError::Client(error.to_string()))?;
+    Ok((client, offline))
 }
 
 async fn build_client(
@@ -413,12 +455,35 @@ async fn build_client(
     passphrase: &str,
     version: VersionBuilder,
 ) -> Result<Client, matrix_sdk::ClientBuildError> {
+    client_builder(
+        &params.session.homeserver_url,
+        sdk_dir,
+        cache_dir,
+        passphrase,
+        &params.config,
+    )
+    .sliding_sync_version_builder(version)
+    .build()
+    .await
+}
+
+/// How every account's client is built (ADR 0005): its stores, Family
+/// Chat's HTTP client and media fetcher, no login well-known, Element X's
+/// encryption settings (ADR 0009), refresh tokens. The sliding sync version
+/// is the caller's.
+pub(crate) fn client_builder(
+    homeserver_url: &str,
+    sdk_dir: &Path,
+    cache_dir: &Path,
+    passphrase: &str,
+    config: &SessionConfig,
+) -> ClientBuilder {
     Client::builder()
-        .homeserver_url(&params.session.homeserver_url)
+        .homeserver_url(homeserver_url)
         .sqlite_store_with_cache_path(sdk_dir, cache_dir, Some(passphrase))
-        .http_client(params.config.http.clone())
+        .http_client(config.http.clone())
         .media_fetcher(Arc::new(AuthenticatedMediaFetcher::new(
-            params.config.http.clone(),
+            config.http.clone(),
         )))
         .respect_login_well_known(false)
         // ADR 0009: Element X's encryption defaults at the pinned SDK.
@@ -427,9 +492,6 @@ async fn build_client(
         .with_decryption_settings(encryption::decryption_settings())
         .with_enable_share_history_on_invite(encryption::SHARE_HISTORY_ON_INVITE)
         .handle_refresh_tokens()
-        .sliding_sync_version_builder(version)
-        .build()
-        .await
 }
 
 /// Writes every token the SDK rotates to the keychain, synchronously in
@@ -506,7 +568,7 @@ async fn reopen(params: OpenParams, shared: Arc<Shared>) {
             None => shared.retry.notified().await,
         }
         shared.set_sync(SyncState::Connecting);
-        match open_client(&params, &shared, None).await {
+        match open_client(&params, &shared, None, None).await {
             Ok((ready, _offline)) => {
                 let _ = shared.ready.set(ready.clone());
                 return supervise(params.id, ready, shared, None).await;
@@ -619,6 +681,24 @@ async fn supervise(
     shared: Arc<Shared>,
     password: Option<Secret<String>>,
 ) {
+    // The SDK's encryption set-up after a restore (backups turned on, as
+    // ADR 0009 has it) runs before the sync and the identity set-up do: run
+    // at the same time as the sync's first key upload, or as making the
+    // identity, it can stall them both inside the pinned SDK (found by the
+    // Phase 14 live tests, an account in five). Not for long without the
+    // server: an account offline still opens and syncs when it can.
+    if tokio::time::timeout(
+        E2EE_SETUP_WAIT,
+        ready
+            .client
+            .encryption()
+            .wait_for_e2ee_initialization_tasks(),
+    )
+    .await
+    .is_err()
+    {
+        info!(account = %id, "the encryption set-up is still running; syncing anyway");
+    }
     let _encryption = AbortOnDrop(tokio::spawn(encryption::follow(
         ready.client.clone(),
         shared.encryption.clone(),

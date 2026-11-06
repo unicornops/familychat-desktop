@@ -13,6 +13,9 @@
 //! | [`http`] | the sign-in's own HTTP client: no redirects, no retries |
 //! | [`login`] | `m.login.token` and `m.login.password`, and signing out a device not kept |
 //! | [`handoff`] | handing credentials to matrix-sdk and the post-login re-check |
+//! | [`methods`] | what a server offers: the password, the browser (OAuth or single sign-on), a QR code (ADR 0010) |
+//! | [`oauth`] | OAuth 2.0: the checked authorization server, registration, PKCE, the code exchange, revocation |
+//! | [`loopback`] | the loopback redirect a browser sign-in comes back to |
 //! | [`flow`] | the state machine |
 //! | [`live`] | [`LiveSignin`], the `SigninApi` the app wires |
 //! | [`wording`] | every sentence the sign-in shows |
@@ -38,6 +41,9 @@ pub mod http;
 pub mod link;
 pub mod live;
 pub mod login;
+pub mod loopback;
+pub mod methods;
+pub mod oauth;
 pub mod wording;
 
 pub use allowlist::{Allowlist, CheckedHomeserver};

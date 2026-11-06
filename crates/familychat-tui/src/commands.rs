@@ -140,6 +140,10 @@ pub const LATER: &[(&str, &str)] = &[
     ("ConfirmIdentity", "Phase 11"),
     ("SetUpRecovery", "Phase 11"),
     ("ManageDevices", "Phase 11"),
+    // A new phone scans the window's QR code (ADR 0010); a QR code a phone
+    // can scan from a terminal (half-block drawing, sized to the terminal
+    // and its font) is later work.
+    ("LinkDevice", "later work"),
     ("ExportRoomKeys", "Phase 11"),
     ("ImportRoomKeys", "Phase 11"),
 ];

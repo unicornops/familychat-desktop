@@ -47,6 +47,10 @@ pub(crate) fn setup(view: &FixtureView, now: u64) -> FixtureSetup {
             ViewStep::RateLimited(wait) => steps::rate_limited(wait),
             ViewStep::NotFamilyChat => steps::not_family_chat(),
             ViewStep::AlreadySignedIn => steps::already_signed_in(),
+            ViewStep::Methods => steps::methods(),
+            ViewStep::BrowserOnly => steps::browser_only(),
+            ViewStep::ConfirmBrowser => steps::confirm_browser(),
+            ViewStep::Browser => steps::browser(),
         }),
         account: view.account.clone(),
         rooms: match view.rooms {

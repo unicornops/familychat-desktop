@@ -158,7 +158,10 @@ instead:
 | `M_UNRECOGNIZED` from the sync endpoint | `NotSupported` | only when asked |
 | anything else | `Error` (a fixed sentence) | 5 s, doubling to 5 minutes |
 
-A sync that reaches the server again resets the backoffs. `retry_sync`
+A sync that reaches the server again resets the backoffs. Before the
+first start the supervisor lets the SDK's encryption set-up after the
+restore finish (at most 15 seconds): run alongside the sync's first key
+upload it can stall both inside the pinned SDK (ADR 0010). `retry_sync`
 skips a wait.
 
 `Suspended` is its own state, never an error: a Family Chat curfew

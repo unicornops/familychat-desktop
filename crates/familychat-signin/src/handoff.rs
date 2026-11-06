@@ -13,9 +13,13 @@
 
 use familychat_core::{OwnedUserId, UserId, session::AccountKey};
 use familychat_security::{AccountSession, Secret};
-use familychat_session::{AccountManager, AddAccountError, OpenError, PostLoginCheck, account_key};
+use familychat_session::{
+    AccountManager, AddAccountError, OpenError, PostLoginCheck, QrAnswer, QrEvent, QrLoginError,
+    QrLoginRequest, UrlGuard, account_key,
+};
 use futures_util::future::BoxFuture;
 use reqwest::Url;
+use tokio::sync::mpsc;
 use tracing::warn;
 
 use crate::{
@@ -55,6 +59,39 @@ pub trait AccountSink: Send + Sync {
         check: Box<dyn PostLoginCheck>,
         password: Option<Secret<String>>,
     ) -> BoxFuture<'_, Result<AccountKey, AddFailure>>;
+
+    /// Signs this computer in with a QR code a signed-in device scans
+    /// (ADR 0010): progress on `events`, the person's answers from
+    /// `answers`, `check` on the new account before anything of it is
+    /// kept. The new account and who signed in.
+    fn add_with_qr_code(
+        &self,
+        request: QrLoginRequest,
+        check: Box<dyn PostLoginCheck>,
+        events: mpsc::Sender<QrEvent>,
+        answers: mpsc::UnboundedReceiver<QrAnswer>,
+    ) -> BoxFuture<'_, Result<(AccountKey, OwnedUserId), QrLoginError>> {
+        let _ = (request, check, events, answers);
+        Box::pin(async { Err(QrLoginError::NotSupported) })
+    }
+
+    /// Signs a new device in to `account` with a QR code it scans.
+    fn link_device(
+        &self,
+        account: &AccountKey,
+        guard: UrlGuard,
+        events: mpsc::Sender<QrEvent>,
+        answers: mpsc::UnboundedReceiver<QrAnswer>,
+    ) -> BoxFuture<'_, Result<(), QrLoginError>> {
+        let _ = (account, guard, events, answers);
+        Box::pin(async { Err(QrLoginError::NotSupported) })
+    }
+
+    /// An open account's homeserver.
+    fn homeserver_of(&self, account: &AccountKey) -> Option<Url> {
+        let _ = account;
+        None
+    }
 }
 
 impl AccountSink for AccountManager {
@@ -92,19 +129,71 @@ impl AccountSink for AccountManager {
             }
         })
     }
+
+    fn add_with_qr_code(
+        &self,
+        request: QrLoginRequest,
+        check: Box<dyn PostLoginCheck>,
+        events: mpsc::Sender<QrEvent>,
+        answers: mpsc::UnboundedReceiver<QrAnswer>,
+    ) -> BoxFuture<'_, Result<(AccountKey, OwnedUserId), QrLoginError>> {
+        Box::pin(async move {
+            let id = self
+                .add_account_with_qr_code(request, check.as_ref(), events, answers)
+                .await?;
+            let user_id = self
+                .account(id)
+                .map(|account| account.view().user_id.clone())
+                .ok_or_else(|| QrLoginError::Failed("the new account is not open".to_owned()))?;
+            Ok((account_key(id), user_id))
+        })
+    }
+
+    fn link_device(
+        &self,
+        account: &AccountKey,
+        guard: UrlGuard,
+        events: mpsc::Sender<QrEvent>,
+        answers: mpsc::UnboundedReceiver<QrAnswer>,
+    ) -> BoxFuture<'_, Result<(), QrLoginError>> {
+        let account = self.account_by_key(account).map(|account| account.id());
+        Box::pin(async move {
+            let id = account
+                .ok_or_else(|| QrLoginError::Failed("the account is not open".to_owned()))?;
+            self.link_device_with_qr_code(id, guard, events, answers)
+                .await
+        })
+    }
+
+    fn homeserver_of(&self, account: &AccountKey) -> Option<Url> {
+        let account = self.account_by_key(account)?;
+        Url::parse(&account.view().homeserver_url).ok()
+    }
 }
 
 /// The post-login re-check for a Family Chat sign-in.
 #[derive(Debug, Clone)]
 pub struct FamilyChatCheck {
     allowlist: Allowlist,
-    user_id: OwnedUserId,
+    user_id: Option<OwnedUserId>,
 }
 
 impl FamilyChatCheck {
     /// The check for a sign-in of `user_id` under `allowlist`.
     pub fn new(allowlist: Allowlist, user_id: OwnedUserId) -> Self {
-        Self { allowlist, user_id }
+        Self {
+            allowlist,
+            user_id: Some(user_id),
+        }
+    }
+
+    /// The check for a sign-in that learns who signed in only from the
+    /// server (a QR code's, ADR 0010): the homeserver alone.
+    pub fn any_user(allowlist: Allowlist) -> Self {
+        Self {
+            allowlist,
+            user_id: None,
+        }
     }
 }
 
@@ -114,7 +203,11 @@ impl PostLoginCheck for FamilyChatCheck {
             warn!("the client's homeserver is outside the allowlist after the sign-in");
             return Err(wording::NOT_FAMILY_CHAT.to_owned());
         }
-        if !same_user(&self.user_id, user_id) {
+        if self
+            .user_id
+            .as_ref()
+            .is_some_and(|expected| !same_user(expected, user_id))
+        {
             warn!("the client's user is not the one the sign-in issued");
             return Err(wording::SIGNIN_FAILED.to_owned());
         }
@@ -126,13 +219,20 @@ impl PostLoginCheck for FamilyChatCheck {
 /// sign-in issued.
 #[derive(Debug, Clone)]
 pub struct OtherServerCheck {
-    user_id: OwnedUserId,
+    user_id: Option<OwnedUserId>,
 }
 
 impl OtherServerCheck {
     /// The check for a sign-in of `user_id`.
     pub fn new(user_id: OwnedUserId) -> Self {
-        Self { user_id }
+        Self {
+            user_id: Some(user_id),
+        }
+    }
+
+    /// The check for a QR code's sign-in: HTTPS alone.
+    pub fn any_user() -> Self {
+        Self { user_id: None }
     }
 }
 
@@ -141,10 +241,29 @@ impl PostLoginCheck for OtherServerCheck {
         if CheckedHomeserver::other_server(homeserver).is_err() {
             return Err(wording::NOT_HTTPS.to_owned());
         }
-        if !same_user(&self.user_id, user_id) {
+        if self
+            .user_id
+            .as_ref()
+            .is_some_and(|expected| !same_user(expected, user_id))
+        {
             return Err(wording::SIGNIN_FAILED.to_owned());
         }
         Ok(())
+    }
+}
+
+/// The post-login check for a sign-in at `homeserver`: Family Chat's
+/// when it passed the allowlist, another server's otherwise.
+pub fn check_for(
+    homeserver: &CheckedHomeserver,
+    allowlist: &Allowlist,
+    user_id: Option<OwnedUserId>,
+) -> Box<dyn PostLoginCheck> {
+    match (homeserver.is_family_chat(), user_id) {
+        (true, Some(user)) => Box::new(FamilyChatCheck::new(allowlist.clone(), user)),
+        (true, None) => Box::new(FamilyChatCheck::any_user(allowlist.clone())),
+        (false, Some(user)) => Box::new(OtherServerCheck::new(user)),
+        (false, None) => Box::new(OtherServerCheck::any_user()),
     }
 }
 

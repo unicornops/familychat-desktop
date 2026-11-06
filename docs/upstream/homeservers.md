@@ -13,6 +13,8 @@ how to move it.
 | `palpo` | `ghcr.io/unicornops/palpo:sha-b188d47` | `sha256:cb50e0fb431d616980a1e4425115dc4039fab7dedbd8e1e3c4de808663842493` | family-chat's `PALPO_IMAGE` |
 | `postgres` | `postgres:18-alpine` | `sha256:10a5c69a83035ab5239f5620d708520e8b28f5aa1f2b20143e6024532edadfb5` | family-chat's `PALPO_POSTGRES_IMAGE` |
 | `synapse` | `matrixdotorg/synapse:v1.164.2` | `sha256:f0df87cff259872637b4b5e5174b9977e5e3046dd421505407803b5e45c5f842` | Synapse's latest stable release |
+| `synapse-mas` | `matrixdotorg/synapse:v1.164.2` | `sha256:f0df87cff259872637b4b5e5174b9977e5e3046dd421505407803b5e45c5f842` | the `synapse` pin (the same image) |
+| `mas` | `ghcr.io/element-hq/matrix-authentication-service:1.28.0` | `sha256:494c67f08ee8344368f4ed336611dea02b26c4e058bf37a212d090d50b612659` | MAS's latest stable release (the multi-arch index; the tag has no `v`) |
 | `edge` | `nginx:1.30.6-alpine` | `sha256:0e52bd054126cdc040b1276c0af347aeb02a41b9cfe305d6094767ac30e97949` | nginx stable (family-chat's edge runs `nginx:alpine`) |
 
 The Palpo image is built from the `familychat` branch of
@@ -65,6 +67,11 @@ the pins; moving them is a deliberate pull request
 - **Postgres:** stay on the major version family-chat runs
   (`postgres:18-alpine`); refresh the digest for security updates.
 - **nginx:** the current stable branch (even minor version), `-alpine`.
+- **MAS:** a stable release, resolved with
+  `docker buildx imagetools inspect ghcr.io/element-hq/matrix-authentication-service:X.Y.Z`
+  (the index digest). Check the rendered config with the new image's
+  `mas-cli config check`, and run the live OAuth tests: they fill MAS's
+  forms (below), so a changed page fails them first.
 
 Dependabot does not watch these images.
 
@@ -85,3 +92,35 @@ Read from the source at the pin and checked by the live tests:
 - Rate limits are per TCP peer: login per family-chat's `[rc_login]`
   (burst 20), registration at Palpo's default (burst 3, about one every
   six seconds).
+
+## What The Harness Found At MAS 1.28.0 With Synapse 1.164.2
+
+Worked out with a native MAS and Synapse behind nginx (Phase 14) and
+checked by the live tests (`tests/live_oauth.rs`):
+
+- Synapse takes the stable `matrix_authentication_service` section
+  (`experimental_features.msc3861` is now a configuration error) and then
+  answers 404 for every `login`, `logout` and `refresh` path, which the
+  front end sends to MAS. `msc4108_enabled` needs MAS; `/versions` then
+  lists `org.matrix.msc4108`. Synapse also implements MSC4388's rendezvous
+  (`msc4388_mode`) without advertising it; the pinned matrix-sdk can't use
+  it, so the harness leaves it off.
+- `GET /_matrix/client/v1/auth_metadata` (and MSC2965's unstable path) is
+  MAS's OpenID configuration; Synapse caches it.
+- Dynamic registration accepts Family Chat Desktop's native client with a
+  `http://127.0.0.1:<port>/callback` redirect under MAS's default policy,
+  and matches loopback ports exactly; identical metadata gets the same
+  client id.
+- The browser's pages are forms with a `csrf` field and no `action` (each
+  posts to itself), behind the `session` and `csrf` cookies: `/login`
+  (`username`, `password`), `/consent/<grant>` (`csrf` only, then a 303 to
+  the redirect, with a trailing empty `#`), `/device/<grant>` (`csrf`,
+  `confirm_device=on`, `action=consent`; 200 when granted), and
+  `/complete-compat-sso/<id>` for single sign-on.
+- The device grant's pending poll answers 403 `authorization_pending`;
+  `verification_uri_complete` exists only with
+  `oauth.device_code_user_code_auto_fill_enabled`.
+- Revoking the access token ends the whole session; Synapse may answer
+  from its cache for a moment after, so the tests wait for the 401.
+- The default login rate limit is a burst of 3 per address, too few for
+  the tests.

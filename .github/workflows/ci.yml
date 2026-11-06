@@ -205,6 +205,7 @@ jobs:
                   scripts/homeserver-harness.sh create-user ci-smoke ci-smoke-password
                   scripts/homeserver-harness.sh mint-token ci-smoke 60000 >/dev/null
                   echo "mint-token: minted a login token for @ci-smoke"
+                  scripts/homeserver-harness.sh create-mas-user ci-smoke ci-smoke-password
                   scripts/homeserver-harness.sh ps
 
             # Every live test from here on runs through the recording proxy
@@ -225,6 +226,7 @@ jobs:
                     --log "${egress_dir}/proxy.log" --port-file "${egress_dir}/proxy.port" \
                     --allow hs1.familychat.test --allow smith.test --allow evil.familychat.example \
                     --allow redirect.familychat.test --allow synapse.test \
+                    --allow synapse-mas.familychat.test --allow mas.familychat.test \
                     > "${egress_dir}/proxy.out" 2>&1 &
                   for _ in $(seq 1 50); do
                     [[ -s "${egress_dir}/proxy.port" ]] && break
@@ -263,6 +265,15 @@ jobs:
             - name: Live sign-in tests
               timeout-minutes: 15
               run: cargo test -p familychat-signin --test live_signin --locked -- --ignored --nocapture
+
+            # The browser and QR code sign-ins against the harness (ADR
+            # 0010): OAuth 2.0 on Synapse with MAS through a scripted
+            # browser, its token refreshed and revoked; QR code sign-in
+            # between two devices both ways (MSC4108); and neither offered
+            # on Family Chat's Palpo.
+            - name: Live browser and QR code sign-in tests
+              timeout-minutes: 15
+              run: cargo test -p familychat-signin --test live_oauth --locked -- --ignored --nocapture
 
             # The terminal UI's sign-in against the harness (ADR 0008): a
             # pasted code used only after y (checked in the access log) and

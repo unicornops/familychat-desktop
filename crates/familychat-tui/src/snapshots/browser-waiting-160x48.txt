@@ -1,0 +1,195 @@
+  FAMILY CHAT 0.0.0-test                                                IN YOUR BROWSER
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                           Waiting for your browser
+
+                                           Finish signing in with your browser, then come back here.
+                                           https://account.example.org/
+
+                                           O Open the browser again
+                                           C Copy the address, for a browser elsewhere
+                                           N Cancel
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+O OpenAgain         N Cancel
+C CopyAddr          ^C Quit
+--- styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                           BBBBBBBBBBBBBBBBBBBBBBBB
+
+
+                                           BBBBBBBBBBBBBBBBBBBBBBBBBBBB
+
+                                           R
+                                           R
+                                           R
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+R                   R
+R                   RR
+--- NO_COLOR styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                           BBBBBBBBBBBBBBBBBBBBBBBB
+
+
+                                           BBBBBBBBBBBBBBBBBBBBBBBBBBBB
+
+                                           R
+                                           R
+                                           R
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+R                   R
+R                   RR
+--- ASCII ---
+  FAMILY CHAT 0.0.0-test                                                IN YOUR BROWSER
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                           Waiting for your browser
+
+                                           Finish signing in with your browser, then come back here.
+                                           https://account.example.org/
+
+                                           O Open the browser again
+                                           C Copy the address, for a browser elsewhere
+                                           N Cancel
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+O OpenAgain         N Cancel
+C CopyAddr          ^C Quit

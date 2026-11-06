@@ -123,6 +123,17 @@ impl Profile {
         self.store.add_account(account)
     }
 
+    /// Adds an account under an id made beforehand: a QR code sign-in
+    /// makes the account's stores before the server says who signed in
+    /// (ADR 0010).
+    pub fn add_account_with_id(
+        &self,
+        id: AccountId,
+        account: &NewAccount,
+    ) -> Result<(), StoreError> {
+        self.store.add_account_with_id(id, account)
+    }
+
     /// Removes an account: its keychain entries, its registry row (with
     /// its drafts) and its directory (the SDK's stores and caches), in that
     /// order, so its secrets go first and what may be left behind (files
