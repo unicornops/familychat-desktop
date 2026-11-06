@@ -2362,6 +2362,7 @@ dependencies = [
  "rqrr",
  "serde_json",
  "tokio",
+ "tracing",
  "unicode-segmentation",
  "windows-registry",
  "zeroize",

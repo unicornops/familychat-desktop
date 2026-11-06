@@ -18,7 +18,8 @@
 //!
 //! The window that holds the lock listens for second launches
 //! (`familychat-instance`, ADR 0013): `familychat LINK` (how the OS's URL
-//! handler starts it, from Phase 12) and `familychat open-link` (which
+//! handler starts it: the `.deb`'s desktop entry, and the MSI's handler
+//! through `familychat-launcher`; ADR 0014) and `familychat open-link` (which
 //! reads the link from standard input, so a token is never in the shell's
 //! history or the process list) forward a sign-in link to it and exit, and
 //! a bare `familychat` asks it to come forward. The window shows the

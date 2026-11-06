@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Family Chat's macOS bundle (ADR 0014), adapted from the Info.plist
+  Zmail's release workflow writes. scripts/create-macos-bundle.sh fills in
+  @VERSION@. The identifiers are familychat_core::identity's (a test in
+  crates/familychat-app/tests/packaging.rs checks them):
+
+  - CFBundleIdentifier is the app id, which UNUserNotificationCenter needs
+    before it shows a notification, and which the keychain and the
+    window's identity already use.
+  - CFBundleURLTypes registers familychat:// with Launch Services: a
+    sign-in link opened in a browser comes to the running window as an
+    Apple Event (GPUI's on_open_urls), never as a second process.
+-->
+<plist version="1.0">
+<dict>
+  <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
+  <key>CFBundleDevelopmentRegion</key><string>en</string>
+  <key>CFBundleExecutable</key><string>familychat</string>
+  <key>CFBundleIdentifier</key><string>family.safechat.desktop</string>
+  <key>CFBundleName</key><string>Family Chat</string>
+  <key>CFBundleDisplayName</key><string>Family Chat</string>
+  <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleIconFile</key><string>FamilyChat</string>
+  <key>CFBundleIconName</key><string>AppIcon</string>
+  <key>CFBundleShortVersionString</key><string>@VERSION@</string>
+  <key>CFBundleVersion</key><string>@VERSION@</string>
+  <key>LSApplicationCategoryType</key><string>public.app-category.social-networking</string>
+  <key>LSMinimumSystemVersion</key><string>12.0</string>
+  <key>NSHighResolutionCapable</key><true/>
+  <key>NSHumanReadableCopyright</key><string>Copyright UnicornOps. Licensed under the GNU GPL, version 3.</string>
+  <key>CFBundleURLTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleURLName</key><string>family.safechat.desktop</string>
+      <key>CFBundleTypeRole</key><string>Viewer</string>
+      <key>CFBundleURLSchemes</key>
+      <array>
+        <string>familychat</string>
+      </array>
+    </dict>
+  </array>
+</dict>
+</plist>
