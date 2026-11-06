@@ -200,32 +200,19 @@ fn the_rooms_targets_hold_on_a_narrow_window(cx: &mut TestAppContext) {
 }
 
 #[gpui::test]
-fn the_notification_settings_and_a_forwarded_link_targets_are_at_least_24px(
-    cx: &mut TestAppContext,
-) {
-    for (screen, initial, at_least) in [
-        (
-            "notification settings",
-            InitialView::NotificationSettings,
-            3,
-        ),
-        (
-            "forwarded link",
-            InitialView::ForwardedLink(FIXTURE_LINK.to_owned()),
-            3,
-        ),
-    ] {
-        let session = FixtureSession::new();
-        session.add_account(&fixture_user(), SyncState::Running);
-        session.with_family();
-        let signin = FixtureSignin::new(session.clone());
-        let startup = FixtureStartup::with(session, signin, &[FixtureProfile::Ready]);
-        let (_view, cx) = super::open(cx, startup, initial);
-        super::wait_until(cx, "the dialog", |cx| {
-            cx.debug_bounds("button-notification-settings-done")
-                .is_some()
-                || cx.debug_bounds("button-signin-confirm-continue").is_some()
-        });
-        assert!(check_targets(screen, cx) >= at_least, "{screen}");
-    }
+fn a_forwarded_links_targets_are_at_least_24px(cx: &mut TestAppContext) {
+    let session = FixtureSession::new();
+    session.add_account(&fixture_user(), SyncState::Running);
+    session.with_family();
+    let signin = FixtureSignin::new(session.clone());
+    let startup = FixtureStartup::with(session, signin, &[FixtureProfile::Ready]);
+    let (_view, cx) = super::open(
+        cx,
+        startup,
+        InitialView::ForwardedLink(FIXTURE_LINK.to_owned()),
+    );
+    super::wait_until(cx, "the dialog", |cx| {
+        cx.debug_bounds("button-signin-confirm-continue").is_some()
+    });
+    assert!(check_targets("forwarded link", cx) >= 3);
 }

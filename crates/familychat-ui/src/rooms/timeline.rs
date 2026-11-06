@@ -59,6 +59,7 @@ use crate::components::avatar::avatar_color;
 use crate::components::tooltip::Tooltip;
 use crate::components::{Avatar, Button, ButtonSize, ComponentTheme, HitTargetExt, IconButton};
 use crate::signin::spinner;
+use crate::styles::TextScale;
 use crate::styles::{
     ICON_SIZE_SM, RADIUS_FULL, RADIUS_LG, RADIUS_MD, SPACE_1, SPACE_2, SPACE_3, SPACE_4, SPACE_6,
     TYPE_BODY, TYPE_BODY_STRONG, TYPE_CAPTION, TYPE_HEADLINE, TypeStyleExt, UiColors,
@@ -1176,7 +1177,7 @@ impl TimelineView {
                     .flex()
                     .items_center()
                     .gap(px(SPACE_1))
-                    .h(px(24.0))
+                    .h(TextScale::get(cx).fit(24.0, TYPE_CAPTION))
                     .min_w(px(24.0))
                     .px(px(SPACE_2))
                     .rounded(px(RADIUS_FULL))

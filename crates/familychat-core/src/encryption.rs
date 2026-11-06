@@ -310,6 +310,76 @@ impl DeviceView {
     }
 }
 
+/// Why a message the encryption stopped is waiting, and who it is
+/// waiting on (ADR 0009, ADR 0015): the "Review" of Send anyway, so the
+/// person sees the devices or people before sending to them.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StoppedMessage {
+    /// Why it stopped.
+    pub problem: crate::timeline::SendProblem,
+    /// The unconfirmed devices it would go to, for
+    /// `SendProblem::UnconfirmedDevices`.
+    pub devices: Vec<UnconfirmedDevice>,
+    /// The people whose identity changed, for
+    /// `SendProblem::IdentityChanged`.
+    pub people: Vec<StoppedPerson>,
+}
+
+/// A verified person's device they haven't confirmed.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UnconfirmedDevice {
+    /// Whose it is.
+    pub user_id: OwnedUserId,
+    /// Their display name in the room, when known.
+    pub user_name: Option<String>,
+    /// Its device id.
+    pub device_id: String,
+    /// Its name, when it has one.
+    pub device_name: Option<String>,
+    /// The account's own device.
+    pub own: bool,
+}
+
+impl UnconfirmedDevice {
+    /// Who it belongs to: "You" for the account's own, else the name or id.
+    pub fn owner_label(&self) -> String {
+        if self.own {
+            return "You".to_owned();
+        }
+        self.user_name
+            .clone()
+            .filter(|name| !name.trim().is_empty())
+            .unwrap_or_else(|| self.user_id.to_string())
+    }
+
+    /// The device: its name, or its id.
+    pub fn device_label(&self) -> String {
+        self.device_name
+            .clone()
+            .filter(|name| !name.trim().is_empty())
+            .unwrap_or_else(|| self.device_id.clone())
+    }
+}
+
+/// A verified person whose identity changed.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StoppedPerson {
+    /// Who.
+    pub user_id: OwnedUserId,
+    /// Their display name in the room, when known.
+    pub name: Option<String>,
+}
+
+impl StoppedPerson {
+    /// Their name, or their id.
+    pub fn label(&self) -> String {
+        self.name
+            .clone()
+            .filter(|name| !name.trim().is_empty())
+            .unwrap_or_else(|| self.user_id.to_string())
+    }
+}
+
 /// How a room key import went.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct KeyImport {
@@ -581,6 +651,35 @@ pub mod wording {
     pub const CONFIRM_THIS_DEVICE_NOT_SENT: &str = "Not sent: confirm it's you first.";
     /// Sending anyway.
     pub const SEND_ANYWAY: &str = "Send anyway";
+    /// The review of a stopped message.
+    pub const REVIEW_TITLE: &str = "Send to unconfirmed devices?";
+    /// Under it, for unconfirmed devices.
+    pub const REVIEW_DEVICES: &str = "These devices haven't been confirmed by the person they \
+         belong to. If you send anyway, they can read this message. Confirm your own devices in \
+         Settings, Sessions, to stop this happening again.";
+    /// The review of a stopped message, for changed identities.
+    pub const REVIEW_PEOPLE_TITLE: &str = "Send to a new identity?";
+    /// Under it.
+    pub const REVIEW_PEOPLE: &str = "These people have a new identity since you verified them. \
+         Sending anyway withdraws that verification. Check with them, in person or by phone, if \
+         you weren't expecting it.";
+    /// Resetting the recovery key.
+    pub const RESET_KEY_TITLE: &str = "Change your recovery key?";
+    /// Under it.
+    pub const RESET_KEY_DETAIL: &str = "Family Chat makes a new recovery key and the old one \
+         stops working. Your messages stay readable on the devices you have now.";
+    /// Resetting the identity.
+    pub const RESET_IDENTITY_TITLE: &str = "Reset your identity?";
+    /// Under it.
+    pub const RESET_IDENTITY_DETAIL: &str = "Only do this if you have no other confirmed device \
+         and no recovery key. Your key backup is deleted, every device you confirmed has to be \
+         confirmed again, your family sees that your identity changed, and messages sent before \
+         now may stay unreadable here.";
+    /// After a reset.
+    pub const IDENTITY_RESET: &str = "Your identity was reset. Set up recovery again.";
+    /// When the reset needs a sign-in in the browser (OAuth, Phase 14).
+    pub const RESET_NEEDS_BROWSER: &str = "Your server wants you to approve this in a browser, \
+         which Family Chat can't do yet. Use another Matrix app to reset your identity.";
 
     /// Why a verification stopped, from the spec's cancel code.
     pub fn cancelled(code: &str, by_us: bool) -> String {

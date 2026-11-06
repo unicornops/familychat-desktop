@@ -674,3 +674,44 @@ async fn a_message_the_encryption_stopped_is_sent_anyway_unless_paused() {
         familychat_core::encryption::wording::UNCONFIRMED_DEVICES_NOT_SENT
     );
 }
+
+#[tokio::test]
+async fn read_receipts_and_typing_follow_the_privacy_settings() {
+    let mut setup = Setup::new();
+    let (privacy, receiver) = watch::channel(PrivacySettings::default());
+    setup.actions = setup.actions.clone().with_privacy(receiver);
+
+    setup.actions.mark_read(&family()).await;
+    setup.actions.typing(&family(), true).await;
+    let sent = setup.requests();
+    assert!(
+        matches!(
+            sent.as_slice(),
+            [RoomRequest::MarkRead, RoomRequest::Typing(true)]
+        ),
+        "{sent:?}"
+    );
+
+    // Off: a private receipt keeps the account's own read position, and no
+    // typing notice goes out at all.
+    privacy.send_replace(PrivacySettings {
+        read_receipts: false,
+        typing_notices: false,
+    });
+    setup.actions.mark_read(&family()).await;
+    setup.actions.typing(&family(), true).await;
+    setup.actions.typing(&family(), false).await;
+    let sent = setup.requests();
+    assert!(
+        matches!(
+            sent.as_slice(),
+            [
+                RoomRequest::MarkRead,
+                RoomRequest::Typing(true),
+                RoomRequest::MarkReadPrivately
+            ]
+        ),
+        "{sent:?}"
+    );
+    assert!(setup.events().is_empty());
+}

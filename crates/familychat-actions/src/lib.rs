@@ -55,10 +55,11 @@ use familychat_core::{
     messaging::{Draft, MessageRef, NewRoom, RoomDone, RoomRequest, ServerDefaults},
     rooms::{Membership, RoomSummary},
     session::{AccountKey, SessionApi, SessionError},
+    settings::PrivacySettings,
     sync::{AccountStatus, SyncState},
 };
 use familychat_security::image_metadata::MetadataError;
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, watch};
 
 pub use files::{FileOptions, FileSource};
 
@@ -352,6 +353,9 @@ pub struct Actions {
     account: AccountKey,
     events: EventSink,
     files: FileOptions,
+    /// Whether read receipts and typing notices go out (ADR 0015); sent
+    /// when nothing says otherwise.
+    privacy: Option<watch::Receiver<PrivacySettings>>,
 }
 
 impl fmt::Debug for Actions {
@@ -374,7 +378,25 @@ impl Actions {
             account,
             events: Arc::new(events),
             files: FileOptions::default(),
+            privacy: None,
         }
+    }
+
+    /// Follows the profile's privacy settings: with read receipts off,
+    /// [`Self::mark_read`] sends a private receipt (the account's devices
+    /// and unread counts follow, nobody else sees it); with typing notices
+    /// off, [`Self::typing`] sends nothing.
+    pub fn with_privacy(mut self, privacy: watch::Receiver<PrivacySettings>) -> Self {
+        self.privacy = Some(privacy);
+        self
+    }
+
+    /// The privacy settings in force now.
+    fn privacy(&self) -> PrivacySettings {
+        self.privacy
+            .as_ref()
+            .map(|privacy| *privacy.borrow())
+            .unwrap_or_default()
     }
 
     /// The actions of `account`, with their events on a channel.
@@ -531,9 +553,14 @@ impl Actions {
             if this.is_paused() {
                 return;
             }
+            let request = if this.privacy().read_receipts {
+                RoomRequest::MarkRead
+            } else {
+                RoomRequest::MarkReadPrivately
+            };
             let reply = this
                 .session
-                .room_action(&this.account, &room, RoomRequest::MarkRead)
+                .room_action(&this.account, &room, request)
                 .await;
             if let Ok(Err(error)) = reply {
                 this.emit(ActionEvent::Failed {
@@ -547,12 +574,12 @@ impl Actions {
 
     /// Tells the room the person is typing, or has stopped. Quiet: a
     /// typing notice that fails is not worth telling anyone about, and
-    /// nothing is sent while paused.
+    /// nothing is sent while paused or with typing notices turned off.
     pub fn typing(&self, room: &RoomId, typing: bool) -> ActionTask {
         let this = self.clone();
         let room = room.to_owned();
         Box::pin(async move {
-            if this.is_paused() {
+            if this.is_paused() || !this.privacy().typing_notices {
                 return;
             }
             let _ = this

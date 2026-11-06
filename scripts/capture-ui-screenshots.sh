@@ -40,7 +40,9 @@ OPENBOX_PID=""
 # the list or the room, and wide (1600), where the member list sits beside
 # the timeline, to show the layout holds. Every fixture view is captured in dark and
 # light (crates/familychat-app/src/ui_fixture.rs checks this list against
-# its views).
+# its views). The settings-* views are captured from the Settings window,
+# which opens over the main window (window_title_for); 860 wide is its
+# default width, and two are captured at the narrowest it gets.
 MATRIX=(
   "welcome-dark welcome dark 1040 760"
   "welcome-light welcome light 1040 760"
@@ -147,10 +149,6 @@ MATRIX=(
   "link-prompt-mismatched-light link-prompt-mismatched light 1180 780"
   "room-large-dark room-large dark 1180 780"
   "room-large-light room-large light 1180 780"
-  "notification-settings-dark notification-settings dark 1180 780"
-  "notification-settings-light notification-settings light 1180 780"
-  "notification-settings-hidden-dark notification-settings-hidden dark 1180 780"
-  "notification-settings-hidden-light notification-settings-hidden light 1180 780"
   "forwarded-link-dark forwarded-link dark 1180 780"
   "forwarded-link-light forwarded-link light 1180 780"
   "signed-in-dark-560 signed-in dark 560 720"
@@ -240,6 +238,42 @@ MATRIX=(
   "room-identity-changed-light-560 room-identity-changed light 560 720"
   "room-identity-changed-dark-1600 room-identity-changed dark 1600 900"
   "recovery-offer-light-1600 recovery-offer light 1600 900"
+  "room-not-sent-review-dark room-not-sent-review dark 1180 780"
+  "room-not-sent-review-light room-not-sent-review light 1180 780"
+  "settings-account-dark settings-account dark 860 900"
+  "settings-account-light settings-account light 860 900"
+  "settings-account-other-dark settings-account-other dark 860 720"
+  "settings-account-other-light settings-account-other light 860 720"
+  "settings-panel-link-dark settings-panel-link dark 860 900"
+  "settings-panel-link-light settings-panel-link light 860 900"
+  "settings-sign-out-dark settings-sign-out dark 860 900"
+  "settings-sign-out-light settings-sign-out light 860 900"
+  "settings-sessions-dark settings-sessions dark 860 720"
+  "settings-sessions-light settings-sessions light 860 720"
+  "settings-privacy-dark settings-privacy dark 860 900"
+  "settings-privacy-light settings-privacy light 860 900"
+  "settings-reset-key-dark settings-reset-key dark 860 900"
+  "settings-reset-key-light settings-reset-key light 860 900"
+  "settings-reset-identity-dark settings-reset-identity dark 860 900"
+  "settings-reset-identity-light settings-reset-identity light 860 900"
+  "settings-reset-identity-password-dark settings-reset-identity-password dark 860 900"
+  "settings-reset-identity-password-light settings-reset-identity-password light 860 900"
+  "settings-appearance-dark settings-appearance dark 860 720"
+  "settings-appearance-light settings-appearance light 860 720"
+  "settings-notifications-dark settings-notifications dark 860 720"
+  "settings-notifications-light settings-notifications light 860 720"
+  "settings-notifications-hidden-dark settings-notifications-hidden dark 860 720"
+  "settings-notifications-hidden-light settings-notifications-hidden light 860 720"
+  "settings-notifications-off-dark settings-notifications-off dark 860 720"
+  "settings-notifications-off-light settings-notifications-off light 860 720"
+  "settings-diagnostics-dark settings-diagnostics dark 860 720"
+  "settings-diagnostics-light settings-diagnostics light 860 720"
+  "settings-appearance-large-dark settings-appearance-large dark 1280 900"
+  "settings-appearance-large-light settings-appearance-large light 1280 900"
+  "room-text-200-dark room-text-200 dark 1280 900"
+  "room-text-200-light room-text-200 light 1280 900"
+  "settings-account-dark-560 settings-account dark 560 720"
+  "settings-privacy-light-560 settings-privacy light 560 720"
 )
 
 usage() {
@@ -270,9 +304,20 @@ cleanup() {
   exit "${exit_code}"
 }
 
-# Prints the id of the app's visible window once it is mapped, waiting up
-# to 90 seconds; fails if the app exits first.
+# The title of the window a fixture view is captured from: the Settings
+# window for the settings views, the main window otherwise.
+window_title_for() {
+  case "$1" in
+    settings-*) echo "Settings" ;;
+    *) echo "${WINDOW_TITLE}" ;;
+  esac
+}
+
+# Prints the id of the app's visible window titled $1 (default: the main
+# window) once it is mapped, waiting up to 90 seconds; fails if the app
+# exits first.
 wait_for_window() {
+  local title="${1:-${WINDOW_TITLE}}"
   local window_id=""
   for _ in $(seq 1 90); do
     if ! kill -0 "${APP_PID}" 2>/dev/null; then
@@ -280,14 +325,14 @@ wait_for_window() {
       cat "${APP_LOG}" >&2
       return 1
     fi
-    window_id="$(xdotool search --onlyvisible --name "^${WINDOW_TITLE}\$" 2>/dev/null | head -n 1 || true)"
+    window_id="$(xdotool search --onlyvisible --name "^${title}\$" 2>/dev/null | head -n 1 || true)"
     if [[ -n "${window_id}" ]]; then
       echo "${window_id}"
       return 0
     fi
     sleep 1
   done
-  echo "timed out waiting for the ${WINDOW_TITLE} window" >&2
+  echo "timed out waiting for the ${title} window" >&2
   cat "${APP_LOG}" >&2
   return 1
 }
@@ -321,7 +366,7 @@ capture_state() {
   APP_PID=$!
 
   local window_id
-  window_id="$(wait_for_window)"
+  window_id="$(wait_for_window "$(window_title_for "${view}")")"
   xdotool windowactivate "${window_id}" >/dev/null 2>&1 || true
   xdotool windowmove "${window_id}" 0 0 >/dev/null 2>&1 || true
   xdotool windowsize "${window_id}" "${width}" "${height}"

@@ -183,6 +183,57 @@ every service's log on failure and runs `down` always. They prove:
   reads to keep working, so the test pins Palpo's behaviour and will fail
   when it changes.
 
+### Egress
+
+Added with Phase 13 (PLAN.md section 8): the live tests fail the build
+when the code under test reaches, or tries to reach, any host other than
+the harness homeservers (`hs1.familychat.test`, `smith.test`,
+`evil.familychat.example`, `redirect.familychat.test`, `synapse.test`, and
+Phase 14's `synapse-mas.familychat.test` and `mas.familychat.test`).
+No link preview, identity server, avatar, emoji or font service, crash
+reporter or anything else may slip in unseen. Three records are kept and
+`scripts/check-egress.sh` reads all three after the live tests in CI's
+quality job:
+
+- **The recording proxy** (`scripts/egress-proxy.py`, Python's standard
+  library, on `127.0.0.1:18480`). From the step after `up`, every live
+  test runs with `FAMILYCHAT_HARNESS_EGRESS_PROXY` set, so the harness
+  client (`edge_client`, and with it the session's SDK client, the
+  sign-in's transport and the media fetcher, which all take it) sends
+  every request through the proxy, and with `HTTPS_PROXY`, `HTTP_PROXY`
+  and `ALL_PROXY` set, so a client built anywhere else that honours them
+  (reqwest's default, curl) goes through it too. The proxy tunnels a
+  `CONNECT` to a harness host on port 443 to the front end (raw TCP: TLS
+  stays end to end, the client still trusts only the harness CA) and logs
+  `ALLOW host:443`; any other `CONNECT`, and any plain-HTTP request, is
+  answered 403 and logged `DENY`. With the front end stopped it answers
+  502 at once, which the client sees as a failed connection, as before.
+- **The resolver's refusals.** The harness client resolves only the
+  harness names; with `FAMILYCHAT_HARNESS_EGRESS_LOG` set it also appends
+  `REFUSED name` for each name it refused (a run without the proxy).
+- **The front end's access log**, whose host column must only name the
+  harness hosts.
+
+The check fails on any `DENY` or `REFUSED` line, any other host in the
+logs, and a proxy log with no `ALLOW` at all (the tests did not go through
+the proxy, so a clean log would prove nothing). Its negative test,
+`scripts/check-egress.sh --self-test`, runs first in the same job: it sends
+a harness host and `example.org` through a proxy on a free port and fails
+unless the check then fails naming `example.org` (and fails on an
+unexpected host in the access log, a refused name, and an empty proxy log,
+and passes on a log of harness hosts only).
+
+What it does not catch: a client that ignores the proxy variables and
+brings its own resolver and connector reaches the network unrecorded (on
+the runner it would succeed). Every client the app builds is reqwest's
+(the session's `SessionConfig::http_client`, the sign-in's
+`ReqwestTransport`), and the live tests replace both with the harness
+client, so a new client added beside them is the gap; code review and
+`scripts/check-dependency-boundaries.sh` are the other lines there.
+Traffic of the harness's own containers (Palpo, Synapse) is not the
+app's and is not checked; the admin APIs on loopback are the harness's
+control channel and stay off the proxy.
+
 ## Consequences
 
 - Tests in later phases use real servers through `HomeserverHarness`;

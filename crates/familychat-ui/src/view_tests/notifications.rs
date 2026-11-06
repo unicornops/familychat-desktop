@@ -41,6 +41,7 @@ fn setup(hidden: bool) -> Setup {
     let startup = FixtureStartup::with(session.clone(), signin, &[FixtureProfile::Ready]);
     if hidden {
         startup.set_notification_settings(NotificationSettings {
+            enabled: true,
             show_content: false,
         });
     }
@@ -206,13 +207,17 @@ fn hidden_content_says_new_message_and_the_setting_can_be_changed(cx: &mut TestA
     assert_eq!(posted[0].body.as_ref(), format!("Mum: {NEW_MESSAGE}"));
     assert!(!posted[0].body.contains("secret"));
 
-    // The dialog shows the setting and changes it in the profile.
+    // Settings → Notifications shows the setting and changes it in the
+    // profile; the main window follows.
     cx.update(|window, _| window.activate_window());
     keys("secondary-alt-n", cx);
-    let (settings, open) = cx.read_entity(&view, |view, _| view.notification_settings());
-    assert!(open, "the dialog opened");
-    assert!(!settings.show_content);
-    click("button-notification-show-content", cx);
+    let (root, mut settings_cx) = super::settings::settings_window(cx);
+    assert_eq!(
+        root.read_with(&settings_cx, |root, _| root.section()),
+        crate::SettingsSection::Notifications
+    );
+    assert!(!root.read_with(&settings_cx, |root, _| root.shown_settings().0.show_content));
+    click("button-settings-notifications-text", &mut settings_cx);
     assert!(
         setup
             .startup
@@ -222,9 +227,12 @@ fn hidden_content_says_new_message_and_the_setting_can_be_changed(cx: &mut TestA
             .show_content,
         "saved in the profile's settings"
     );
-    click("button-notification-settings-done", cx);
-    let (_, open) = cx.read_entity(&view, |view, _| view.notification_settings());
-    assert!(!open);
+    assert!(cx.read_entity(&view, |view, _| view.notification_settings().show_content));
+    keys("escape", &mut settings_cx);
+    assert!(
+        cx.update(|_, cx| crate::settings::window(cx)).is_none(),
+        "Escape closed Settings"
+    );
 
     cx.deactivate_window();
     report(

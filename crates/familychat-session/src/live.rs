@@ -7,15 +7,17 @@ use std::{path::PathBuf, sync::Arc};
 use familychat_core::{
     encryption::{
         AuthOutcome, DeviceView, EncryptionStatus, IdentityWarning, KeyImport, SecretText,
-        VerificationFlow,
+        StoppedMessage, VerificationFlow,
     },
     media::{DecodedImage, MediaError, MediaInfo},
-    messaging::{Draft, MediaLimits, Mention, NewRoom, RoomDone, RoomRequest, ServerDefaults},
+    messaging::{
+        Draft, MediaLimits, Mention, MessageRef, NewRoom, RoomDone, RoomRequest, ServerDefaults,
+    },
     notifications::IncomingNotification,
     rooms::{MemberRole, Membership, RoomListFilter, RoomMember, sort_members},
     session::{
-        AccountKey, AccountView, MediaReply, Reply, RoomListSubscription, SessionApi, SessionError,
-        TimelineSubscription,
+        AccountDetails, AccountKey, AccountView, MediaReply, Reply, RoomListSubscription,
+        SessionApi, SessionError, SignedOut, TimelineSubscription,
     },
     sync::AccountStatus,
     timeline::MessageBody,
@@ -83,18 +85,45 @@ fn draft_from_json(value: &Value) -> Option<Draft> {
     })
 }
 
+/// Whether a homeserver URL is a Family Chat one: the sign-in's allowlist
+/// decides (ADR 0006), and the app hands it here, since this crate can't
+/// depend on the sign-in.
+pub type FamilyChatHomeserver = Arc<dyn Fn(&str) -> bool + Send + Sync>;
+
 /// The live sessions of one profile.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct LiveSession {
     manager: Arc<AccountManager>,
     handle: Handle,
+    family_chat: FamilyChatHomeserver,
+}
+
+impl std::fmt::Debug for LiveSession {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("LiveSession")
+            .field("manager", &self.manager)
+            .finish_non_exhaustive()
+    }
 }
 
 impl LiveSession {
     /// The session over `manager`, doing its work on `handle` (the
-    /// [`BackgroundRuntime`](crate::BackgroundRuntime)'s).
+    /// [`BackgroundRuntime`](crate::BackgroundRuntime)'s). No homeserver
+    /// counts as Family Chat's until [`Self::with_family_chat`] says how
+    /// to tell.
     pub fn new(manager: Arc<AccountManager>, handle: Handle) -> Self {
-        Self { manager, handle }
+        Self {
+            manager,
+            handle,
+            family_chat: Arc::new(|_| false),
+        }
+    }
+
+    /// Tells Family Chat's homeservers apart (the sign-in's allowlist), so
+    /// Settings shows a Family Chat account's guidance.
+    pub fn with_family_chat(mut self, family_chat: FamilyChatHomeserver) -> Self {
+        self.family_chat = family_chat;
+        self
     }
 
     /// The account manager.
@@ -480,6 +509,103 @@ impl SessionApi for LiveSession {
         self.reply(account, move |ready| async move {
             encryption::acknowledge_identity(&ready.client, &user).await
         })
+    }
+
+    fn stopped_message(
+        &self,
+        account: &AccountKey,
+        room: &RoomId,
+        message: MessageRef,
+    ) -> Reply<StoppedMessage> {
+        let room: OwnedRoomId = room.to_owned();
+        self.reply(account, move |ready| async move {
+            let room = ready
+                .client
+                .get_room(&room)
+                .ok_or(SessionError::UnknownRoom)?;
+            let timeline = ready.timelines.for_room(&room).await?;
+            messaging::stopped_message(&room, &timeline, &message).await
+        })
+    }
+
+    fn reset_recovery_key(&self, account: &AccountKey) -> Reply<SecretText> {
+        self.reply(account, move |ready| async move {
+            encryption::reset_recovery_key(&ready.client).await
+        })
+    }
+
+    fn reset_identity(
+        &self,
+        account: &AccountKey,
+        password: Option<SecretText>,
+    ) -> Reply<AuthOutcome> {
+        let password = encryption::password_secret(password);
+        self.reply(account, move |ready| async move {
+            encryption::reset_identity(&ready.client, password).await
+        })
+    }
+
+    fn account_details(&self, account: &AccountKey) -> Reply<AccountDetails> {
+        let family_chat = self.family_chat.clone();
+        self.reply(account, move |ready| async move {
+            let client = ready.client;
+            let user_id = client.user_id().ok_or(SessionError::NotReady)?.to_owned();
+            let homeserver_url = client
+                .homeserver()
+                .as_str()
+                .trim_end_matches('/')
+                .to_owned();
+            let device_id = client
+                .device_id()
+                .map(ToString::to_string)
+                .unwrap_or_default();
+            // A server that can't be reached in time leaves the name out
+            // rather than failing.
+            let display_name = tokio::time::timeout(
+                std::time::Duration::from_secs(5),
+                client.account().get_display_name(),
+            )
+            .await
+            .ok()
+            .and_then(Result::ok)
+            .flatten();
+            let device_name = match client.encryption().get_own_device().await {
+                Ok(Some(device)) => device.display_name().map(ToOwned::to_owned),
+                _ => None,
+            };
+            Ok(AccountDetails {
+                family_chat: family_chat(&homeserver_url),
+                user_id,
+                display_name,
+                homeserver_url,
+                device_id,
+                device_name,
+            })
+        })
+    }
+
+    fn sign_out(&self, account: &AccountKey) -> Reply<SignedOut> {
+        let (answer, reply) = oneshot::channel();
+        let Some(id) = account.0.parse().ok() else {
+            let _ = answer.send(Err(SessionError::UnknownAccount));
+            return reply;
+        };
+        let manager = self.manager.clone();
+        self.handle.spawn(async move {
+            let result = manager.sign_out(id).await.map_err(|error| match error {
+                crate::SignOutError::Unknown => SessionError::UnknownAccount,
+                crate::SignOutError::Remove(error) => {
+                    tracing::warn!(%error, "the account could not be removed");
+                    SessionError::Failed(
+                        "Family Chat couldn't remove the account from this computer. Check \
+                         that the keychain is unlocked, then try again."
+                            .to_owned(),
+                    )
+                }
+            });
+            let _ = answer.send(result);
+        });
+        reply
     }
 }
 

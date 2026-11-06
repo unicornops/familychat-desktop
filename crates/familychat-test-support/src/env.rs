@@ -32,6 +32,14 @@ const ADMIN_TOKEN: &str = "FAMILYCHAT_HARNESS_ADMIN_TOKEN";
 const REGISTRATION_TOKEN: &str = "FAMILYCHAT_HARNESS_REGISTRATION_TOKEN";
 const SYNAPSE_ADMIN_URL: &str = "FAMILYCHAT_HARNESS_SYNAPSE_ADMIN_URL";
 const SYNAPSE_ADMIN_TOKEN: &str = "FAMILYCHAT_HARNESS_SYNAPSE_ADMIN_TOKEN";
+/// The egress test's recording proxy (`scripts/egress-proxy.py`), an
+/// `http://` URL on loopback. Read from the process environment only (the
+/// harness script never writes it): when set, the harness client sends
+/// every request through it, so CI can check every host the tests reached.
+pub const EGRESS_PROXY_VAR: &str = "FAMILYCHAT_HARNESS_EGRESS_PROXY";
+/// Where [`crate::HarnessResolver`] appends each name it refused
+/// (`REFUSED name`), for the egress check. Process environment only.
+pub const EGRESS_LOG_VAR: &str = "FAMILYCHAT_HARNESS_EGRESS_LOG";
 const SYNAPSE_MAS_URL: &str = "FAMILYCHAT_HARNESS_SYNAPSE_MAS_URL";
 const MAS_URL: &str = "FAMILYCHAT_HARNESS_MAS_URL";
 const MAS_ADMIN_CLIENT: &str = "FAMILYCHAT_HARNESS_MAS_ADMIN_CLIENT";
@@ -74,6 +82,12 @@ pub struct HarnessEnv {
     /// users.
     pub synapse_admin_url: String,
     synapse_admin_token: String,
+    /// The egress test's recording proxy, when the tests run through one
+    /// ([`EGRESS_PROXY_VAR`]): every harness request goes through it.
+    pub egress_proxy: Option<String>,
+    /// Where the harness resolver records the names it refused
+    /// ([`EGRESS_LOG_VAR`]).
+    pub egress_log: Option<PathBuf>,
     /// Synapse delegating sign-in to MAS (Phase 14),
     /// `https://synapse-mas.familychat.test`.
     pub synapse_mas_url: String,
@@ -90,17 +104,35 @@ impl HarnessEnv {
     /// `eval "$(scripts/homeserver-harness.sh env)"`); else from
     /// `env` in `FAMILYCHAT_HARNESS_STATE_DIR` or the script's default state
     /// directory.
+    ///
+    /// The egress test's settings ([`EGRESS_PROXY_VAR`], [`EGRESS_LOG_VAR`])
+    /// always come from the process environment.
     pub fn load() -> Result<Self> {
-        if let Some(path) = std::env::var_os(ENV_FILE_VAR) {
-            return Self::from_file(Path::new(&path));
+        let env = if let Some(path) = std::env::var_os(ENV_FILE_VAR) {
+            Self::from_file(Path::new(&path))?
+        } else if std::env::var_os(EDGE_ADDR).is_some() {
+            Self::from_lookup(|key| std::env::var(key).ok())?
+        } else {
+            let state_dir = std::env::var_os(STATE_DIR_VAR)
+                .map(PathBuf::from)
+                .unwrap_or_else(|| repo_root().join(DEFAULT_STATE_DIR));
+            Self::from_file(&state_dir.join("env"))?
+        };
+        env.with_egress(|key| std::env::var(key).ok())
+    }
+
+    /// The settings with the egress test's proxy and refusal log from
+    /// `lookup` (unset or empty: none). The proxy must be an `http://`
+    /// address on loopback, like the admin APIs.
+    pub fn with_egress(mut self, lookup: impl Fn(&str) -> Option<String>) -> Result<Self> {
+        let get = |key: &str| lookup(key).filter(|value| !value.is_empty());
+        self.egress_proxy = get(EGRESS_PROXY_VAR);
+        if let Some(proxy) = &self.egress_proxy {
+            loopback_http(proxy.trim_end_matches('/'))
+                .with_context(|| format!("{EGRESS_PROXY_VAR} is not an http:// URL on loopback"))?;
         }
-        if std::env::var_os(EDGE_ADDR).is_some() {
-            return Self::from_lookup(|key| std::env::var(key).ok());
-        }
-        let state_dir = std::env::var_os(STATE_DIR_VAR)
-            .map(PathBuf::from)
-            .unwrap_or_else(|| repo_root().join(DEFAULT_STATE_DIR));
-        Self::from_file(&state_dir.join("env"))
+        self.egress_log = get(EGRESS_LOG_VAR).map(PathBuf::from);
+        Ok(self)
     }
 
     /// Reads a settings file the harness script wrote.
@@ -150,6 +182,8 @@ impl HarnessEnv {
             registration_token: get(REGISTRATION_TOKEN)?,
             synapse_admin_url: get(SYNAPSE_ADMIN_URL)?,
             synapse_admin_token: get(SYNAPSE_ADMIN_TOKEN)?,
+            egress_proxy: None,
+            egress_log: None,
             synapse_mas_url: get(SYNAPSE_MAS_URL)?,
             mas_url: get(MAS_URL)?,
             mas_admin_client: get(MAS_ADMIN_CLIENT)?,
@@ -238,6 +272,8 @@ impl fmt::Debug for HarnessEnv {
             .field("registration_token", &"<redacted>")
             .field("synapse_admin_url", &self.synapse_admin_url)
             .field("synapse_admin_token", &"<redacted>")
+            .field("egress_proxy", &self.egress_proxy)
+            .field("egress_log", &self.egress_log)
             .field("synapse_mas_url", &self.synapse_mas_url)
             .field("mas_url", &self.mas_url)
             .field("mas_admin_client", &self.mas_admin_client)
@@ -473,6 +509,44 @@ export FAMILYCHAT_HARNESS_MAS_ADMIN_SECRET='mas-secret'
             );
         }
         assert!(HarnessEnv::from_lookup(lookup_with(ADMIN_URL, "http://[::1]:18008")).is_ok());
+    }
+
+    #[test]
+    fn reads_the_egress_settings() {
+        let env = sample_env();
+        assert_eq!(env.egress_proxy, None);
+        assert_eq!(env.egress_log, None);
+        let env = env
+            .with_egress(|key| match key {
+                EGRESS_PROXY_VAR => Some("http://127.0.0.1:18480".to_owned()),
+                EGRESS_LOG_VAR => Some("/tmp/egress/resolver.log".to_owned()),
+                _ => None,
+            })
+            .expect("valid egress settings");
+        assert_eq!(env.egress_proxy.as_deref(), Some("http://127.0.0.1:18480"));
+        assert_eq!(
+            env.egress_log.as_deref(),
+            Some(Path::new("/tmp/egress/resolver.log"))
+        );
+        let empty = sample_env()
+            .with_egress(|_| Some(String::new()))
+            .expect("empty is unset");
+        assert_eq!(empty.egress_proxy, None);
+        assert_eq!(empty.egress_log, None);
+    }
+
+    #[test]
+    fn refuses_an_egress_proxy_off_loopback() {
+        for proxy in [
+            "http://192.0.2.1:18480",
+            "https://127.0.0.1:18480",
+            "http://localhost:18480",
+            "socks5://127.0.0.1:18480",
+        ] {
+            let result =
+                sample_env().with_egress(|key| (key == EGRESS_PROXY_VAR).then(|| proxy.to_owned()));
+            assert!(result.is_err(), "accepted {proxy}");
+        }
     }
 
     #[test]

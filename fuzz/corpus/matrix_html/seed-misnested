@@ -1,0 +1,14 @@
+<p><b>bold <i>both</b> italic</i> plain
+<p>unclosed paragraph <b>unclosed bold
+<ul><li>one<li>two<ol><li>nested<li>nested two</ul>after list
+<blockquote><blockquote><blockquote><p>three deep</blockquote>two deep</blockquote>
+<table><tr><td>cell<td>cell<tr><td>row two</table>text after
+<table><b>foster parented</b><tr><td>x</td></tr></table>
+<a href="https://a.example/"><b>a</a>b</b>
+<pre>pre <b>bold in pre</b>
+next line</pre>
+</p></p></div></b></i></span></table></li>
+<li>orphan item</li>
+<td>orphan cell</td>
+<h1>heading <h2>in heading</h1></h2>
+<code>unclosed code

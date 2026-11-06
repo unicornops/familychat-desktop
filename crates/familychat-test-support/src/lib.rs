@@ -23,7 +23,10 @@ mod env;
 pub mod fixtures;
 pub mod photo;
 
-pub use env::{DEFAULT_STATE_DIR, ENV_FILE_VAR, HarnessEnv, STATE_DIR_VAR, parse_env_file};
+pub use env::{
+    DEFAULT_STATE_DIR, EGRESS_LOG_VAR, EGRESS_PROXY_VAR, ENV_FILE_VAR, HarnessEnv, STATE_DIR_VAR,
+    parse_env_file,
+};
 
 #[cfg(feature = "test-harness")]
 mod client;

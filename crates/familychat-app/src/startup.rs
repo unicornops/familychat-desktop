@@ -217,7 +217,11 @@ async fn open_sessions(
     );
     let transport = ReqwestTransport::new().context("failed to build the sign-in's HTTP client")?;
     let signin = LiveSignin::new(manager.clone(), Arc::new(transport), handle.clone());
-    let session = LiveSession::new(manager.clone(), handle.clone());
+    // Family Chat accounts get the panel's guidance in Settings; the
+    // sign-in's allowlist says which they are (ADR 0006).
+    let allowlist = familychat_signin::Allowlist::for_build();
+    let session = LiveSession::new(manager.clone(), handle.clone())
+        .with_family_chat(Arc::new(move |url: &str| allowlist.is_family_chat(url)));
     let settings = LiveSettings::load(manager.clone(), handle.clone());
     Ok((
         manager,

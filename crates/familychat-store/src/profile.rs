@@ -134,17 +134,50 @@ impl Profile {
         self.store.add_account_with_id(id, account)
     }
 
-    /// Removes an account: its keychain entries, its directory and its
-    /// registry row, in that order, so its secrets go first. `false` when
-    /// it was not in the registry.
+    /// Removes an account: its keychain entries, its registry row (with
+    /// its drafts) and its directory (the SDK's stores and caches), in that
+    /// order, so its secrets go first and what may be left behind (files
+    /// another process still had open, on Windows) is ciphertext whose key
+    /// is gone, which [`Self::remove_orphaned_account_dirs`] sweeps up
+    /// later. `false` when it was not in the registry.
     pub fn remove_account(&self, account: AccountId) -> Result<bool, RemoveAccountError> {
         delete_account_entries(self.held.keychain.as_ref(), account)?;
+        let removed = self.store.remove_account(account)?;
+        self.remove_account_dir(account)?;
+        Ok(removed)
+    }
+
+    /// Removes an account's directory (`accounts/<uuid>/`), if it is there.
+    pub fn remove_account_dir(&self, account: AccountId) -> Result<(), RemoveAccountError> {
         match fs::remove_dir_all(self.held.dir().account_dir(account)) {
-            Ok(()) => {}
-            Err(error) if error.kind() == io::ErrorKind::NotFound => {}
-            Err(error) => return Err(RemoveAccountError::Files(error)),
+            Ok(()) => Ok(()),
+            Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(()),
+            Err(error) => Err(RemoveAccountError::Files(error)),
         }
-        Ok(self.store.remove_account(account)?)
+    }
+
+    /// Removes every directory under `accounts/` that no registered account
+    /// owns: what a sign-out could not delete at the time. Returns how
+    /// many went; one that still can't be removed is left for next time.
+    pub fn remove_orphaned_account_dirs(&self) -> Result<usize, StoreError> {
+        let registered: Vec<String> = self
+            .accounts()?
+            .into_iter()
+            .map(|account| account.id.to_string())
+            .collect();
+        let Ok(entries) = fs::read_dir(self.held.dir().accounts_dir()) else {
+            return Ok(0);
+        };
+        let mut removed = 0;
+        for entry in entries.flatten() {
+            let name = entry.file_name().to_string_lossy().into_owned();
+            let is_account = name.parse::<AccountId>().is_ok();
+            if is_account && !registered.contains(&name) && fs::remove_dir_all(entry.path()).is_ok()
+            {
+                removed += 1;
+            }
+        }
+        Ok(removed)
     }
 
     /// The passphrase for the account's SDK stores (`account-<uuid>-store`),
@@ -709,5 +742,28 @@ mod tests {
         assert!(!profile.dir().account_dir(id).exists());
         assert!(profile.accounts().expect("accounts").is_empty());
         assert!(!profile.remove_account(id).expect("already gone"));
+    }
+
+    #[test]
+    fn leftover_account_directories_are_swept_but_registered_ones_stay() {
+        let dir = TestDir::new("orphans");
+        let keychain = Arc::new(MemoryKeychain::new());
+        let profile = ready(Profile::open(dir.data_dir(), keychain).expect("opens"));
+        let kept = profile
+            .add_account(&NewAccount {
+                user_id: "@ana:smith.safechat.family".to_owned(),
+                homeserver_url: "https://smith.safechat.family".to_owned(),
+            })
+            .expect("added");
+        fs::create_dir_all(profile.dir().account_sdk_dir(kept)).expect("dir");
+        let orphan = AccountId::generate().expect("an id");
+        fs::create_dir_all(profile.dir().account_cache_dir(orphan)).expect("dir");
+        let stranger = profile.dir().accounts_dir().join("not-an-account");
+        fs::create_dir_all(&stranger).expect("dir");
+
+        assert_eq!(profile.remove_orphaned_account_dirs().expect("swept"), 1);
+        assert!(profile.dir().account_dir(kept).exists());
+        assert!(!profile.dir().account_dir(orphan).exists());
+        assert!(stranger.exists(), "only account directories are touched");
     }
 }

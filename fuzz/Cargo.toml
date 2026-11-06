@@ -1,0 +1,47 @@
+# Fuzz smoke for the two parsers that read text an attacker writes (PLAN.md,
+# sections 7 and 9; ADR 0015): the sign-in link and server-name parsers
+# (familychat-signin) and the Matrix HTML sanitiser (familychat-security).
+#
+# cargo-fuzz (libFuzzer, coverage-guided) needs a nightly toolchain for
+# `-Zsanitizer`, so this crate is outside the workspace (`exclude` in the
+# root Cargo.toml): the workspace's stable builds, tests, clippy, deny and
+# about never see it, and it is never part of a release. Its own Cargo.lock
+# is committed so CI builds it `--locked`.
+#
+#   cargo +nightly fuzz run signin_link -- -max_total_time=60
+#   cargo +nightly fuzz run matrix_html -- -max_total_time=60
+[package]
+name = "familychat-fuzz"
+version = "0.0.0"
+edition = "2024"
+license = "GPL-3.0-only"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+familychat-core = { path = "../crates/familychat-core" }
+familychat-security = { path = "../crates/familychat-security" }
+familychat-signin = { path = "../crates/familychat-signin" }
+# The checker re-reads the sanitised markup with the tokenizer the
+# sanitiser uses (as `familychat-security/tests/hostile_html.rs` does).
+html5ever = "0.40.1"
+libfuzzer-sys = "0.4"
+
+# Its own workspace, so it is not a member of the repository's.
+[workspace]
+
+[[bin]]
+name = "signin_link"
+path = "fuzz_targets/signin_link.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "matrix_html"
+path = "fuzz_targets/matrix_html.rs"
+test = false
+doc = false
+bench = false

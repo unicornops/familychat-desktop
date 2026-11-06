@@ -24,11 +24,11 @@ use std::{
 };
 
 use familychat_core::{
-    OwnedRoomId, OwnedUserId, UserId,
+    OwnedRoomId, OwnedUserId, RoomId, UserId,
     diff::ListDiff,
     encryption::{
         AuthOutcome, DeviceView, EncryptionStatus, IdentityWarning, KeyImport, SecretText,
-        VerificationFlow, VerificationStep,
+        StoppedMessage, StoppedPerson, VerificationFlow, VerificationStep,
     },
     media::{DecodedImage, MediaError, MediaInfo},
     messaging::{
@@ -41,8 +41,8 @@ use familychat_core::{
         Membership, RoomListCommand, RoomListFilter, RoomListLoading, RoomMember, RoomSummary,
     },
     session::{
-        AccountKey, AccountView, MediaReply, Reply, RoomListSubscription, SUBSCRIPTION_BUFFER,
-        SessionApi, SessionError, TimelineSubscription,
+        AccountDetails, AccountKey, AccountView, MediaReply, Reply, RoomListSubscription,
+        SUBSCRIPTION_BUFFER, SessionApi, SessionError, SignedOut, TimelineSubscription,
     },
     settings::{MemorySettings, NotificationSettings},
     signin::{
@@ -159,6 +159,8 @@ pub struct SessionRecord {
     pub drafts: Vec<(OwnedRoomId, Option<Draft>)>,
     /// How many times the upload limit was asked for.
     pub media_limit_asks: usize,
+    /// Each account signed out, in order.
+    pub signed_out: Vec<AccountKey>,
 }
 
 impl SessionRecord {
@@ -167,7 +169,12 @@ impl SessionRecord {
         self.requests
             .iter()
             .map(|(_, request)| request)
-            .filter(|request| !matches!(request, RoomRequest::MarkRead | RoomRequest::Typing(_)))
+            .filter(|request| {
+                !matches!(
+                    request,
+                    RoomRequest::MarkRead | RoomRequest::MarkReadPrivately | RoomRequest::Typing(_)
+                )
+            })
             .collect()
     }
 }
@@ -417,6 +424,7 @@ fn apply_request(
             }
         }
         RoomRequest::MarkRead
+        | RoomRequest::MarkReadPrivately
         | RoomRequest::Typing(_)
         | RoomRequest::Invite(_)
         | RoomRequest::AnswerInvite(_)
@@ -1105,6 +1113,90 @@ impl SessionApi for FixtureSession {
             return answered(Err(SessionError::UnknownAccount));
         }
         answered(self.encryption.acknowledge(user))
+    }
+
+    fn stopped_message(
+        &self,
+        account: &AccountKey,
+        room: &RoomId,
+        message: MessageRef,
+    ) -> Reply<StoppedMessage> {
+        if let Err(error) = self.encryption.stopped(account) {
+            return answered(Err(error));
+        }
+        let not_there =
+            || SessionError::Failed("That message isn't waiting to be sent any more.".to_owned());
+        let problem = lock(&self.timelines).get(room).and_then(|timeline| {
+            let mut items = timeline.borrow().clone();
+            target_event(&mut items, &message).and_then(|event| match &event.send_state {
+                Some(SendState::Failed { problem, .. }) => *problem,
+                _ => None,
+            })
+        });
+        let Some(problem) = problem else {
+            return answered(Err(not_there()));
+        };
+        let (devices, people) = match problem {
+            SendProblem::UnconfirmedDevices => (encryption::fixture_stopped_devices(), Vec::new()),
+            SendProblem::IdentityChanged => (
+                Vec::new(),
+                vec![StoppedPerson {
+                    user_id: OwnedUserId::try_from("@dad:smith.safechat.family").expect("an id"),
+                    name: Some("Dad".to_owned()),
+                }],
+            ),
+            SendProblem::ConfirmThisDevice => (Vec::new(), Vec::new()),
+        };
+        answered(Ok(StoppedMessage {
+            problem,
+            devices,
+            people,
+        }))
+    }
+
+    fn reset_recovery_key(&self, account: &AccountKey) -> Reply<SecretText> {
+        answered(self.encryption.reset_recovery_key(account))
+    }
+
+    fn reset_identity(
+        &self,
+        account: &AccountKey,
+        password: Option<SecretText>,
+    ) -> Reply<AuthOutcome> {
+        answered(self.encryption.reset_identity(account, password))
+    }
+
+    fn account_details(&self, account: &AccountKey) -> Reply<AccountDetails> {
+        let Some(view) = self
+            .accounts
+            .borrow()
+            .iter()
+            .find(|view| &view.key == account)
+            .cloned()
+        else {
+            return answered(Err(SessionError::UnknownAccount));
+        };
+        let server = view.user_id.server_name().to_string();
+        let family_chat = server == "safechat.family" || server.ends_with(".safechat.family");
+        let display_name = (view.user_id.localpart() == "ana").then(|| "Ana Smith".to_owned());
+        answered(Ok(AccountDetails {
+            user_id: view.user_id,
+            display_name,
+            homeserver_url: view.homeserver_url.trim_end_matches('/').to_owned(),
+            device_id: "FAMLAPTOP".to_owned(),
+            device_name: Some("Family Chat (Linux)".to_owned()),
+            family_chat,
+        }))
+    }
+
+    fn sign_out(&self, account: &AccountKey) -> Reply<SignedOut> {
+        if lock(&self.statuses).remove(account).is_none() {
+            return answered(Err(SessionError::UnknownAccount));
+        }
+        lock(&self.record).signed_out.push(account.clone());
+        self.accounts
+            .send_modify(|accounts| accounts.retain(|view| &view.key != account));
+        answered(Ok(SignedOut::Everywhere))
     }
 }
 

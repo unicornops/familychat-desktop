@@ -128,6 +128,10 @@ pub enum RoomRequest {
     },
     /// Move the read receipt and the read marker to the newest message.
     MarkRead,
+    /// Move them there with a private read receipt (`m.read.private`):
+    /// the account's own devices and the unread counts follow, nobody
+    /// else sees it (read receipts turned off, ADR 0015).
+    MarkReadPrivately,
     /// Tell the room the account is typing, or has stopped.
     Typing(bool),
     /// Send a file, as a reply to `reply_to` when it is set.

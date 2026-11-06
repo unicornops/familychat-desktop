@@ -535,17 +535,15 @@ fn open_signed_in(
 }
 
 #[gpui::test]
-fn the_notification_settings_are_a_named_dialog_with_a_checkbox(cx: &mut TestAppContext) {
+fn the_notification_settings_open_in_settings_with_named_checkboxes(cx: &mut TestAppContext) {
     let (_view, cx) = open_signed_in(cx, InitialView::NotificationSettings);
-    let entries = redraw(cx);
+    let (_root, mut settings_cx) = super::settings::settings_window(cx);
+    let entries = redraw(&mut settings_cx);
     assert_all_named(&entries);
-    assert!(has(&entries, Role::Dialog, "Notifications"), "{entries:?}");
-    assert!(has(
-        &entries,
-        Role::CheckBox,
-        "Show message text in notifications"
-    ));
-    assert!(has(&entries, Role::Button, "Done"));
+    assert!(has(&entries, Role::Heading, "Notifications"), "{entries:?}");
+    for checkbox in ["Show notifications", "Show message text in notifications"] {
+        assert!(has(&entries, Role::CheckBox, checkbox), "{checkbox}");
+    }
 }
 
 #[gpui::test]

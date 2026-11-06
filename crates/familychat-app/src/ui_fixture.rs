@@ -14,10 +14,10 @@ use std::{sync::Arc, time::Duration};
 
 use anyhow::{Result, bail};
 use familychat_core::{
-    ThemeAppearance,
+    OwnedUserId, ThemeAppearance,
     encryption::{DeviceTrust, EncryptionStatus, IdentitySetup, RecoveryState, VerificationStep},
     rooms::RoomListFilter,
-    settings::NotificationSettings,
+    settings::{AppearanceSettings, ContrastChoice, NotificationSettings, SettingsApi as _},
     signin::{SigninStep, Working},
     sync::SyncState,
     timeline::SendProblem,
@@ -29,7 +29,10 @@ use familychat_test_support::fixtures::{
     rooms::{self, LARGE_EVENTS, LARGE_ROOMS},
     steps,
 };
-use familychat_ui::{ComposerLaunch, EncryptionLaunch, InitialView, LaunchOptions, RoomsLaunch};
+use familychat_ui::{
+    ComposerLaunch, EncryptionLaunch, InitialView, LaunchOptions, RoomsLaunch, SettingsLaunch,
+    SettingsOpen, SettingsSection,
+};
 
 /// Every fixture view, in the screenshot matrix's order.
 pub(crate) const VIEWS: &[&str] = &[
@@ -84,8 +87,6 @@ pub(crate) const VIEWS: &[&str] = &[
     "link-prompt",
     "link-prompt-mismatched",
     "room-large",
-    "notification-settings",
-    "notification-settings-hidden",
     "forwarded-link",
     "composer-text",
     "composer-reply",
@@ -115,6 +116,23 @@ pub(crate) const VIEWS: &[&str] = &[
     "keys-import",
     "room-identity-changed",
     "room-not-sent",
+    "room-not-sent-review",
+    "settings-account",
+    "settings-account-other",
+    "settings-panel-link",
+    "settings-sign-out",
+    "settings-sessions",
+    "settings-privacy",
+    "settings-reset-key",
+    "settings-reset-identity",
+    "settings-reset-identity-password",
+    "settings-appearance",
+    "settings-appearance-large",
+    "settings-notifications",
+    "settings-notifications-hidden",
+    "settings-notifications-off",
+    "settings-diagnostics",
+    "room-text-200",
     "link-device",
     "link-device-approve",
     "link-device-done",
@@ -158,6 +176,12 @@ struct Fixture {
     identity_warnings: bool,
     /// The account's newest message in the family room was stopped.
     stopped: Option<SendProblem>,
+    /// Notifications are turned off.
+    notifications_off: bool,
+    /// The account is this user instead of the fixture's Family Chat one.
+    user: Option<&'static str>,
+    /// The appearance settings, when not the defaults.
+    appearance: Option<AppearanceSettings>,
 }
 
 impl Fixture {
@@ -174,6 +198,17 @@ impl Fixture {
             incoming_request: false,
             identity_warnings: false,
             stopped: None,
+            notifications_off: false,
+            user: None,
+            appearance: None,
+        }
+    }
+
+    /// The family's rooms with Settings open on `section`, with `open`.
+    fn settings(section: SettingsSection, open: Option<SettingsOpen>) -> Self {
+        Self {
+            initial_view: InitialView::Settings(SettingsLaunch { section, open }),
+            ..Self::signed_in(SyncState::Running)
         }
     }
 
@@ -368,15 +403,7 @@ fn fixture(view: &str) -> Result<Fixture> {
             ..RoomsLaunch::default()
         }),
         "room-large" => Fixture::room(rooms::FAMILY_ROOM).with_rooms(Rooms::Large),
-        "notification-settings" => Fixture {
-            initial_view: InitialView::NotificationSettings,
-            ..Fixture::signed_in(SyncState::Running)
-        },
-        "notification-settings-hidden" => Fixture {
-            initial_view: InitialView::NotificationSettings,
-            hide_content: true,
-            ..Fixture::signed_in(SyncState::Running)
-        },
+
         // A second launch forwarded a sign-in link while the rooms show:
         // the confirmation, over the sign-in that returns to them.
         "forwarded-link" => Fixture {
@@ -469,6 +496,79 @@ fn fixture(view: &str) -> Result<Fixture> {
             stopped: Some(SendProblem::UnconfirmedDevices),
             ..Fixture::room(rooms::FAMILY_ROOM)
         },
+        // Send anyway's review: the unconfirmed devices it would go to.
+        "room-not-sent-review" => Fixture {
+            stopped: Some(SendProblem::UnconfirmedDevices),
+            ..Fixture::rooms(RoomsLaunch {
+                room: Some(rooms::FAMILY_ROOM.to_owned()),
+                review_stopped: true,
+                ..RoomsLaunch::default()
+            })
+        },
+        // Settings (ADR 0015), each section and its dialogs.
+        "settings-account" => Fixture::settings(SettingsSection::Account, None),
+        "settings-account-other" => Fixture {
+            user: Some("@sam:matrix.example.org"),
+            ..Fixture::settings(SettingsSection::Account, None)
+        },
+        "settings-panel-link" => {
+            Fixture::settings(SettingsSection::Account, Some(SettingsOpen::PanelLink))
+        }
+        "settings-sign-out" => Fixture {
+            encryption: Some(EncryptionStatus {
+                recovery: RecoveryState::Disabled,
+                other_devices: false,
+                ..settled()
+            }),
+            ..Fixture::settings(SettingsSection::Account, Some(SettingsOpen::SignOut))
+        },
+        "settings-sessions" => Fixture::settings(SettingsSection::Sessions, None),
+        "settings-privacy" => Fixture::settings(SettingsSection::Privacy, None),
+        "settings-reset-key" => Fixture::settings(
+            SettingsSection::Privacy,
+            Some(SettingsOpen::Encryption(EncryptionLaunch::ResetRecoveryKey)),
+        ),
+        "settings-reset-identity" => Fixture::settings(
+            SettingsSection::Privacy,
+            Some(SettingsOpen::Encryption(EncryptionLaunch::ResetIdentity)),
+        ),
+        "settings-reset-identity-password" => Fixture::settings(
+            SettingsSection::Privacy,
+            Some(SettingsOpen::Encryption(
+                EncryptionLaunch::ResetIdentityPassword,
+            )),
+        ),
+        "settings-appearance" => Fixture::settings(SettingsSection::Appearance, None),
+        // The largest text and increased contrast, in a window that size.
+        "settings-appearance-large" => Fixture {
+            appearance: Some(AppearanceSettings {
+                text_size: 200,
+                contrast: ContrastChoice::Increased,
+                ..AppearanceSettings::default()
+            }),
+            ..Fixture::settings(SettingsSection::Appearance, None)
+        },
+        "settings-notifications" => Fixture::settings(SettingsSection::Notifications, None),
+        "settings-notifications-hidden" => Fixture {
+            hide_content: true,
+            ..Fixture::settings(SettingsSection::Notifications, None)
+        },
+        "settings-notifications-off" => Fixture {
+            notifications_off: true,
+            ..Fixture::settings(SettingsSection::Notifications, None)
+        },
+        "settings-diagnostics" => Fixture::settings(SettingsSection::Diagnostics, None),
+        // The main window at the largest text size, with increased
+        // contrast and reduced motion (Settings → Appearance).
+        "room-text-200" => Fixture {
+            appearance: Some(AppearanceSettings {
+                text_size: 200,
+                contrast: ContrastChoice::Increased,
+                motion: familychat_core::settings::MotionChoice::Reduce,
+                ..AppearanceSettings::default()
+            }),
+            ..Fixture::room(rooms::FAMILY_ROOM)
+        },
         other => bail!(
             "unknown fixture view `{other}`; the views are: {}",
             VIEWS.join(", ")
@@ -499,7 +599,11 @@ pub(crate) fn startup(
     let fixture = fixture(view)?;
     let session = FixtureSession::new();
     if let Some(sync) = fixture.account {
-        let account = session.add_account(&fixture_user(), sync);
+        let user = match fixture.user {
+            Some(user) => OwnedUserId::try_from(user)?,
+            None => fixture_user(),
+        };
+        let account = session.add_account(&user, sync);
         if let Some(status) = fixture.encryption.clone() {
             session.set_encryption(&account, status);
         }
@@ -537,10 +641,14 @@ pub(crate) fn startup(
         signin.start_at(step);
     }
     let startup = FixtureStartup::with(session, signin, &[fixture.profile]);
-    if fixture.hide_content {
+    if fixture.hide_content || fixture.notifications_off {
         startup.set_notification_settings(NotificationSettings {
-            show_content: false,
+            enabled: !fixture.notifications_off,
+            show_content: !fixture.hide_content,
         });
+    }
+    if let Some(appearance) = fixture.appearance {
+        drop(startup.settings().set_appearance_settings(appearance));
     }
     Ok((
         startup,

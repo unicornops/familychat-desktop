@@ -182,16 +182,16 @@ pub const SHARED: &[(&str, Cmd)] = &[
 /// (ADR 0008, "What the terminal leaves to the window").
 #[cfg_attr(not(test), allow(dead_code))]
 pub const LATER: &[(&str, &str)] = &[
-    // The window's notification settings dialog (ADR 0013); the terminal
-    // gets its settings with Phase 13.
-    ("NotificationSettings", "Phase 13"),
-    // The devices dialog (verify another device, sign one out with the
-    // password the server may ask for) and room key files (a passphrase
-    // typed twice, a file chosen): the window's for now, with the
-    // terminal's settings screen in Phase 13.
-    ("ManageDevices", "Phase 13"),
-    ("ExportRoomKeys", "Phase 13"),
-    ("ImportRoomKeys", "Phase 13"),
+    // The window's Settings (ADR 0015), its notification settings dialog
+    // (ADR 0013), the devices dialog (verify another device, sign one out
+    // with the password the server may ask for) and room key files (a
+    // passphrase typed twice, a file chosen): the terminal's own settings
+    // page is not phased yet (PLAN.md, section 14).
+    ("OpenSettings", "later"),
+    ("NotificationSettings", "later"),
+    ("ManageDevices", "later"),
+    ("ExportRoomKeys", "later"),
+    ("ImportRoomKeys", "later"),
     // A new phone scans the window's QR code (ADR 0010); a QR code a phone
     // can scan from a terminal (half-block drawing, sized to the terminal
     // and its font) is later work.

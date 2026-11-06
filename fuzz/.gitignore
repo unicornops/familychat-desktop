@@ -1,0 +1,6 @@
+/target
+/artifacts
+/coverage
+# The corpus libFuzzer grows during a run; only the seeds are kept.
+/corpus/*/*
+!/corpus/*/seed-*

@@ -653,6 +653,51 @@ fn a_stopped_message_is_sent_anyway_through_the_actions(cx: &mut TestAppContext)
         .copied()
         .expect("the button is a target");
     click(selector, cx);
+
+    // First the review (ADR 0015): who it would go to, named; nothing is
+    // sent until Send anyway there.
+    wait_until(cx, "the review", |cx| {
+        rooms.read_with(cx, |rooms, _| {
+            rooms
+                .stopped_review()
+                .is_some_and(|answer| answer.is_some())
+        })
+    });
+    assert!(
+        !session
+            .record()
+            .requests
+            .iter()
+            .any(|(_, request)| matches!(request, RoomRequest::SendAnyway(_))),
+        "nothing is sent before the review is answered"
+    );
+    let entries = redraw(cx);
+    assert!(
+        audit::labels(&entries, Role::Dialog)
+            .iter()
+            .any(|dialog| dialog.starts_with(wording::REVIEW_TITLE)),
+        "{entries:?}"
+    );
+    let devices = audit::labels(&entries, Role::ListItem);
+    for device in [
+        "You: Old tablet, OLDTABLET",
+        "Dad: Dad's new phone, DADPHONE2",
+    ] {
+        assert!(devices.contains(&device), "{device}: {devices:?}");
+    }
+    assert!(check_targets("the review", cx) >= 2);
+    // Cancel sends nothing; Send anyway does, through the actions.
+    click("button-review-cancel", cx);
+    assert!(rooms.read_with(cx, |rooms, _| rooms.stopped_review().is_none()));
+    click(selector, cx);
+    wait_until(cx, "the review again", |cx| {
+        rooms.read_with(cx, |rooms, _| {
+            rooms
+                .stopped_review()
+                .is_some_and(|answer| answer.is_some())
+        })
+    });
+    click("button-review-send-anyway", cx);
     wait_until(cx, "the request", |_| {
         session
             .record()

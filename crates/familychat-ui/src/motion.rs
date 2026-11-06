@@ -45,11 +45,9 @@ use std::time::{Duration, Instant};
 
 use gpui::{App, AppContext as _, Global};
 
-/// Whether animations follow the system or are forced on or off. The
-/// setting arrives with Settings (Phase 13); until then the app follows
-/// the system.
+/// Whether animations follow the system or are forced on or off: Settings
+/// → Appearance → Motion (ADR 0015).
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-#[allow(dead_code)]
 pub(crate) enum MotionMode {
     /// Follow the operating system's reduce-motion setting (full motion
     /// where the platform cannot tell).
@@ -71,6 +69,24 @@ pub(crate) struct SystemMotion(pub(crate) Option<bool>);
 
 impl Global for SystemMotion {}
 
+impl From<familychat_core::settings::MotionChoice> for MotionMode {
+    fn from(choice: familychat_core::settings::MotionChoice) -> Self {
+        use familychat_core::settings::MotionChoice;
+        match choice {
+            MotionChoice::System => Self::System,
+            MotionChoice::Reduce => Self::Reduce,
+            MotionChoice::Full => Self::Full,
+        }
+    }
+}
+
+/// The person's choice, kept so a later read of the system setting
+/// applies it too.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+struct ChosenMotion(MotionMode);
+
+impl Global for ChosenMotion {}
+
 /// Whether the UI should reduce motion for the user's choice, given what
 /// the system asks for. An unknown system setting allows motion.
 pub(crate) fn reduces_motion(mode: MotionMode, system: Option<bool>) -> bool {
@@ -81,8 +97,10 @@ pub(crate) fn reduces_motion(mode: MotionMode, system: Option<bool>) -> bool {
     }
 }
 
-/// Applies `mode` to every window, with the last system setting read.
+/// Applies `mode` to every window, with the last system setting read, and
+/// keeps it for the next read.
 pub(crate) fn apply(mode: MotionMode, cx: &mut App) {
+    cx.set_global(ChosenMotion(mode));
     let system = cx.try_global::<SystemMotion>().copied().unwrap_or_default();
     cx.set_reduce_motion(reduces_motion(mode, system.0));
 }
@@ -94,7 +112,8 @@ pub(crate) fn follow_system(cx: &mut App) {
         let system = cx.background_spawn(async { read_system_setting() }).await;
         cx.update(|cx| {
             cx.set_global(SystemMotion(system));
-            apply(MotionMode::System, cx);
+            let chosen = cx.try_global::<ChosenMotion>().copied().unwrap_or_default();
+            apply(chosen.0, cx);
         });
     })
     .detach();

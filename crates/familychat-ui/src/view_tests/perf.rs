@@ -21,7 +21,10 @@
 //! frame: render, layout, prepaint and paint into the scene) until the
 //! executor is idle: the CPU side of a frame, without the GPU drawing it.
 //! `FAMILYCHAT_PERF_REPORT=<dir>` writes the tables to
-//! `<dir>/performance.md`.
+//! `<dir>/performance.md`. `FAMILYCHAT_PERF_GATE=<factor>` fails the run
+//! when a median is over its budget times `factor`: CI's performance job
+//! uses 3, a gross-regression gate on a shared runner rather than the
+//! budget itself (as Zmail's `ZMAIL_PERF_GATE`).
 
 use std::time::{Duration, Instant};
 
@@ -355,17 +358,48 @@ fn performance_budgets() {
         "## Rooms and timeline, {LARGE_ROOMS} rooms and {LARGE_EVENTS} events\n\nWindow opened \
          in {opened:.1?}. CPU time on the main thread per step.\n"
     );
-    markdown.push_str(&table(
-        "Scrolling (CPU time per frame)",
-        &[flick_end, flick_middle, jumps, list],
-    ));
-    markdown.push_str(&table(
-        "Changes and actions (CPU time)",
-        &[one_change, reset, open_room],
-    ));
+    let scrolling = [flick_end, flick_middle, jumps, list];
+    let changes = [one_change, reset, open_room];
+    markdown.push_str(&table("Scrolling (CPU time per frame)", &scrolling));
+    markdown.push_str(&table("Changes and actions (CPU time)", &changes));
+    let gate = std::env::var("FAMILYCHAT_PERF_GATE")
+        .ok()
+        .and_then(|value| value.parse::<f64>().ok())
+        .filter(|factor| *factor > 0.);
+    let over = gate.map(|factor| over_gate(scrolling.iter().chain(&changes), factor));
+    if let (Some(factor), Some(over)) = (gate, &over) {
+        markdown.push_str(&format!(
+            "\nGate: every median within {factor} times its budget: {}.\n",
+            if over.is_empty() { "passed" } else { "FAILED" }
+        ));
+    }
     if let Some(dir) = std::env::var_os("FAMILYCHAT_PERF_REPORT") {
         let dir = std::path::PathBuf::from(dir);
         std::fs::create_dir_all(&dir).expect("the report directory is created");
         std::fs::write(dir.join("performance.md"), &markdown).expect("the tables are written");
     }
+    // A gross-regression gate (CI): only a median several times over its
+    // budget fails, so a noisy shared runner does not.
+    if let (Some(factor), Some(over)) = (gate, over) {
+        assert!(
+            over.is_empty(),
+            "medians over {factor} times their budget:\n{}",
+            over.join("\n")
+        );
+    }
+}
+
+/// The measurements whose median is over `factor` times their budget.
+fn over_gate<'a>(samples: impl Iterator<Item = &'a Samples>, factor: f64) -> Vec<String> {
+    samples
+        .filter(|samples| samples.percentile(50) > samples.budget.mul_f64(factor))
+        .map(|samples| {
+            format!(
+                "{}: median {} over {factor} × {}",
+                samples.name,
+                ms(samples.percentile(50)),
+                ms(samples.budget)
+            )
+        })
+        .collect()
 }

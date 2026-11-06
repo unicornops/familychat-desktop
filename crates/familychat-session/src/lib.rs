@@ -49,7 +49,9 @@ mod timeline;
 pub use account::{Account, OpenError, account_key};
 pub use config::SessionConfig;
 pub use live::LiveSession;
-pub use manager::{AccountManager, AddAccountError, AnyHomeserver, PostLoginCheck, Restored};
+pub use manager::{
+    AccountManager, AddAccountError, AnyHomeserver, PostLoginCheck, Restored, SignOutError,
+};
 pub use media::{AuthenticatedMediaFetcher, DOWNLOAD_TIMEOUT, MAX_DOWNLOAD_BYTES};
 pub use qr_login::{QrAnswer, QrEvent, QrLoginError, QrLoginRequest, UrlGuard};
 pub use runtime::BackgroundRuntime;

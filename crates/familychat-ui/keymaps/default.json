@@ -1,7 +1,8 @@
 [
   {
     "bindings": {
-      "secondary-q": "familychat::Quit"
+      "secondary-q": "familychat::Quit",
+      "secondary-,": "familychat::OpenSettings"
     }
   },
   {
