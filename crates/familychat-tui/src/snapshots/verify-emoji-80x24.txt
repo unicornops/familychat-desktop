@@ -1,0 +1,99 @@
+  FAMILY CHAT 0.0.0-test               @ana:smith.safechat.family  Room 1 of 11
+
+
+  ┌──────────────────────────────────────────────────────────────────────────┐
+  │ Verify this device                                                       │
+  │                                                                          │
+  │ Check that these emoji appear on the other device, in the same order.    │
+  │                                                                          │
+  │ 1. 🐶   Dog                                                               │
+  │ 2. 🔑   Key                                                               │
+  │ 3. 🍕   Pizza                                                             │
+  │ 4. 🚀   Rocket                                                            │
+  │ 5. 🎸   Guitar                                                            │
+  │ 6. ☂️   Umbrella                                                          │
+  │ 7. 🦋   Butterfly                                                         │
+  │                                                                          │
+  │ Y They match   N They don't match                                        │
+  └──────────────────────────────────────────────────────────────────────────┘
+
+
+
+                                                                     Up to date
+Y TheyMatch
+N NoMatch
+--- styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+
+
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+BBB BBBBBBBBBBBBBBBBBB                                                       B
+  B                                                                          B
+  B                                                                          B
+  B                                                                          B
+  B BBBB BBBBB                                                               B
+  B BBBB BBBBB                                                               B
+  B BBBB BBBBBBB                                                             B
+  B BBBB BBBBBBBB                                                            B
+  B BBBB BBBBBBBB                                                            B
+  B BBBB BBBBBBBBBB                                                          B
+  B BBBB BBBBBBBBBBB                                                         B
+  B                                                                          B
+  B R              R                                                         B
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+
+
+
+                                                                     kkkkkkkkkkk
+R
+R
+--- NO_COLOR styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+
+
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+BBB BBBBBBBBBBBBBBBBBB                                                       B
+  B                                                                          B
+  B                                                                          B
+  B                                                                          B
+  B BBBB BBBBB                                                               B
+  B BBBB BBBBB                                                               B
+  B BBBB BBBBBBB                                                             B
+  B BBBB BBBBBBBB                                                            B
+  B BBBB BBBBBBBB                                                            B
+  B BBBB BBBBBBBBBB                                                          B
+  B BBBB BBBBBBBBBBB                                                         B
+  B                                                                          B
+  B R              R                                                         B
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+
+
+
+
+R
+R
+--- ASCII ---
+  FAMILY CHAT 0.0.0-test               @ana:smith.safechat.family  Room 1 of 11
+
+
+  +--------------------------------------------------------------------------+
+  | Verify this device                                                       |
+  |                                                                          |
+  | Check that these emoji appear on the other device, in the same order.    |
+  |                                                                          |
+  | 1. Dog                                                                   |
+  | 2. Key                                                                   |
+  | 3. Pizza                                                                 |
+  | 4. Rocket                                                                |
+  | 5. Guitar                                                                |
+  | 6. Umbrella                                                              |
+  | 7. Butterfly                                                             |
+  |                                                                          |
+  | Y They match   N They don't match                                        |
+  +--------------------------------------------------------------------------+
+
+
+
+                                                                     Up to date
+Y TheyMatch
+N NoMatch

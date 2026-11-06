@@ -249,6 +249,16 @@ jobs:
               timeout-minutes: 15
               run: cargo test -p familychat-app --test live_tui_signin --locked -- --ignored --nocapture
 
+            # The terminal UI writing and verifying against the harness (ADR
+            # 0008): it joins an encrypted room it was invited to, sends,
+            # shows the other member's answer, replies and reacts (each
+            # checked on the other member's device), and confirms a new
+            # device by emoji with another device, then verifies a third
+            # device that asks it to.
+            - name: Live terminal UI writing tests
+              timeout-minutes: 20
+              run: cargo test -p familychat-app --test live_tui_writing --locked -- --ignored --nocapture
+
             # The messaging actions against the harness (ADR 0012): send,
             # reply, edit, react and redact between two members; a message
             # sent with the front end stopped goes when it is back; a paused

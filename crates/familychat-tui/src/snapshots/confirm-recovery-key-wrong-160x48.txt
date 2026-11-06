@@ -1,0 +1,195 @@
+  FAMILY CHAT 0.0.0-test                                                CONFIRM IT'S YOU                               @ana:smith.safechat.family  Room 1 of 11
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                            Enter your recovery key
+                                            Type or paste the recovery key you saved. Spaces don't matter.
+
+                                            That recovery key doesn't match. Check it and try again.
+
+                                            Recovery key:
+
+                                            Enter confirms. Esc goes back to the other ways.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                                                                                     Up to date
+Enter OK            ^C Quit
+Esc Back
+--- styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+
+
+                                            rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr
+
+                                            BBBBBBBBBBBBBB
+
+                                            kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                                                                                     kkkkkkkkkkk
+RRRRR               RR
+RRR
+--- NO_COLOR styles ---
+RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+
+
+                                            BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+
+                                            BBBBBBBBBBBBBB
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+RRRRR               RR
+RRR
+--- ASCII ---
+  FAMILY CHAT 0.0.0-test                                                CONFIRM IT'S YOU                               @ana:smith.safechat.family  Room 1 of 11
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                            Enter your recovery key
+                                            Type or paste the recovery key you saved. Spaces don't matter.
+
+                                            That recovery key doesn't match. Check it and try again.
+
+                                            Recovery key:
+
+                                            Enter confirms. Esc goes back to the other ways.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                                                                                     Up to date
+Enter OK            ^C Quit
+Esc Back

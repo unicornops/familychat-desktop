@@ -9,22 +9,20 @@
     You: Love you too ❤️                     │                                                                                       │ Ana (you)
   Grandad                           2 09:00 │                                                                                       │ Ben
     Grandad: Sent an image                  │                                                                                       │
-  Holiday photos                      07:00 │                                                                                       │ Invited, 1
-    Dad: Sent an image                      │                                                                                       │ Aunt Clare
-  Summer holiday 2027                 03:00 │ ───────────────────────────────────── Yesterday ──────────────────────────────────────│
-    Dad: Packing list is in the pinned mess…│ Dad  09:00                                                                            │
-  Homework help                   Yesterday │   Who's in for pancakes tomorrow morning?                                             │
-    Ben: What's 7 × 8 again?                │ Ben  09:01                                                                            │
-  Ben                           • Yesterday │   ME                                                                                  │
-    Ben: can I borrow your charger          │   with chocolate chips pls                                                            │
-  Under-14s football                Tuesday │ Dad  10:00                                                                            │
-    Coach Rivera: Training moves to Thursda…│   * Dad is buying chocolate chips                                                     │
-  Birthday surprise                  Monday │ Ana  10:05                                                                            │
-    Dad: Message deleted                    │   Yes please! Can we have them before football?                                       │
-  Book club                          Sunday │   👍  2                                                                                │
-    No messages yet                         │ Family Chat  11:00                                                                    │
-                                            │   Quiet time starts at 21:00. Chat is paused until 07:00.                             │
-                                            │ ─────────────────────────────────────── Today ────────────────────────────────────────│
+  Holiday photos                      07:00 │ ───────────────────────────────────── Yesterday ──────────────────────────────────────│ Invited, 1
+    Dad: Sent an image                      │ Dad  09:00                                                                            │ Aunt Clare
+  Summer holiday 2027                 03:00 │   Who's in for pancakes tomorrow morning?                                             │
+    Dad: Packing list is in the pinned mess…│ Ben  09:01                                                                            │
+  Homework help                   Yesterday │   ME                                                                                  │
+    Ben: What's 7 × 8 again?                │   with chocolate chips pls                                                            │
+  Ben                           • Yesterday │ Dad  10:00                                                                            │
+    Ben: can I borrow your charger          │   * Dad is buying chocolate chips                                                     │
+  Under-14s football                Tuesday │ Ana  10:05                                                                            │
+    Coach Rivera: Training moves to Thursda…│   Yes please! Can we have them before football?                                       │
+  Birthday surprise                  Monday │   👍  2                                                                                │
+    Dad: Message deleted                    │ Family Chat  11:00                                                                    │
+  Book club                          Sunday │   Quiet time starts at 21:00. Chat is paused until 07:00.                             │
+    No messages yet                         │ ─────────────────────────────────────── Today ────────────────────────────────────────│
                                             │ Mum  09:00                                                                            │
                                             │   Morning all. Pancakes are ready!                                                    │
                                             │ Dad  10:00                                                                            │
@@ -43,9 +41,11 @@
                                             │   ❤️  1                                                                                │
                                             │ Ana  11:59                                                                            │
                                             │   See you then (sending…)                                                             │
+                                            │ ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                            │ ›  Message Smith family
                                                                                                                                                      Up to date
-< Rooms             PgDn Newer          l Link#             u FirstNew          m Members           : Commands          ^N NextRoom         N PrevNew
-PgUp Older          Tab NextLink        s Save              G Latest            n NextNew           q Quit              ^P PrevRoom         O OTHER
+Enter Send          Esc Messages        PgDn Newer          ^P PrevRoom         ^C Quit
+^J NewLine          PgUp Older          ^N NextRoom         ^R Recovery
 --- styles ---
 RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
  kkRRR  kk        kk        kk              k BBBBBBBBBBBBkkkkkkkkkkkkkkkkkkkkkk
@@ -58,22 +58,20 @@ kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk                                   
 kkkkkkkkkkkkkkkkkkkkkkk kkkkkkkkkkkkkkkkkkkkk                                                                                       k                          k
   BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB B kkkkk k                                                                                       k                          k
 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk                                                                                       k
-                                      kkkkk k                                                                                       k BBBBBBBBBB
-kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk                                                                                       k                          k
-                                      kkkkk k kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+                                      kkkkk k kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk BBBBBBBBBB
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk BBB  kkkkk                                                                            k                          k
+                                      kkkkk k kk                                                                                    k
 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk BBB  kkkkk                                                                            k
                                   kkkkkkkkk k kk                                                                                    k
-kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk BBB  kkkkk                                                                            k
-  BBBBBBBBBBBBBBBBBBBBBBBBBBBBB B kkkkkkkkk k kk                                                                                    k
 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk kk                                                                                    k
-                                    kkkkkkk k BBB  kkkkk                                                                            k
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBB B kkkkkkkkk k BBB  kkkkk                                                                            k
 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk kkBBBBBB                                                                              k
-                                     kkkkkk k ccc  kkkkk                                                                            k
+                                    kkkkkkk k ccc  kkkkk                                                                            k
 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk kk                                                                                    k
                                      kkkkkk k   k kk                                                                                k
 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk BBBBBBBBBBB  kkkkk                                                                    k
-                                            k kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk                             k
-                                            k kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+                                     kkkkkk k kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk                             k
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
                                             k BBB  kkkkk                                                                            k
                                             k kk                                                                                    k
                                             k BBB  kkkkk                                                                            k
@@ -92,9 +90,11 @@ kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk BBBBBBBBBBB  kkkkk                
                                             k   k kk                                                                                k
                                             k ccc  kkkkk                                                                            k
                                             k kk            kkkkkkkkkkk                                                             k
+                                            k kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+                                            k BBkkkkkkkkkkkkkkkkkkkkk
                                                                                                                                                      kkkkkkkkkkk
-R                   RRRR                R                   R                   R                   R                   RR                  R
-RRRR                RRR                 R                   R                   R                   R                   RR                  R
+RRRRR               RRR                 RRRR                RR                  RR
+RR                  RRRR                RR                  RR
 --- NO_COLOR styles ---
 RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
    RRR                                        BBBBBBBBBBBB
@@ -108,14 +108,12 @@ BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
   BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB B
 
                                                                                                                                       BBBBBBBBBB
-
-
                                               BBB
 
                                               BBB
-  BBBBBBBBBBBBBBBBBBBBBBBBBBBBB B
 
-                                              BBB
+
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBB B             BBB
                                                 BBBBBB
                                               BBB
 
@@ -142,8 +140,10 @@ BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
                                               BBB
 
 
-R                   RRRR                R                   R                   R                   R                   RR                  R
-RRRR                RRR                 R                   R                   R                   R                   RR                  R
+                                              BBR
+
+RRRRR               RRR                 RRRR                RR                  RR
+RR                  RRRR                RR                  RR
 --- ASCII ---
   FAMILY CHAT 0.0.0-test                                                     ROOMS                                     @ana:smith.safechat.family  Room 2 of 11
  1 All  2 Unread  3 People  4 Invites       | Smith family  Encrypted  5 members
@@ -156,22 +156,20 @@ RRRR                RRR                 R                   R                   
     You: Love you too ❤️                     |                                                                                       | Ana (you)
   Grandad                           2 09:00 |                                                                                       | Ben
     Grandad: Sent an image                  |                                                                                       |
-  Holiday photos                      07:00 |                                                                                       | Invited, 1
-    Dad: Sent an image                      |                                                                                       | Aunt Clare
-  Summer holiday 2027                 03:00 | ------------------------------------- Yesterday --------------------------------------|
-    Dad: Packing list is in the pinned me...| Dad  09:00                                                                            |
-  Homework help                   Yesterday |   Who's in for pancakes tomorrow morning?                                             |
-    Ben: What's 7 × 8 again?                | Ben  09:01                                                                            |
-  Ben                           * Yesterday |   ME                                                                                  |
-    Ben: can I borrow your charger          |   with chocolate chips pls                                                            |
-  Under-14s football                Tuesday | Dad  10:00                                                                            |
-    Coach Rivera: Training moves to Thurs...|   * Dad is buying chocolate chips                                                     |
-  Birthday surprise                  Monday | Ana  10:05                                                                            |
-    Dad: Message deleted                    |   Yes please! Can we have them before football?                                       |
-  Book club                          Sunday |   👍  2                                                                                |
-    No messages yet                         | Family Chat  11:00                                                                    |
-                                            |   Quiet time starts at 21:00. Chat is paused until 07:00.                             |
-                                            | --------------------------------------- Today ----------------------------------------|
+  Holiday photos                      07:00 | ------------------------------------- Yesterday --------------------------------------| Invited, 1
+    Dad: Sent an image                      | Dad  09:00                                                                            | Aunt Clare
+  Summer holiday 2027                 03:00 |   Who's in for pancakes tomorrow morning?                                             |
+    Dad: Packing list is in the pinned me...| Ben  09:01                                                                            |
+  Homework help                   Yesterday |   ME                                                                                  |
+    Ben: What's 7 × 8 again?                |   with chocolate chips pls                                                            |
+  Ben                           * Yesterday | Dad  10:00                                                                            |
+    Ben: can I borrow your charger          |   * Dad is buying chocolate chips                                                     |
+  Under-14s football                Tuesday | Ana  10:05                                                                            |
+    Coach Rivera: Training moves to Thurs...|   Yes please! Can we have them before football?                                       |
+  Birthday surprise                  Monday |   👍  2                                                                                |
+    Dad: Message deleted                    | Family Chat  11:00                                                                    |
+  Book club                          Sunday |   Quiet time starts at 21:00. Chat is paused until 07:00.                             |
+    No messages yet                         | --------------------------------------- Today ----------------------------------------|
                                             | Mum  09:00                                                                            |
                                             |   Morning all. Pancakes are ready!                                                    |
                                             | Dad  10:00                                                                            |
@@ -190,6 +188,8 @@ RRRR                RRR                 R                   R                   
                                             |   ❤️  1                                                                                |
                                             | Ana  11:59                                                                            |
                                             |   See you then (sending...)                                                           |
+                                            | ------------------------------------------------------------------------------------------------------------------
+                                            | >  Message Smith family
                                                                                                                                                      Up to date
-< Rooms             PgDn Newer          l Link#             u FirstNew          m Members           : Commands          ^N NextRoom         N PrevNew
-PgUp Older          Tab NextLink        s Save              G Latest            n NextNew           q Quit              ^P PrevRoom         O OTHER
+Enter Send          Esc Messages        PgDn Newer          ^P PrevRoom         ^C Quit
+^J NewLine          PgUp Older          ^N NextRoom         ^R Recovery

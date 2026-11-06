@@ -9,6 +9,9 @@ description = "Family Chat's terminal UI (ADR 0008)"
 
 [dependencies]
 anyhow.workspace = true
+# Every room change goes through the messaging actions (ADR 0012): no
+# matrix-sdk, GPUI or ratatui in its graph.
+familychat-actions = { path = "../familychat-actions" }
 # OSC 52 copies: the selection in base64 (Zmail's clipboard.rs). Already in
 # the lock file through the GPUI and wiremock graphs.
 base64 = "0.22.1"
@@ -18,6 +21,8 @@ familychat-core = { path = "../familychat-core" }
 # file names the save question suggests. GPUI- and matrix-sdk-free.
 familychat-security = { path = "../familychat-security" }
 ratatui.workspace = true
+# The composer: a multi-line editor with Zmail's settings (ADR 0008).
+ratatui-textarea.workspace = true
 # The session's and the sign-in's channels, polled with try_recv on each
 # tick: the sync primitives only, no runtime.
 tokio = { version = "1", default-features = false, features = ["sync"] }

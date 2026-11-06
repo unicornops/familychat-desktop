@@ -2,10 +2,12 @@
 
 ## Status
 
-Proposed with Phase 10 (issue #11); accepted when that pull request
-merges. It records PLAN.md sections 5.2, 5.3, 5.5, 5.8, 5.9, 7 and 13.10
-as built for reading. Writing, encryption and answering invitations in the
-terminal are Phase 11 (issue #12), which adds to this ADR.
+Accepted with Phase 10 (issue #11), which built the terminal UI for
+reading (PLAN.md sections 5.2, 5.3, 5.5, 5.8, 5.9, 7 and 13.10). Phase 11
+(issue #12) adds writing, invitations and encryption (PLAN.md section
+13.11 and decision 10): the sections "Writing", "Encryption" and "What
+the terminal leaves to the window" below, accepted when its pull request
+merges.
 
 ## Context
 
@@ -46,7 +48,8 @@ locked or unreachable (Try again, `t`), the data's key lost (Start over,
 same states with the same sentences as in the window. When the terminal
 UI ends, the accounts' syncs stop before the runtime does. Flags:
 `--bell` (ring the bell for new messages), `--ascii` (ASCII drawing in a
-UTF-8 terminal) and `--no-mouse` (leave the mouse to the terminal);
+UTF-8 terminal), `--no-mouse` (leave the mouse to the terminal) and
+`--editor` (the external editor, "Writing" below);
 `FAMILYCHAT_TUI_COPY_COMMAND` names a program copies are piped to. The
 settings screen of Phase 13 will keep them.
 
@@ -80,8 +83,12 @@ on the table's terminal key, with the table's name and description in the
 palette (`commands::SHARED`). The terminal adds only what a window does
 with its pointer and focus: Enter, Esc and `<`, the arrows and pages, Tab
 and Shift-Tab between links and files, `l` for one by its number, `s` to
-save, `y` to copy, `t` to try again, `v` for spoilers, `b` for the bell
-(`commands::LOCAL`), and they never reuse a table key. A new table row
+save, `y` to copy, `t` to try again, `v` for spoilers, `b` for the bell,
+and from Phase 11 the composer's Enter, `^J` and `^_`, `a` and `x` for an
+invitation, `S` for Send anyway, `w` for an identity warning, and `d`,
+`r` and `s` on "Confirm it's you" (`commands::LOCAL`), and they never
+reuse a table key. Decision 10's `O` for a link stays `l`: `O` pages the
+command bar, as in Zmail. A new table row
 fails `every_table_command_has_a_terminal_command` until it is mapped or
 listed in `commands::LATER` with the phase that brings it, so the
 frontends cannot drift apart. In a text field (the link, the password
@@ -131,7 +138,7 @@ Zmail's preview pane follows its index; narrower, they take turns. The
 room's header names the encryption state, and a room that is not
 encrypted says so in a banner (PLAN.md, section 6.8). The members show
 beside the timeline where there is room (`m`), and instead of it where
-there is not. An invitation is read-only here: answering is Phase 11.
+there is not. An invitation is answered in the room ("Writing").
 
 The timeline draws `familychat-core`'s rows (room changes folded, a
 sender's messages grouped) with its wording for room changes, days and
@@ -195,9 +202,12 @@ status line, and on any payload the attacks carry.
 
 ### Fixtures, snapshots and the live tests
 
-`familychat_tui::fixture_views` names every screen (48 views) as data: how
+`familychat_tui::fixture_views` names every screen (78 views) as data: how
 the profile opens, the sign-in step, a signed-in account's sync and
-rooms, and where the UI starts. `familychat launch-tui-fixture VIEW`
+rooms, its encryption, a verification, identity warnings, a message the
+encryption stopped, the upload limit, and where the UI starts (a room,
+then commands run and keys typed, one step a tick once the answers to the
+last have arrived). `familychat launch-tui-fixture VIEW`
 (`--list`) opens one in a real terminal, behind the app's `ui-fixture`
 feature, which turns on the terminal UI's `fixture-views` feature and is
 never in a release (`scripts/check-release-features.sh`).
@@ -218,7 +228,129 @@ own state, key by key and paste by paste, over the real `LiveSignin` and
 on Palpo, pasted and used only after `y` (no login in the access log
 before it), and a typed password. Each new account has an invitation to
 a room whose name carries escape sequences, which the terminal shows
-filtered. CI's quality job runs it with the other live tests.
+filtered. `crates/familychat-app/tests/live_tui_writing.rs` (Phase 11)
+drives it the same way against a test-support device, a second
+`LiveSession` on a profile of its own driven through `SessionApi`: the
+terminal joins an encrypted room it was invited to with `a`, sends a
+message the other member's device reads decrypted, shows the answer,
+replies to it (`[`, `R`; the other side sees the reply's target) and
+reacts to it (`+`, `1`); and a new device in the terminal confirms
+itself by emoji with the account's first device ("Confirm it's you", `d`,
+`e`, `y`, the seven emoji and their names checked on screen against the
+other device's), then verifies a third device that asks it to. CI's
+quality job runs both with the other live tests.
+
+### Writing
+
+The composer is Zmail's compose editor: `ratatui-textarea` with Zmail's
+settings (no cursor-line underline, word wrap, only plain keys reach it)
+under the timeline, one message long, growing to six lines. It follows
+PLAN.md decision 10: opening a room the person can write in gives the
+composer the keys, so letters are text; Esc hands them to the room's
+commands, where the table's single letters work (`[` and `]` select a
+message, `R` reply, `E` edit, `+` react, `D` delete, `A` attach, `L`
+leave, `i` back to the composer), and Esc again goes back to the list.
+In the composer, Enter sends; `^J`, Alt-Enter and (where the terminal
+tells it apart) Shift-Enter start a new line; Up in an empty composer
+edits the account's newest message; the table's Ctrl keys still work.
+Nothing in the composer decides a rule: every change to a room is
+`familychat-actions`' (ADR 0012), whose tasks run to their end on a
+short-lived thread each, parked between wake-ups (`tasks.rs`; the
+terminal has no async runtime, and `send_file` reads and cleans a file
+inside its task), and whose events arrive on its channel on each tick.
+
+- **Markdown and mentions.** What is typed is sent as typed; the actions
+  turn it into Markdown with the HTML the sanitiser keeps. `@` lists the
+  room's members (the actions' `mentions`), Up and Down move, Tab or
+  Enter picks, and the mention goes in `m.mentions`.
+- **Replies, edits, reactions and deletions** are about the selected
+  message, or with none selected the newest one that fits, as in the
+  window: a reply shows "Replying to …" over the field, an edit puts the
+  message's text in it, Esc cancels either. `+` opens the quick picker
+  (the window's six; `1` to `6`; names instead of emoji in ASCII). `D`
+  needs one of the account's own messages selected and asks first, in a
+  dialog only `y` answers. A selected message the encryption stopped
+  shows why, and `S` sends it anyway (ADR 0009).
+- **Files by path.** `A` asks for a path, starting in Downloads, with Tab
+  completing as far as the names in that folder agree (and listing them).
+  The file is checked against the server's upload limit by its size
+  before anything is read (`file_allowed`); one over the limit says so
+  and never waits. A file waits under the field until the message goes
+  (Backspace in an empty field takes the last one back), and goes through
+  `send_file`, which takes a picture's location out.
+- **Invitations.** An invitation's room says who sent it; `a` joins and
+  `x` declines, through the actions. Once joined, the room opens again
+  with its timeline and composer (from All, when the list was showing
+  Invites).
+- **Paused.** While the account is suspended the composer has no field:
+  "Chat is paused" and the actions' sentence, read-only, and the room's
+  commands have the keys without the writing ones. The actions refuse
+  every write anyway.
+- **Drafts, typing and receipts** are the window's rules: the draft is
+  read when a room opens and kept a second after typing pauses (and when
+  the room is left, never for an edit); typing notices go at most every
+  few seconds and stop after five quiet ones or a send; the read receipt
+  moves when the newest message is on screen, at most every two seconds.
+- **Text from outside the keys** (a paste, a draft, an edited message's
+  old text, the external editor's text, a member's name) goes through
+  `terminal::sanitize` before it reaches the editor.
+- **The external editor** is Zmail's and off unless `familychat tui
+  --editor`: `^_` hands the message to `$VISUAL` or `$EDITOR` (split as a
+  copy command is, no shell) on a file in a fresh 0700 folder (the file
+  0600), which is overwritten with zeros and removed with anything the
+  editor left beside it however the editor ends; the text comes back
+  filtered. It is opt-in because the message sits unencrypted on disk
+  while the editor is open. `editor.rs` is copied from Zmail.
+
+### Encryption
+
+The terminal draws the session's `EncryptionStatus` and
+`VerificationFlow`s and sends the answers back, as the window's
+`EncryptionView` does (ADR 0009), with the same wording:
+
+- **Confirm it's you** takes the rooms' place while this device isn't
+  confirmed: `d` another device (comparing emoji), `r` the recovery key
+  (when the account has recovery), `s` (or Esc) skip, after the warning,
+  which only `y` accepts. Skipped, a banner over the rooms says the device
+  isn't confirmed, and `V` (ConfirmIdentity) brings the screen back. A new
+  reason to confirm (the identity reset elsewhere) asks again.
+- **The recovery key and the password** the server may ask for before the
+  identity is made are typed (or pasted) into masked fields, held as
+  `SecretField`s (wiped when taken or dropped) and handed on as
+  `SecretText`, used once and never drawn, kept or logged. A key that
+  doesn't open recovery says so, and the field starts again.
+- **Verification** is a dialog over the body: waiting for the other
+  device, a request from one (`y` accepts, `n` declines; Enter answers
+  nothing), ready, the seven emoji with their names under or beside them
+  (in a row where the dialog is wide enough, one a line where not, and
+  names only in ASCII), confirming, done, or why it stopped (`y` they
+  match, `n` they don't, Esc cancels). Requests from the account's other
+  devices reach the terminal through `verification_requests`, which it
+  listens on from the moment the profile opens (so the session no longer
+  declines them while it is open); one at a time, a newer one while a
+  verification is open is declined, as in the window. No QR code is
+  drawn: a terminal's cells don't make a code a phone reliably reads, so
+  "ready" offers the emoji, which work with every device.
+- **Recovery** (`^R`, SetUpRecovery, and the banner offering it) asks
+  first, then shows the new key once, in the dialog: `c` copies it (OSC
+  52, the copy wiped from memory once written) and Enter then closes, or
+  `w` says it was written down; the key is dropped (wiped) when the
+  dialog closes.
+- **Banners and the timeline.** The identity couldn't be made (`t` tries
+  again), recovery isn't set up (`^R`), and each identity warning of the
+  open room (`w` answers the first: OK, or withdraws the old
+  verification). Unable-to-decrypt messages say why with `UtdReason`'s
+  sentences, and a message the encryption stopped says
+  `SendProblem`'s.
+
+### What the terminal leaves to the window
+
+`commands::LATER` lists what the shared table has that the terminal
+doesn't offer yet, each with when: the notification settings, the devices
+dialog (verifying another device, signing one out with the password the
+server may ask for) and room key export and import (a passphrase typed
+twice and a file chosen) wait for the terminal's settings screen in Phase
+13. A verification QR code is the window's (above).
 
 ## Consequences
 
@@ -240,3 +372,12 @@ filtered. CI's quality job runs it with the other live tests.
   cell late. Zmail has the same limit.
 - New-message notices follow unread counts until Phase 9 adds the
   notification stream; the terminal UI then shows that instead.
+- The composer has the keys in an open room, so a single-letter command
+  there is an Esc away; the command bar always shows which keys are live.
+- Shift-Enter reaches the terminal UI only where the terminal reports it
+  (the kitty keyboard protocol, Windows Terminal); `^J` and Alt-Enter
+  start a new line everywhere.
+- The emoji comparison shows each emoji's name too, so a terminal whose
+  font draws an emoji differently, or not at all, can still compare. A
+  phone that only scans a code verifies with the window, or compares
+  emoji.

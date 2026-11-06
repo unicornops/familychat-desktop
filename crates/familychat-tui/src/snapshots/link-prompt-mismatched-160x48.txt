@@ -13,9 +13,9 @@
     Dad: Sent an image                      │
 › Summer holiday 2027                 03:00 │
     Dad: Packing list is in the pinned mess…│
-  Homework help                   Yesterday │
+  Homework help                   Yesterday │ ───────────────────────────────────────────────────── Today ──────────────────────────────────────────────────────
     Ben: What's 7 × 8 again?                │ ┌──────────────────────────────────────────────────────────────────┐
-  Ben                           • Yesterday │ │ Open this link?                                                  │──────────────────────────────────────────────
+  Ben                           • Yesterday │ │ Open this link?                                                  │
     Ben: can I borrow your charger          │ │                                                                  │
   Under-14s football                Tuesday │ │ https://tickets.evil.example/claim                               │
     Coach Rivera: Training moves to Thursda…│ │                                                                  │
@@ -27,8 +27,6 @@
                                             │ │                                                                  │
                                             │ │ Y Open Link   C Copy the address   N Cancel                      │
                                             │ └──────────────────────────────────────────────────────────────────┘
-                                            │ Grandad  02:30
-                                            │   │ Beach by lunchtime
                                             │   Optimistic! Traffic on the A30 is bad terrible in August.
                                             │ Dad  03:00
                                             │   Cottage wifi is `SeaView-5G`, the code is in the welcome book:
@@ -43,6 +41,8 @@
                                             │   Ben, don't click links like that. Ask in #family[4] first.
                                             │ Ana  05:00
                                             │   Spoiler for Ben: ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒ 🚤
+                                            │ ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                            │ ›  Message Summer holiday 2027
 Open this link? (y open, c copy, n cancel)
 Y Open              N Cancel
 C Copy
@@ -62,9 +62,9 @@ kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
 BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBkkkkk k
 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
-                                  kkkkkkkkk k
+                                  kkkkkkkkk k kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
-  BBBBBBBBBBBBBBBBBBBBBBBBBBBBB B kkkkkkkkk k B BBBBBBBBBBBBBBB                                                  Bkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+  BBBBBBBBBBBBBBBBBBBBBBBBBBBBB B kkkkkkkkk k B BBBBBBBBBBBBBBB                                                  B
 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk B                                                                  B
                                     kkkkkkk k B cccccccccccccccccccccccccccccccccc                               B
 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk B                                                                  B
@@ -76,8 +76,6 @@ kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk B rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr
                                             k B                                                                  B
                                             k B R             R                    R                             B
                                             k BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
-                                            k BBBBBBB  kkkkk
-                                            k kkkk
                                             k kk                                  XXX UUUUUUUU
                                             k BBB  kkkkk
                                             k kk                gggggggggggg
@@ -92,6 +90,8 @@ kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk B rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr
                                             k kkBBB                                      cccccccccc
                                             k ccc  kkkkk
                                             k kk                 kkkkkkkkkkkkkkkkkkkkkkkkkkk
+                                            k kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+                                            k BBkkkkkkkkkkkkkkkkkkkkkkkkkkkk
 BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 R                   R
 R
@@ -125,8 +125,6 @@ BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
                                               B                                                                  B
                                               B R             R                    R                             B
                                               BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
-                                              BBBBBBB
-
                                                                                   XXX UUUUUUUU
                                               BBB
 
@@ -141,6 +139,8 @@ BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
                                                 BBB                                      UUUUUUUUUU
                                               BBB
 
+
+                                              BBR
 BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 R                   R
 R
@@ -160,9 +160,9 @@ R
     Dad: Sent an image                      |
 > Summer holiday 2027                 03:00 |
     Dad: Packing list is in the pinned me...|
-  Homework help                   Yesterday |
+  Homework help                   Yesterday | ----------------------------------------------------- Today ------------------------------------------------------
     Ben: What's 7 × 8 again?                | +------------------------------------------------------------------+
-  Ben                           * Yesterday | | Open this link?                                                  |----------------------------------------------
+  Ben                           * Yesterday | | Open this link?                                                  |
     Ben: can I borrow your charger          | |                                                                  |
   Under-14s football                Tuesday | | https://tickets.evil.example/claim                               |
     Coach Rivera: Training moves to Thurs...| |                                                                  |
@@ -174,8 +174,6 @@ R
                                             | |                                                                  |
                                             | | Y Open Link   C Copy the address   N Cancel                      |
                                             | +------------------------------------------------------------------+
-                                            | Grandad  02:30
-                                            |   | Beach by lunchtime
                                             |   Optimistic! Traffic on the A30 is bad terrible in August.
                                             | Dad  03:00
                                             |   Cottage wifi is `SeaView-5G`, the code is in the welcome book:
@@ -190,6 +188,8 @@ R
                                             |   Ben, don't click links like that. Ask in #family[4] first.
                                             | Ana  05:00
                                             |   Spoiler for Ben: ########################### 🚤
+                                            | ------------------------------------------------------------------------------------------------------------------
+                                            | >  Message Summer holiday 2027
 Open this link? (y open, c copy, n cancel)
 Y Open              N Cancel
 C Copy

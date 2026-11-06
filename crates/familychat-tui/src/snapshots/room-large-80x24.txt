@@ -2,8 +2,6 @@
 Room 0 garden  Not encrypted  26 members
 Messages here are not end-to-end encrypted: the server can read them.
 ────────────────────────────────────────────────────────────────────────────────
-Ana  11:39
-  pancakes weekend weekend garden definitely piano later piano rain dinner
   homework ok
   pancakes library chocolate maybe swimming
 Ben  11:45
@@ -19,16 +17,16 @@ Dad  11:54
   weekend weekend
 Grandad  11:57
   school garden rain dinner homework later library maybe pancakes Grandad
+────────────────────────────────────────────────────────────────────────────────
+›  Message Room 0 garden
                                                                      Up to date
-< Rooms      PgDn Newer   l Link#      u FirstNew   m Members    : Commands
-PgUp Older   Tab NextLink s Save       G Latest     n NextNew    O OTHER
+Enter Send   Esc Messages PgDn Newer   ^P PrevRoom  ^C Quit
+^J NewLine   PgUp Older   ^N NextRoom  ^R Recovery
 --- styles ---
 RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
 BBBBBBBBBBBBByyyyyyyyyyyyyyykkkkkkkkkkkk
 yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
-ccc  kkkkk
-kkBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 kkBBBBBBBB II
 kk
 BBB  kkkkk
@@ -44,16 +42,16 @@ BBB  kkkkk
 kk
 BBBBBBB  kkkkk
 kk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+BBkkkkkkkkkkkkkkkkkkkkkk
                                                                      kkkkkkkkkkk
-R            RRRR         R            R            R            R
-RRRR         RRR          R            R            R            R
+RRRRR        RRR          RRRR         RR           RR
+RR           RRRR         RR           RR
 --- NO_COLOR styles ---
 RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
 BBBBBBBBBBBBBBBBBBBBBBBBBBBB
 BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 
-BBB
-  BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
   BBBBBBBB II
 
 BBB
@@ -70,15 +68,15 @@ BBB
 BBBBBBB
 
 
-R            RRRR         R            R            R            R
-RRRR         RRR          R            R            R            R
+BBR
+
+RRRRR        RRR          RRRR         RR           RR
+RR           RRRR         RR           RR
 --- ASCII ---
   FAMILY CHAT 0.0.0-test             @ana:smith.safechat.family  Room 1 of 1000
 Room 0 garden  Not encrypted  26 members
 Messages here are not end-to-end encrypted: the server can read them.
 --------------------------------------------------------------------------------
-Ana  11:39
-  pancakes weekend weekend garden definitely piano later piano rain dinner
   homework ok
   pancakes library chocolate maybe swimming
 Ben  11:45
@@ -94,6 +92,8 @@ Dad  11:54
   weekend weekend
 Grandad  11:57
   school garden rain dinner homework later library maybe pancakes Grandad
+--------------------------------------------------------------------------------
+>  Message Room 0 garden
                                                                      Up to date
-< Rooms      PgDn Newer   l Link#      u FirstNew   m Members    : Commands
-PgUp Older   Tab NextLink s Save       G Latest     n NextNew    O OTHER
+Enter Send   Esc Messages PgDn Newer   ^P PrevRoom  ^C Quit
+^J NewLine   PgUp Older   ^N NextRoom  ^R Recovery

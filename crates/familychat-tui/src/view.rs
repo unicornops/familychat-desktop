@@ -20,6 +20,8 @@ use ratatui::{
     text::{Line, Span},
 };
 
+mod composer;
+mod encryption;
 mod profile;
 mod rooms;
 mod signin;
@@ -195,7 +197,38 @@ pub fn draw(app: &mut App, frame: &mut Frame) {
             );
         }
         Some(Prompt::Link(prompt)) => rooms::draw_link_dialog(app, frame, theme, body, &prompt),
-        _ => {}
+        Some(Prompt::Delete { preview, .. }) => draw_question(
+            app,
+            frame,
+            theme,
+            body,
+            "Delete this message?",
+            &[
+                (
+                    "It goes for everyone in the room, and it can't be brought back.".to_owned(),
+                    Style::new(),
+                ),
+                (preview, theme.faint()),
+            ],
+            &[("Y", "Delete"), ("N", "Cancel")],
+        ),
+        Some(Prompt::Leave(room)) => draw_question(
+            app,
+            frame,
+            theme,
+            body,
+            &format!("Leave {}?", sanitize_line(&room.name)),
+            &[(
+                "You won't see new messages here. Someone in the room can invite you back."
+                    .to_owned(),
+                Style::new(),
+            )],
+            &[("Y", "Leave"), ("N", "Cancel")],
+        ),
+        Some(Prompt::Attach { choices, .. }) if !choices.is_empty() => {
+            composer::draw_choices(frame, theme, body, &choices);
+        }
+        _ => encryption::draw_dialog(app, frame, theme, body),
     }
     draw_status(app, frame, theme, Rect::new(0, area.height - 3, width, 1));
     draw_commands(app, frame, theme, Rect::new(0, area.height - 2, width, 2));
@@ -344,6 +377,7 @@ fn draw_title(app: &App, frame: &mut Frame, theme: Theme, area: Rect) {
         Screen::Profile(ProfileScreen::LostKey(_)) => "CAN'T OPEN YOUR DATA",
         Screen::Profile(ProfileScreen::Failed(_)) => "CAN'T OPEN YOUR DATA",
         Screen::Signin(signin) => signin::title(signin),
+        Screen::Rooms(rooms) if rooms.encryption.takes_over() => "CONFIRM IT'S YOU",
         Screen::Rooms(rooms) if rooms.room_focused() && !app.side_by_side() => "ROOM",
         Screen::Rooms(_) => "ROOMS",
     };
@@ -500,4 +534,83 @@ pub(crate) fn centred(mut lines: Vec<PaneLine>, height: usize) -> Vec<PaneLine> 
     let mut out = vec![PaneLine::default(); top];
     out.append(&mut lines);
     out
+}
+
+/// A dialog over the body: `lines` in a box `width` cells wide (with its
+/// border), centred.
+pub(crate) fn draw_box(
+    app: &mut App,
+    frame: &mut Frame,
+    theme: Theme,
+    body: Rect,
+    width: u16,
+    lines: Vec<PaneLine>,
+) {
+    let height = (lines.len() as u16 + 2).min(body.height);
+    let x = body.x + (body.width.saturating_sub(width)) / 2;
+    let y = body.y + (body.height.saturating_sub(height)) / 2;
+    let area = Rect::new(x, y, width, height);
+    clear(frame, area);
+    let (h, v, corners) = if theme.unicode {
+        ("─", "│", ["┌", "┐", "└", "┘"])
+    } else {
+        ("-", "|", ["+", "+", "+", "+"])
+    };
+    let buffer = frame.buffer_mut();
+    let fill = h.repeat(usize::from(width.saturating_sub(2)));
+    let style = theme.bold();
+    buffer.set_string(x, y, format!("{}{fill}{}", corners[0], corners[1]), style);
+    buffer.set_string(
+        x,
+        y + height - 1,
+        format!("{}{fill}{}", corners[2], corners[3]),
+        style,
+    );
+    for row in 1..height - 1 {
+        buffer.set_string(x, y + row, v, style);
+        buffer.set_string(x + width - 1, y + row, v, style);
+    }
+    let inner_area = Rect::new(x + 2, y + 1, width.saturating_sub(4), height - 2);
+    draw_pane(app, frame, PaneId::Dialog, inner_area, lines, None);
+}
+
+/// A dialog's row of answers: each key reversed, then what it does.
+pub(crate) fn answers(theme: Theme, keys: &[(&str, &str)]) -> PaneLine {
+    let mut spans = Vec::new();
+    for (index, (key, label)) in keys.iter().enumerate() {
+        if index > 0 {
+            spans.push(Span::raw("   "));
+        }
+        spans.push(Span::styled((*key).to_owned(), theme.reversed()));
+        spans.push(Span::raw(format!(" {label}")));
+    }
+    PaneLine {
+        spans,
+        ..PaneLine::default()
+    }
+}
+
+/// A question over the body: its title, its sentences, and its answers.
+pub(crate) fn draw_question(
+    app: &mut App,
+    frame: &mut Frame,
+    theme: Theme,
+    body: Rect,
+    title: &str,
+    paragraphs: &[(String, Style)],
+    keys: &[(&str, &str)],
+) {
+    let width = body.width.min(72).saturating_sub(4);
+    let inner = usize::from(width.saturating_sub(4));
+    let mut lines = vec![PaneLine::new(Span::styled(
+        theme.words(title),
+        theme.bold(),
+    ))];
+    for (text, style) in paragraphs {
+        lines.push(PaneLine::default());
+        lines.extend(paragraph(&theme.words(text), *style, 0, inner));
+    }
+    lines.push(PaneLine::default());
+    lines.push(answers(theme, keys));
+    draw_box(app, frame, theme, body, width, lines);
 }

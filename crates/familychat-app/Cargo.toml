@@ -101,9 +101,10 @@ tui = ["dep:familychat-tui"]
 ui-fixture = ["dep:familychat-test-support", "familychat-test-support/fixtures", "familychat-tui?/fixture-views"]
 
 [dev-dependencies]
-# tests/live_tui_signin.rs: the terminal UI's sign-in on the homeserver
-# harness, over the real sign-in and session (test builds only; the
-# release graph never has them: scripts/check-release-features.sh).
+# tests/live_tui_signin.rs and live_tui_writing.rs: the terminal UI's
+# sign-in, writing and verification on the homeserver harness, over the
+# real sign-in and session (test builds only; the release graph never has
+# them: scripts/check-release-features.sh).
 crossterm.workspace = true
 familychat-signin = { path = "../familychat-signin", features = ["test-harness"] }
 familychat-test-support = { path = "../familychat-test-support", features = ["test-harness"] }
@@ -114,6 +115,10 @@ winresource = "0.1"
 
 [[test]]
 name = "live_tui_signin"
+required-features = ["tui"]
+
+[[test]]
+name = "live_tui_writing"
 required-features = ["tui"]
 
 [lints]

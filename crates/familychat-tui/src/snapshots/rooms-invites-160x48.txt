@@ -4,7 +4,7 @@
 › Cousins                     invited 11:40 │
     Invitation from Aunt Clare              │   Aunt Clare invited you to Cousins.
                                             │
-                                            │   Join or decline it in the Family Chat window. Answering invitations in the terminal arrives in a later release.
+                                            │   Press a to join it, or x to decline. Until you join, you can't read or write in it.
                                             │
                                             │
                                             │
@@ -44,8 +44,8 @@
                                             │
                                             │
                                                                                                                                                      Up to date
-Enter Open          : Commands          ^N NextRoom         N PrevNew           2 Unread            4 Invites           y Copy
-n NextNew           q Quit              ^P PrevRoom         1 All               3 People            m Members           b Bell
+Enter Open          : Commands          ^N NextRoom         N PrevNew           2 Unread            4 Invites           V Confirm           y Copy
+n NextNew           q Quit              ^P PrevRoom         1 All               3 People            m Members           ^R Recovery         b Bell
 --- styles ---
 RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
  kk     kk        kk        kkRRRRRRR       k BBBBBBBkkkkkkkkkkkkkkkkkkkkkk
@@ -53,7 +53,7 @@ kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
 RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRcccccccRkkkkk k
 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk   BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
                                             k
-                                            k   kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+                                            k   kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
                                             k
                                             k
                                             k
@@ -93,8 +93,8 @@ kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk   BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
                                             k
                                             k
                                                                                                                                                      kkkkkkkkkkk
-RRRRR               R                   RR                  R                   R                   R                   R
-R                   R                   RR                  R                   R                   R                   R
+RRRRR               R                   RR                  R                   R                   R                   R                   R
+R                   R                   RR                  R                   R                   R                   RR                  R
 --- NO_COLOR styles ---
 RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
                               RRRRRRR         BBBBBBB
@@ -142,8 +142,8 @@ RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR    BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 
 
 
-RRRRR               R                   RR                  R                   R                   R                   R
-R                   R                   RR                  R                   R                   R                   R
+RRRRR               R                   RR                  R                   R                   R                   R                   R
+R                   R                   RR                  R                   R                   R                   RR                  R
 --- ASCII ---
   FAMILY CHAT 0.0.0-test                                                     ROOMS                                      @ana:smith.safechat.family  Room 1 of 1
  1 All  2 Unread  3 People  4 Invites       | Cousins  Encrypted  4 members
@@ -151,7 +151,7 @@ R                   R                   RR                  R                   
 > Cousins                     invited 11:40 |
     Invitation from Aunt Clare              |   Aunt Clare invited you to Cousins.
                                             |
-                                            |   Join or decline it in the Family Chat window. Answering invitations in the terminal arrives in a later release.
+                                            |   Press a to join it, or x to decline. Until you join, you can't read or write in it.
                                             |
                                             |
                                             |
@@ -191,5 +191,5 @@ R                   R                   RR                  R                   
                                             |
                                             |
                                                                                                                                                      Up to date
-Enter Open          : Commands          ^N NextRoom         N PrevNew           2 Unread            4 Invites           y Copy
-n NextNew           q Quit              ^P PrevRoom         1 All               3 People            m Members           b Bell
+Enter Open          : Commands          ^N NextRoom         N PrevNew           2 Unread            4 Invites           V Confirm           y Copy
+n NextNew           q Quit              ^P PrevRoom         1 All               3 People            m Members           ^R Recovery         b Bell

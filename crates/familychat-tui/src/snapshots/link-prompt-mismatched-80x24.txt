@@ -2,23 +2,23 @@
 Summer holiday 2027  Encrypted  5 members
 Cornwall, 2 to 16 August
 ────────────────────────────────────────────────────────────────────────────────
-Granda┌──────────────────────────────────────────────────────────────────┐
-  │ Be│ Open this link?                                                  │
-  Opti│                                                                  │
-Dad  0│ https://tickets.evil.example/claim                               │
+  Opti┌──────────────────────────────────────────────────────────────────┐
+Dad  0│ Open this link?                                                  │
   Cott│                                                                  │
-    Ne│ It goes to tickets.evil.example and opens in your browser.       │
+    Ne│ https://tickets.evil.example/claim                               │
     Ch│                                                                  │
-    Ch│ This link is not what it shows                                   │
-Dad  0│ The link's text shows www.bank.example, but it goes to           │
-  Book│ tickets.evil.example.                                            │at
-  surf│                                                                  │
-Ben  0│ Y Open Link   C Copy the address   N Cancel                      │
-  Free└──────────────────────────────────────────────────────────────────┘
-Mum  04:02
-  Ben, don't click links like that. Ask in #family[4] first.
+    Ch│ It goes to tickets.evil.example and opens in your browser.       │
+Dad  0│                                                                  │
+  Book│ This link is not what it shows                                   │at
+  surf│ The link's text shows www.bank.example, but it goes to           │
+Ben  0│ tickets.evil.example.                                            │
+  Free│                                                                  │
+Mum  0│ Y Open Link   C Copy the address   N Cancel                      │
+  Ben,└──────────────────────────────────────────────────────────────────┘
 Ana  05:00
   Spoiler for Ben: ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒ 🚤
+────────────────────────────────────────────────────────────────────────────────
+›  Message Summer holiday 2027
 Open this link? (y open, c copy, n cancel)
 Y Open       N Cancel
 C Copy
@@ -27,23 +27,23 @@ RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
 BBBBBBBBBBBBBBBBBBBkkkkkkkkkkkkkkkkkkkkkk
 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
 kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
-BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
-kkkk  B BBBBBBBBBBBBBBB                                                  B
-kk    B                                                                  B
-BBB  kB cccccccccccccccccccccccccccccccccc                               B
-kk    B                                                                  B
-kkkkggB                                                                  B
-kkkkggB                                                                  B
-kkkkggB rrrrrrrrrrrrrrrrrrrrrrrrrrrrrr                                   B
-BBB  kB rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr           B
-kk    B rrrrrrrrrrrrrrrrrrrrr                                            B
-kkccccB                                                                  B
-BBB  kB R             R                    R                             B
 kk    BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
-BBB  kkkkk
-kkBBB                                      cccccccccc
+BBB  kB BBBBBBBBBBBBBBB                                                  B
+kk    B                                                                  B
+kkkkggB cccccccccccccccccccccccccccccccccc                               B
+kkkkggB                                                                  B
+kkkkggB                                                                  B
+BBB  kB                                                                  B
+kk    B rrrrrrrrrrrrrrrrrrrrrrrrrrrrrr                                   B
+kkccccB rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr           B
+BBB  kB rrrrrrrrrrrrrrrrrrrrr                                            B
+kk    B                                                                  B
+BBB  kB R             R                    R                             B
+kkBBB BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 ccc  kkkkk
 kk                 kkkkkkkkkkkkkkkkkkkkkkkkkkk
+kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+BBkkkkkkkkkkkkkkkkkkkkkkkkkkkk
 BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 R            R
 R
@@ -52,23 +52,23 @@ RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
 BBBBBBBBBBBBBBBBBBB
 
 
-BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
-      B BBBBBBBBBBBBBBB                                                  B
-      B                                                                  B
-BBB   B UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU                               B
-      B                                                                  B
-      B                                                                  B
-      B                                                                  B
-      B BBBBBBBBBBBBBBBBBBBBBBBBBBBBBB                                   B
-BBB   B BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB           B
-      B BBBBBBBBBBBBBBBBBBBBB                                            B
-  UUUUB                                                                  B
-BBB   B R             R                    R                             B
       BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
-BBB
-  BBB                                      UUUUUUUUUU
+BBB   B BBBBBBBBBBBBBBB                                                  B
+      B                                                                  B
+      B UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU                               B
+      B                                                                  B
+      B                                                                  B
+BBB   B                                                                  B
+      B BBBBBBBBBBBBBBBBBBBBBBBBBBBBBB                                   B
+  UUUUB BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB           B
+BBB   B BBBBBBBBBBBBBBBBBBBBB                                            B
+      B                                                                  B
+BBB   B R             R                    R                             B
+  BBB BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 BBB
 
+
+BBR
 BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 R            R
 R
@@ -77,23 +77,23 @@ R
 Summer holiday 2027  Encrypted  5 members
 Cornwall, 2 to 16 August
 --------------------------------------------------------------------------------
-Granda+------------------------------------------------------------------+
-  | Be| Open this link?                                                  |
-  Opti|                                                                  |
-Dad  0| https://tickets.evil.example/claim                               |
+  Opti+------------------------------------------------------------------+
+Dad  0| Open this link?                                                  |
   Cott|                                                                  |
-    Ne| It goes to tickets.evil.example and opens in your browser.       |
+    Ne| https://tickets.evil.example/claim                               |
     Ch|                                                                  |
-    Ch| This link is not what it shows                                   |
-Dad  0| The link's text shows www.bank.example, but it goes to           |
-  Book| tickets.evil.example.                                            |at
-  surf|                                                                  |
-Ben  0| Y Open Link   C Copy the address   N Cancel                      |
-  Free+------------------------------------------------------------------+
-Mum  04:02
-  Ben, don't click links like that. Ask in #family[4] first.
+    Ch| It goes to tickets.evil.example and opens in your browser.       |
+Dad  0|                                                                  |
+  Book| This link is not what it shows                                   |at
+  surf| The link's text shows www.bank.example, but it goes to           |
+Ben  0| tickets.evil.example.                                            |
+  Free|                                                                  |
+Mum  0| Y Open Link   C Copy the address   N Cancel                      |
+  Ben,+------------------------------------------------------------------+
 Ana  05:00
   Spoiler for Ben: ########################### 🚤
+--------------------------------------------------------------------------------
+>  Message Summer holiday 2027
 Open this link? (y open, c copy, n cancel)
 Y Open       N Cancel
 C Copy
