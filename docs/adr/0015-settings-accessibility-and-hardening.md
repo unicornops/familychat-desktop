@@ -107,8 +107,11 @@ same watch.
    registry row and its drafts, then `accounts/<uuid>/` (the SDK's state
    and crypto stores, the event and media caches). `Profile::remove_account`
    now deletes in that order, so the secrets go first and anything left
-   behind is ciphertext whose key is gone. Files another process still has
-   open (Windows) are retried for five seconds, then left to
+   behind is ciphertext whose key is gone. The client's stores close once
+   its last tasks end (the session callbacks the client keeps hold the
+   account's shared state weakly, so nothing keeps a signed-out client
+   alive); files still open then (Windows refuses to delete them) are
+   retried for ten seconds, then left to
    `Profile::remove_orphaned_account_dirs`, which `restore_all` runs at
    every start.
 

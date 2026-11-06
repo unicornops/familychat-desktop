@@ -446,6 +446,10 @@ fn persist_rotated_tokens(
     let template = params.session.clone();
     let keychain = params.keychain.clone();
     let reload_keychain = params.keychain.clone();
+    // The client keeps these callbacks, and `Shared` keeps the client (in
+    // `Ready`): a strong reference here would be a cycle, and a signed-out
+    // account's client, with its open stores, would never be dropped.
+    let shared = Arc::downgrade(&shared);
     client.set_session_callbacks(
         Box::new(move |_client| {
             let session = load_session(reload_keychain.as_ref(), id)?
@@ -468,12 +472,16 @@ fn persist_rotated_tokens(
             match save_session(keychain.as_ref(), id, &session) {
                 Ok(()) => {
                     info!(account = %id, "saved the renewed sign-in");
-                    shared.set_problem(None);
+                    if let Some(shared) = shared.upgrade() {
+                        shared.set_problem(None);
+                    }
                     Ok(())
                 }
                 Err(error) => {
                     warn!(account = %id, error = %error, "could not save the renewed sign-in");
-                    shared.set_problem(Some(AccountProblem::TokenNotSaved));
+                    if let Some(shared) = shared.upgrade() {
+                        shared.set_problem(Some(AccountProblem::TokenNotSaved));
+                    }
                     Err(error.into())
                 }
             }

@@ -34,7 +34,7 @@ const LOGOUT_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
 /// How many times signing out tries to delete the account's directory
 /// (the SDK's stores close as the client's last tasks end, and Windows
 /// refuses to delete an open file).
-const SIGN_OUT_FILE_ATTEMPTS: u32 = 50;
+const SIGN_OUT_FILE_ATTEMPTS: u32 = 100;
 
 /// The check every new sign-in passes before its account syncs (PLAN.md,
 /// section 6.6): the client's homeserver and user, after the session is
@@ -271,9 +271,10 @@ impl AccountManager {
     /// [`LOGOUT_TIMEOUT`]: a server that can't be reached, or refuses, does
     /// not keep the account here), then its keychain entries, its registry
     /// row and drafts, and its directory (the SDK's stores, the event and
-    /// media caches) go. Files still open are retried for a few seconds
-    /// and otherwise left to [`Self::restore_all`]'s sweep: their key is
-    /// already gone.
+    /// media caches) go. The client's stores close as its last tasks end
+    /// (about a second); files still open (Windows refuses to delete them)
+    /// are retried for ten seconds and otherwise left to
+    /// [`Self::restore_all`]'s sweep: their key is already gone.
     pub async fn sign_out(&self, id: AccountId) -> Result<SignedOut, SignOutError> {
         let account = {
             let mut accounts = self
