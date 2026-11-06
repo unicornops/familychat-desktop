@@ -1,0 +1,21 @@
+# Family Chat's desktop entry (ADR 0014), adapted from Zmail's
+# ie.unicornops.zmail.desktop. The .deb installs it as
+# /usr/share/applications/family.safechat.desktop.desktop: the file is named
+# after the app id, which is also the window's Wayland app id and X11
+# class, so the desktop matches the window to it. MimeType registers
+# familychat:// links; the desktop passes one as %u, which a running window
+# receives over the single-instance hand-off (ADR 0013).
+[Desktop Entry]
+Type=Application
+Name=Family Chat
+GenericName=Chat Client
+Comment=Chat with your family on Family Chat or any Matrix server
+Exec=familychat %u
+TryExec=familychat
+Icon=family.safechat.desktop
+Terminal=false
+Categories=Network;Chat;InstantMessaging;
+Keywords=Matrix;Chat;Family;
+MimeType=x-scheme-handler/familychat;
+StartupNotify=true
+StartupWMClass=family.safechat.desktop

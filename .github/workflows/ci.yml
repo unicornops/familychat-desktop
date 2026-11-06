@@ -72,6 +72,11 @@ jobs:
                       about.toml|about.hbs|deny.toml|scripts/homeserver-harness.sh|scripts/check-release-features.sh|scripts/check-dependency-boundaries.sh|scripts/capture-ui-screenshots.sh|scripts/check-egress.sh|scripts/egress-proxy.py)
                         workspace_checks=true
                         ;;
+                      # The packaging (ADR 0014): the identifiers test in
+                      # familychat-app and the scripts' lint and tests.
+                      packaging/*|scripts/*.sh)
+                        workspace_checks=true
+                        ;;
                       docker/homeserver-harness/*|fuzz/*)
                         if [[ "$file" != *.md ]]; then
                           workspace_checks=true
@@ -176,7 +181,12 @@ jobs:
               run: scripts/check-dependency-boundaries.sh
 
             - name: Lint the scripts
-              run: shellcheck scripts/homeserver-harness.sh scripts/check-release-features.sh scripts/check-dependency-boundaries.sh scripts/keychain-session.sh scripts/capture-ui-screenshots.sh scripts/check-egress.sh
+              run: shellcheck scripts/*.sh
+
+            # The release notes' signing section (ADR 0014): what it says for
+            # signed, ad hoc and unsigned files, and the input it refuses.
+            - name: Release script tests
+              run: scripts/test-release-signing-notes.sh
 
             # The egress check's negative test (PLAN.md section 8, ADR 0004
             # "Egress"): a request to example.org through the recording

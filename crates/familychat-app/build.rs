@@ -5,8 +5,12 @@
 //! `Cargo.lock`, so `familychat --version` and the window stay correct
 //! when the `zed-upstream` workflow bumps the pin.
 //!
-//! The VERSIONINFO resource gives the Windows executable its name and
-//! version in Explorer, and the WiX MSI of Phase 12 binds against it.
+//! The VERSIONINFO resource gives the Windows executables their name and
+//! version in Explorer, and the WiX MSI (`wix/main.wxs`, ADR 0014) binds
+//! its version to it; the icon resource is Family Chat's app icon
+//! (`packaging/windows/familychat.ico`, from
+//! `scripts/generate-app-icon.sh windows`), which Explorer, the taskbar
+//! and the MSI's `familychat:` handler show.
 
 use std::path::PathBuf;
 
@@ -31,7 +35,12 @@ fn main() {
         .and_then(|p| p.parse::<u64>().ok())
         .unwrap_or(0);
 
+    let icon = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap_or_default())
+        .join("../../packaging/windows/familychat.ico");
+    println!("cargo:rerun-if-changed={}", icon.display());
+
     let mut version_info = winresource::WindowsResource::new();
+    version_info.set_icon(&icon.to_string_lossy());
     version_info.set("FileDescription", "Family Chat desktop client");
     version_info.set("ProductName", "Family Chat");
     version_info.set("ProductVersion", &version);

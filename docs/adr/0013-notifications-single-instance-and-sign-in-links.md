@@ -222,7 +222,7 @@ redeems anything by itself.
 Registering `familychat://` with the OS (Info.plist, the MSI, the
 `.desktop` file) is Phase 12, as is the macOS bundle without which
 `on_open_urls` receives nothing; until then links reach the app through
-`familychat LINK`, `open-link`, or pasting.
+`familychat LINK`, `open-link`, or pasting. (Done: ADR 0014.)
 
 ### Testing
 
@@ -318,7 +318,8 @@ account with a second account to send from):
    anything the second launch printed (the terminal shows what was pasted
    at the prompt, which is the terminal's echo, not the app's).
 8. **macOS links.** Not until Phase 12 registers the scheme: note that
-   `open 'familychat://…'` does nothing yet.
+   `open 'familychat://…'` does nothing yet. (Phase 12's DMG registers
+   it; the browser checks per OS are in `docs/release.md`.)
 
 ## Consequences
 
@@ -344,7 +345,7 @@ account with a second account to send from):
 
 ## Follow-ups
 
-- Phase 12: register `familychat://` in the macOS bundle (`CFBundleURLTypes`,
+- Phase 12 (done, ADR 0014): register `familychat://` in the macOS bundle (`CFBundleURLTypes`,
   which also gives `on_open_urls` its links and notifications their bundle
   id), the MSI and the `.desktop` file (`MimeType=x-scheme-handler/familychat`,
   `Exec=familychat %u`), and check a browser's link opens the running

@@ -2,8 +2,11 @@
 //! change (PLAN.md, section 15, Open decision 2).
 //!
 //! The bundle id matches the one the Family Chat Electron desktop build
-//! already uses, since this app replaces it. Registering the URL scheme
-//! with the OS is Phase 12; the data directory is used from Phase 1.
+//! already uses, since this app replaces it. The packages register the
+//! URL scheme with the OS (ADR 0014: the macOS bundle's Info.plist, the
+//! MSI and the Linux desktop entry, which
+//! `crates/familychat-app/tests/packaging.rs` checks against these names);
+//! the data directory is used from Phase 1.
 
 /// The app's name as people see it: window titles, menus, notifications.
 pub const APP_NAME: &str = "Family Chat";

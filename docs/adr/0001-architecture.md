@@ -98,7 +98,7 @@ they change in one place:
 | App and bundle id, keychain service | `family.safechat.desktop` |
 | Binary and Debian package | `familychat` |
 | Data directory | "Family Chat" (macOS, Windows), `familychat` (`$XDG_DATA_HOME`), overridden by `FAMILYCHAT_DATA_DIR` |
-| URL scheme | `familychat` (registered with the OS in Phase 12) |
+| URL scheme | `familychat` (registered with the OS by the packages, ADR 0014) |
 
 ### No code from the Element forks
 
