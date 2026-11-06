@@ -602,6 +602,14 @@ jobs:
             # were last built and checked with.
             FUZZ_TOOLCHAIN: nightly-2026-09-19
             CARGO_FUZZ_VERSION: 0.13.2
+            # The repository's .cargo/config.toml puts every build in the
+            # root's target/; the fuzz build (with AddressSanitizer) gets a
+            # directory of its own, which the cache below keeps.
+            CARGO_TARGET_DIR: ${{ github.workspace }}/fuzz/target
+            # Two crates at a time: four sanitised builds of the Matrix
+            # crates at once ran the runner out of memory (it was shut
+            # down mid-build, twice).
+            CARGO_BUILD_JOBS: 2
 
         steps:
             - name: Checkout
@@ -611,6 +619,11 @@ jobs:
             # library on Linux.
             - name: Install Linux build dependencies
               run: sudo apt-get update && sudo apt-get install -y pkg-config libdbus-1-dev
+
+            # The sanitised build with debug info is large; the runner's
+            # preinstalled SDKs this job never uses make room for it.
+            - name: Free disk space
+              run: sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghcup && df -h /
 
             - name: Install Rust nightly
               uses: dtolnay/rust-toolchain@89b12181fb390509a0842a86cc55eeb8eb928c1d # stable
