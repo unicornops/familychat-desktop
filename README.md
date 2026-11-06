@@ -109,6 +109,12 @@ Phase 11, the terminal UI: writing and encryption ([#12](https://github.com/unic
 - "Confirm it's you" in the terminal: compare emoji with another of your devices (each emoji shown with its name, names only in ASCII), or type your recovery key into a masked field; requests from your other devices to verify them; setting up recovery with the key shown once; identity warnings and why a message can't be read
 - the devices list and room key export and import stay in the window for now
 
+Phase 12, packaging, signing and distribution ([#13](https://github.com/unicornops/familychat-desktop/issues/13), [ADR 0014](./docs/adr/0014-packaging-signing-and-distribution.md), [`docs/release.md`](./docs/release.md)):
+
+- installers for each system: a DMG for macOS (signed with Developer ID and notarised by Apple), a per-user MSI for Windows and a `.deb` for Debian and Ubuntu, next to the archives
+- `familychat://` sign-in links from your browser open in Family Chat on every system: the window you have open asks "Sign in as …?"
+- every download listed in `SHA256SUMS` with a build provenance attestation, and the release notes say which files are signed
+
 
 Phase 14, sign-in in the browser and with a QR code, for servers that offer them ([#15](https://github.com/unicornops/familychat-desktop/issues/15), [ADR 0010](./docs/adr/0010-browser-and-qr-code-sign-in.md)):
 
@@ -118,7 +124,7 @@ Phase 14, sign-in in the browser and with a QR code, for servers that offer them
 - for a Family Chat family, every address these use must be one of Family Chat's own; Family Chat's servers don't offer them yet (family-chat #239 plans it), so families see the same sign-in as before
 - the terminal UI signs in through the browser too (Ctrl-B); QR codes are the window's
 
-Opening `familychat://` links straight from your browser needs the installers of Phase 12.
+Settings, accessibility and hardening (Phase 13) follow.
 
 ## Building
 
@@ -171,15 +177,21 @@ cargo run -p familychat-app --features ui-fixture -- launch-tui-fixture room
 
 See [`AGENTS.md`](./AGENTS.md) for the crates, commands and rules.
 
-## Platform Packages
+## Installing
 
-Each release on the [releases page](https://github.com/unicornops/familychat-desktop/releases) attaches:
+Download from the [releases page](https://github.com/unicornops/familychat-desktop/releases):
 
-- `familychat-linux-x86_64.tar.gz` (Linux, x86-64)
-- `familychat-macos.tar.gz` (macOS, Apple silicon)
-- `familychat-windows-x86_64.zip` (Windows, x86-64)
+| System | Download | Install |
+| --- | --- | --- |
+| macOS 12 or later (Apple silicon) | `familychat-macos.dmg` | open it and drag Family Chat to Applications |
+| Windows 10 or 11 (x86-64) | `familychat-windows-x86_64.msi` | run it; it installs for you alone, with no administrator prompt |
+| Debian 13, Ubuntu 24.04 or later (x86-64) | `familychat-linux-x86_64.deb` | `sudo apt install ./familychat-linux-x86_64.deb` |
 
-Each holds the `familychat` binary, `LICENSE`, `THIRD_PARTY.html` (the licences of the Rust crates it is built from) and `licenses/` (the bundled Inter font and Lucide icons), with `SHA256SUMS-<OS>` checksums next to them. The binaries are not signed yet: macOS will ask before opening one from the internet. Installers (`.deb`, DMG, MSI), signing and the `familychat://` link handler come in Phase 12.
+Each installer registers `familychat://`, so a sign-in link from a parent opens in Family Chat from your browser (the browser asks first, then Family Chat asks "Sign in as …?"). The MSI also puts `familychat` on your `PATH`, and the `.deb` installs it as `/usr/bin/familychat`, for `familychat tui` and the other commands.
+
+Signing: the macOS DMG and app are signed with Developer ID and notarised by Apple. The Windows MSI is **not signed** yet, so SmartScreen warns before running it (More info, Run anyway), and the Linux packages are not signed during the alpha; each release's notes say which files are signed. Check any download against `SHA256SUMS`, and its origin with `gh attestation verify FILE --repo unicornops/familychat-desktop`.
+
+For the terminal, or a Linux without `.deb` packages, the archives hold the bare program: `familychat-macos.tar.gz`, `familychat-windows-x86_64.zip` and `familychat-linux-x86_64.tar.gz`. Every download carries `LICENSE`, `THIRD_PARTY.html` (the licences of the Rust crates it is built from) and `licenses/` (the bundled Inter font, Lucide icons and the code ported from Zed). See [`docs/release.md`](./docs/release.md) for what each file holds, how releases are built and signed, and how to build the packages yourself.
 
 ## Privacy
 

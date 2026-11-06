@@ -1,0 +1,4 @@
+# Shell scripts keep Unix line endings in every checkout: the release
+# workflow runs some of them under Git Bash on Windows, where a checkout
+# with core.autocrlf would otherwise give them CRLF endings bash refuses.
+*.sh text eol=lf

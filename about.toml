@@ -138,12 +138,30 @@ ignore-dev-dependencies = true
 #   this project's tests (python-qrcode and Pillow), under its licence, and
 #   crates/familychat-test-support/src/testdata/photo.jpg (a 32x24
 #   gradient made with ImageMagick for the location tests) likewise.
+# - Packaging (Phase 12, ADR 0014), same copyright and licence; keep each
+#   file's header notice. Copied from Zmail: scripts/create-dmg.sh
+#   (scripts/create-dmg.sh, names changed). Adapted from Zmail:
+#   scripts/generate-app-icon.sh (scripts/generate-app-icon.sh, with Linux
+#   and Windows modes added), crates/familychat-app/wix/main.wxs
+#   (crates/zmail-app/wix/main.wxs, made per-user), the desktop entry
+#   packaging/linux/family.safechat.desktop.desktop
+#   (crates/zmail-app/ie.unicornops.zmail.desktop), the .deb metadata in
+#   crates/familychat-app/Cargo.toml (zmail-app's), and from the macOS
+#   steps of Zmail's .github/workflows/release-please.yml:
+#   packaging/macos/Info.plist, scripts/create-macos-bundle.sh and
+#   scripts/notarize-macos.sh.
 #
 # Nothing is copied from the Element X forks (AGPL-3.0); see PLAN.md,
 # section 2.
 
 # Bundled assets that are not crates, also recorded here:
 #
+# - packaging/icons/familychat.svg, the app icon, and what is rendered from
+#   it (packaging/windows/familychat.ico, committed; the macOS icns and
+#   asset catalog and the Linux hicolor PNGs, made at release time): Family
+#   Chat's own mark, the tile and speech bubble of family-chat's
+#   website/static/img/favicon.svg (Copyright UnicornOps), redrawn on the
+#   1024 px icon grid. Not a third-party asset.
 # - assets/fonts/inter/Inter-{Regular,Medium,SemiBold,Bold}.ttf
 #   Inter 4.1 (https://github.com/rsms/inter/releases/tag/v4.1, from
 #   Inter-4.1.zip, sha256 9883fdd4a49d4fb66bd8177ba6625ef9a64aa45899767dde3d36aa425756b11e),
