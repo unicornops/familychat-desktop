@@ -70,6 +70,8 @@ actions!(
         SetUpRecovery,
         /// Show the account's devices.
         ManageDevices,
+        /// Show a QR code for a new device to sign in with (ADR 0010).
+        LinkDevice,
         /// Save the room keys to a passphrase-protected file.
         ExportRoomKeys,
         /// Read room keys from such a file.

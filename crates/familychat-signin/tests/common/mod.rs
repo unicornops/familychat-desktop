@@ -16,7 +16,9 @@ use familychat_core::{
     signin::{SecretText, SigninAnswer, SigninStart, SigninStep},
 };
 use familychat_security::{AccountSession, AuthKind};
-use familychat_session::PostLoginCheck;
+use familychat_session::{
+    PostLoginCheck, QrAnswer, QrEvent, QrLoginError, QrLoginRequest, UrlGuard,
+};
 use familychat_signin::{
     AccountSink, AddFailure, Allowlist, HttpRequest, HttpResponse, Services, Transport,
     TransportError, http::Method, link::parse_user_id, run_flow,
@@ -138,6 +140,7 @@ impl Transport for FakeServer {
                 body: request
                     .json
                     .as_ref()
+                    .or(request.form.as_ref())
                     .map(|body| String::from_utf8_lossy(body.expose()).into_owned()),
             };
             lock(&self.seen).push(seen.clone());
@@ -176,6 +179,53 @@ pub struct FakeAccounts {
     /// For each account added, whether the sign-in handed its password on
     /// (for the cross-signing set-up), and whether it was the one typed.
     pub passwords: Mutex<Vec<Option<bool>>>,
+    /// For each account added, the OAuth client id it keeps.
+    pub client_ids: Mutex<Vec<Option<String>>>,
+    /// The QR code sign-ins asked for: the homeserver and the client
+    /// metadata.
+    pub qr_requests: Mutex<Vec<(String, Value)>>,
+    /// Addresses to put to each QR sign-in's guard, and its answers.
+    pub guard_probes: Mutex<Vec<String>>,
+    pub guard_answers: Mutex<Vec<bool>>,
+    /// Who a QR sign-in signs in (default `@ana:smith.safechat.family`).
+    pub qr_user: Mutex<Option<String>>,
+    /// The approval address a new device sends when it is linked.
+    pub approval_uri: Mutex<Option<String>>,
+    /// An open account's homeserver, for linking a device.
+    pub homeserver: Mutex<Option<Url>>,
+    /// The other device scans the fake QR code when this is notified.
+    pub scan: Notify,
+}
+
+/// The check code the fake QR sign-ins expect.
+pub const CHECK_CODE: u8 = 42;
+
+/// A small QR code for the fake sign-ins.
+pub fn fake_qr() -> familychat_core::encryption::QrModules {
+    familychat_core::encryption::QrModules {
+        width: 2,
+        dark: vec![true, false, false, true],
+    }
+}
+
+/// Waits for the check code, then for `wanted` if given; `Err` on a
+/// wrong code or a cancel.
+async fn fake_answers(
+    answers: &mut mpsc::UnboundedReceiver<QrAnswer>,
+    wanted: Option<QrAnswer>,
+) -> Result<(), QrLoginError> {
+    match answers.recv().await {
+        Some(QrAnswer::CheckCode(CHECK_CODE)) => {}
+        Some(QrAnswer::CheckCode(_)) => return Err(QrLoginError::CheckCodeMismatch),
+        _ => return Err(QrLoginError::Cancelled),
+    }
+    if let Some(wanted) = wanted {
+        match answers.recv().await {
+            Some(answer) if answer == wanted => {}
+            _ => return Err(QrLoginError::Cancelled),
+        }
+    }
+    Ok(())
 }
 
 impl FakeAccounts {
@@ -212,9 +262,108 @@ impl AccountSink for FakeAccounts {
                 return Err(failure);
             }
             assert_eq!(session.access_token.expose(), ACCESS);
+            lock(&self.client_ids).push(session.oauth_client_id.clone());
             lock(&self.added).push((session.user_id, session.homeserver_url, session.auth_kind));
             Ok(AccountKey("new-account".to_owned()))
         })
+    }
+
+    fn add_with_qr_code(
+        &self,
+        request: QrLoginRequest,
+        check: Box<dyn PostLoginCheck>,
+        events: mpsc::Sender<QrEvent>,
+        mut answers: mpsc::UnboundedReceiver<QrAnswer>,
+    ) -> BoxFuture<'_, Result<(AccountKey, OwnedUserId), QrLoginError>> {
+        Box::pin(async move {
+            self.probe_guard(&request.guard);
+            lock(&self.qr_requests).push((
+                request.homeserver.to_string(),
+                request.client_metadata.clone(),
+            ));
+            let _ = events
+                .send(QrEvent::Ready {
+                    qr: fake_qr(),
+                    data: familychat_security::Secret::new(b"MATRIX".to_vec()),
+                })
+                .await;
+            self.scan.notified().await;
+            let _ = events.send(QrEvent::Scanned).await;
+            fake_answers(&mut answers, None).await?;
+            let _ = events
+                .send(QrEvent::WaitingForApproval {
+                    user_code: "ABC123".to_owned(),
+                })
+                .await;
+            let _ = events.send(QrEvent::SyncingSecrets).await;
+            let user = lock(&self.qr_user)
+                .clone()
+                .unwrap_or_else(|| ANA.to_owned());
+            let user = parse_user_id(&user).expect("a user");
+            check
+                .check(&request.homeserver, &user)
+                .map_err(QrLoginError::Refused)?;
+            if self.is_signed_in(&user) {
+                return Err(QrLoginError::AlreadySignedIn(user));
+            }
+            lock(&self.added).push((
+                user.to_string(),
+                request.homeserver.to_string(),
+                AuthKind::QrCode,
+            ));
+            Ok((AccountKey("qr-account".to_owned()), user))
+        })
+    }
+
+    fn link_device(
+        &self,
+        _account: &AccountKey,
+        guard: UrlGuard,
+        events: mpsc::Sender<QrEvent>,
+        mut answers: mpsc::UnboundedReceiver<QrAnswer>,
+    ) -> BoxFuture<'_, Result<(), QrLoginError>> {
+        Box::pin(async move {
+            self.probe_guard(&guard);
+            let _ = events
+                .send(QrEvent::Ready {
+                    qr: fake_qr(),
+                    data: familychat_security::Secret::new(b"MATRIX".to_vec()),
+                })
+                .await;
+            self.scan.notified().await;
+            let _ = events.send(QrEvent::Scanned).await;
+            fake_answers(&mut answers, None).await?;
+            let uri = lock(&self.approval_uri)
+                .clone()
+                .expect("an approval address");
+            let _ = events
+                .send(QrEvent::ApproveInBrowser {
+                    verification_uri: familychat_security::Secret::new(uri),
+                })
+                .await;
+            match answers.recv().await {
+                Some(QrAnswer::Continue) => {}
+                _ => return Err(QrLoginError::Cancelled),
+            }
+            // The new device signs in once the test has seen the browser.
+            self.scan.notified().await;
+            let _ = events.send(QrEvent::SyncingSecrets).await;
+            Ok(())
+        })
+    }
+
+    fn homeserver_of(&self, _account: &AccountKey) -> Option<Url> {
+        lock(&self.homeserver).clone()
+    }
+}
+
+impl FakeAccounts {
+    fn probe_guard(&self, guard: &UrlGuard) {
+        let answers = lock(&self.guard_probes)
+            .iter()
+            .map(|url| guard(&Url::parse(url).expect("a URL")))
+            .collect();
+        *lock(&self.guard_answers) = answers;
     }
 }
 
@@ -335,6 +484,17 @@ impl Flow {
             .expect("the flow did not panic");
         self.steps.borrow().clone()
     }
+}
+
+/// "Use another Matrix server" for `server`: the server step, then the
+/// form with what the server offers.
+pub async fn choose_server(flow: &mut Flow, server: &str) -> SigninStep {
+    let step = flow.settled().await;
+    assert!(matches!(step, SigninStep::Server(_)), "{step:?}");
+    flow.answer(SigninAnswer::ChooseServer {
+        server: server.to_owned(),
+    });
+    flow.settled().await
 }
 
 pub fn password_form(step: &SigninStep) -> &familychat_core::signin::PasswordForm {

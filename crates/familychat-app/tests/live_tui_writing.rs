@@ -111,6 +111,7 @@ async fn add_account(
                     .refresh_token()
                     .map(|token| Secret::new(token.to_owned())),
                 auth_kind: AuthKind::Password,
+                oauth_client_id: None,
             },
             &AnyHomeserver,
             Some(Secret::new(password.to_owned())),

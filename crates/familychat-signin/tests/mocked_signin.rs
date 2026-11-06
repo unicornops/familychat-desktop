@@ -93,6 +93,7 @@ async fn the_post_login_recheck_signs_out_a_homeserver_outside_the_allowlist() -
         access_token: Secret::new("issued-access".to_owned()),
         refresh_token: None,
         auth_kind: AuthKind::LoginToken,
+        oauth_client_id: None,
     };
     let added = manager
         .add(

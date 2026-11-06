@@ -22,6 +22,8 @@ services:
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - postgres-data:/var/lib/postgresql/data
+      # The MAS database (Phase 14), made with the data directory.
+      - ./postgres-init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "palpo", "-h", "127.0.0.1"]
       interval: 2s
@@ -61,13 +63,43 @@ services:
     ports:
       - "127.0.0.1:${FAMILYCHAT_HARNESS_SYNAPSE_ADMIN_PORT:-18009}:8008"
 
+  # Synapse delegating its sign-in to MAS (Phase 14, ADR 0010): OAuth 2.0
+  # (MSC3861), the device authorization grant and the MSC4108 rendezvous
+  # for QR code sign-in, as family-chat #239 plans for each family. The same
+  # pinned image as `synapse`; its config is generated the same way and
+  # the script appends the MAS settings. No published port: MAS manages its
+  # users, and the tests reach both only through the edge.
+  synapse-mas:
+    image: matrixdotorg/synapse:v1.164.2@sha256:f0df87cff259872637b4b5e5174b9977e5e3046dd421505407803b5e45c5f842
+    environment:
+      SYNAPSE_SERVER_NAME: synapse-mas.familychat.test
+      SYNAPSE_REPORT_STATS: "no"
+    volumes:
+      - synapse-mas-data:/data
+
+  # Matrix Authentication Service, pinned: the OAuth 2.0 authorization
+  # server synapse-mas delegates to. Its config (fresh secrets and keys on
+  # every `up`) is rendered into the state directory by the script; the
+  # database is on the Postgres sidecar. `server` runs its migrations.
+  mas:
+    image: ghcr.io/element-hq/matrix-authentication-service:1.28.0@sha256:494c67f08ee8344368f4ed336611dea02b26c4e058bf37a212d090d50b612659
+    environment:
+      MAS_CONFIG: /etc/mas/config.yaml
+    volumes:
+      - ${FAMILYCHAT_HARNESS_STATE_DIR:?run scripts/homeserver-harness.sh up}/mas:/etc/mas:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   # The TLS front end: one nginx serving every harness host on 8443 with a
   # certificate from the throwaway CA the script makes on every `up`.
   # hs1.familychat.test is a Family Chat family's edge proxy (the paths
   # family-chat's render_nginx_edge_config exposes), smith.test a custom
   # domain that only publishes the well-known delegation,
   # evil.familychat.example a working homeserver outside the allowlist, and
-  # redirect.familychat.test an allowlisted host whose login answers 307.
+  # redirect.familychat.test an allowlisted host whose login answers 307,
+  # synapse-mas.familychat.test Synapse with MAS and mas.familychat.test
+  # MAS itself.
   edge:
     image: nginx:1.30.6-alpine@sha256:0e52bd054126cdc040b1276c0af347aeb02a41b9cfe305d6094767ac30e97949
     volumes:
@@ -78,9 +110,12 @@ services:
     depends_on:
       - palpo
       - synapse
+      - synapse-mas
+      - mas
     ports:
       - "127.0.0.1:${FAMILYCHAT_HARNESS_EDGE_PORT:-18443}:8443"
 
 volumes:
   postgres-data:
   synapse-data:
+  synapse-mas-data:

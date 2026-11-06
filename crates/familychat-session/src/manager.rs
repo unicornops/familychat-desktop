@@ -76,9 +76,9 @@ pub struct Restored {
 /// The accounts of one profile.
 pub struct AccountManager {
     profile: Mutex<Profile>,
-    keychain: Arc<dyn Keychain>,
-    dir: DataDir,
-    config: SessionConfig,
+    pub(crate) keychain: Arc<dyn Keychain>,
+    pub(crate) dir: DataDir,
+    pub(crate) config: SessionConfig,
     accounts: RwLock<BTreeMap<AccountId, Arc<Account>>>,
     views: watch::Sender<Vec<AccountView>>,
     notifications: NotificationFeed,
@@ -110,7 +110,7 @@ impl AccountManager {
         }
     }
 
-    fn profile(&self) -> MutexGuard<'_, Profile> {
+    pub(crate) fn profile(&self) -> MutexGuard<'_, Profile> {
         self.profile
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner())
@@ -153,6 +153,7 @@ impl AccountManager {
                 notifications: self.notifications.clone(),
                 verifications: self.verifications.clone(),
             },
+            None,
             None,
             None,
         )
@@ -203,6 +204,7 @@ impl AccountManager {
                 },
                 Some(check),
                 password,
+                None,
             )
             .await?;
             Ok::<_, AddAccountError>(account)
@@ -225,7 +227,7 @@ impl AccountManager {
     /// files and its registry row. The SDK's stores close as the client's
     /// last tasks end, and Windows refuses to delete an open file, so the
     /// files are tried a few times.
-    async fn forget(&self, id: AccountId) {
+    pub(crate) async fn forget(&self, id: AccountId) {
         for attempt in 1..=FORGET_ATTEMPTS {
             match self.profile().remove_account(id) {
                 Ok(_) => return,
@@ -241,7 +243,7 @@ impl AccountManager {
         }
     }
 
-    fn insert(&self, account: Account) -> Arc<Account> {
+    pub(crate) fn insert(&self, account: Account) -> Arc<Account> {
         let account = Arc::new(account);
         let mut accounts = self
             .accounts

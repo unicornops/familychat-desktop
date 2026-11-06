@@ -16,6 +16,14 @@
 //!   nowhere else, and only while the step is `Confirm`); the password
 //!   form with the rate-limit countdown; the work in progress; the final
 //!   steps.
+//! - Phase 14 (ADR 0010): "Use another Matrix server"'s server step, the
+//!   server's methods on the form (Ctrl-B "Continue in your browser",
+//!   Ctrl-E to change the server), the "Continue in your browser?"
+//!   question with the full address, answered `Continue` only by `y`, and
+//!   the wait while the browser is open: the address is opened once with
+//!   the system's opener when that step arrives (`o` again, `c` copies it
+//!   for a browser elsewhere) and never printed. QR codes are the
+//!   window's: the form says so.
 
 use std::{fmt, time::Instant};
 
@@ -26,7 +34,7 @@ use tokio::sync::watch;
 use zeroize::Zeroize;
 
 use crate::{
-    app::{App, CommandEntry, InitialView, Screen},
+    app::{App, CommandEntry, Effect, InitialView, Screen},
     commands::Cmd,
 };
 
@@ -140,6 +148,9 @@ pub(crate) struct SigninState {
     pub(crate) focus: Field,
     /// When a rate limit ends.
     pub(crate) retry_at: Option<Instant>,
+    /// The person answered `y` to "Continue in your browser?": the
+    /// browser step that follows opens its address, once.
+    browser_confirmed: bool,
 }
 
 impl SigninState {
@@ -157,6 +168,27 @@ impl SigninState {
             password: SecretField::default(),
             focus: Field::Server,
             retry_at: None,
+            browser_confirmed: false,
+        }
+    }
+
+    /// Whether the form's server is fixed (chosen on the server step), so
+    /// Tab moves between the username and the password only.
+    fn server_is_fixed(&self) -> bool {
+        matches!(&self.step, SigninStep::Password(form) if form.server_is_fixed())
+    }
+
+    fn next_field(&mut self) {
+        self.focus = self.focus.next();
+        if self.focus == Field::Server && self.server_is_fixed() {
+            self.focus = self.focus.next();
+        }
+    }
+
+    fn previous_field(&mut self) {
+        self.focus = self.focus.previous();
+        if self.focus == Field::Server && self.server_is_fixed() {
+            self.focus = self.focus.previous();
         }
     }
 
@@ -173,6 +205,7 @@ impl SigninState {
         self.steps = None;
         self.step = SigninStep::Starting;
         self.retry_at = None;
+        self.browser_confirmed = false;
         self.password.clear();
     }
 
@@ -214,13 +247,19 @@ impl SigninState {
                     .as_ref()
                     .and_then(|problem| problem.retry_after)
                     .map(|wait| Instant::now() + wait);
-                self.focus = if form.server.is_empty() {
+                self.focus = if form.server.is_empty() && !form.server_is_fixed() {
                     Field::Server
                 } else if form.username.is_empty() {
                     Field::Username
                 } else {
                     Field::Password
                 };
+            }
+            SigninStep::Server(form) => {
+                if !matches!(self.step, SigninStep::Server(_)) || self.server != form.server {
+                    self.server = form.server.clone();
+                }
+                self.focus = Field::Server;
             }
             SigninStep::NotALink(message) => {
                 self.show_code(Some(message.clone()));
@@ -282,7 +321,25 @@ impl App {
             // new account.
             signin.steps = None;
         }
+        self.open_new_browser_step();
         true
+    }
+
+    /// A browser step that just arrived opens its address with the
+    /// system's opener, once, and only after the person's `y` to the
+    /// question that showed the address.
+    fn open_new_browser_step(&mut self) {
+        let Some(signin) = self.signin_state() else {
+            return;
+        };
+        let SigninStep::Browser(browser) = &signin.step else {
+            return;
+        };
+        if !std::mem::take(&mut signin.browser_confirmed) {
+            return;
+        }
+        let url = browser.url.expose().to_owned();
+        self.effects.push(Effect::Open(url));
     }
 
     /// Starts a flow and follows its steps.
@@ -302,6 +359,7 @@ impl App {
         signin.page = Page::Flow;
         signin.code_problem = None;
         signin.show_step(first);
+        self.open_new_browser_step();
     }
 
     /// The fixture's first view.
@@ -328,13 +386,11 @@ impl App {
             Screen::Signin(signin) => {
                 signin.page == Page::Code
                     || (signin.page == Page::Flow
-                        && matches!(
+                        && !matches!(
                             signin.step,
-                            SigninStep::Password(_)
-                                | SigninStep::Confirm(_)
-                                | SigninStep::Starting
-                                | SigninStep::Working(_)
-                                | SigninStep::AlreadySignedIn(_)
+                            SigninStep::Finished(_)
+                                | SigninStep::NotALink(_)
+                                | SigninStep::Cancelled
                         ))
             }
             _ => false,
@@ -357,7 +413,7 @@ impl App {
                 self.start_signin(SigninStart::Link(SecretText::new(pasted)));
             }
             Page::Flow => {
-                if !matches!(signin.step, SigninStep::Password(_)) {
+                if !matches!(signin.step, SigninStep::Password(_) | SigninStep::Server(_)) {
                     return;
                 }
                 match signin.focus {
@@ -430,22 +486,103 @@ impl App {
                 }
                 _ => {}
             },
-            SigninStep::Starting | SigninStep::Working(_) => {}
-            SigninStep::AlreadySignedIn(_) => {
-                if matches!(key.code, KeyCode::Enter | KeyCode::Esc) {
-                    signin.show_welcome();
+            // The browser opens only after `y` here (the full address is
+            // on screen).
+            SigninStep::ConfirmBrowser(_) => match (answer, key.code) {
+                (Some('y'), _) => {
+                    if let Some(flow) = &signin.flow {
+                        signin.browser_confirmed = flow.answer(SigninAnswer::Continue);
+                    }
+                }
+                (Some('n'), _) | (_, KeyCode::Esc) => {
+                    if let Some(flow) = &signin.flow {
+                        flow.answer(SigninAnswer::Cancel);
+                    }
+                }
+                _ => {}
+            },
+            SigninStep::Browser(browser) => match (answer, key.code) {
+                (Some('o'), _) => self
+                    .effects
+                    .push(Effect::Open(browser.url.expose().to_owned())),
+                (Some('c'), _) => {
+                    self.effects
+                        .push(Effect::Copy(browser.url.expose().to_owned()));
+                    self.status = Some("Copied the sign-in address".to_owned());
+                }
+                (Some('n'), _) | (_, KeyCode::Esc) => {
+                    if let Some(flow) = &signin.flow {
+                        flow.answer(SigninAnswer::Cancel);
+                    }
+                }
+                _ => {}
+            },
+            // QR codes are drawn in the window only; a flow that shows one
+            // here (none does) can only be cancelled.
+            SigninStep::QrCode(_) | SigninStep::CheckCode(_) => {
+                if key.code == KeyCode::Esc
+                    && let Some(flow) = &signin.flow
+                {
+                    flow.answer(SigninAnswer::Cancel);
                 }
             }
-            SigninStep::Password(_) => match key.code {
+            SigninStep::Server(_) => match key.code {
                 KeyCode::Esc => {
                     if let Some(flow) = &signin.flow {
                         flow.answer(SigninAnswer::Cancel);
                     }
                 }
-                KeyCode::Tab | KeyCode::Down => signin.focus = signin.focus.next(),
-                KeyCode::BackTab | KeyCode::Up => signin.focus = signin.focus.previous(),
+                KeyCode::Enter => {
+                    let server = signin.server.trim().to_owned();
+                    if let Some(flow) = &signin.flow {
+                        flow.answer(SigninAnswer::ChooseServer { server });
+                    }
+                }
+                KeyCode::Backspace => {
+                    signin.server.pop();
+                }
+                KeyCode::Char('u') if control => signin.server.clear(),
+                KeyCode::Char(ch) if !control && !ch.is_control() => signin.server.push(ch),
+                _ => {}
+            },
+            SigninStep::Starting | SigninStep::Working(_) => {}
+            SigninStep::DeviceLinked(_) | SigninStep::Stopped(_) => {
+                if matches!(key.code, KeyCode::Enter | KeyCode::Esc) {
+                    signin.show_welcome();
+                }
+            }
+            SigninStep::AlreadySignedIn(_) => {
+                if matches!(key.code, KeyCode::Enter | KeyCode::Esc) {
+                    signin.show_welcome();
+                }
+            }
+            SigninStep::Password(form) => match key.code {
+                KeyCode::Esc => {
+                    if let Some(flow) = &signin.flow {
+                        flow.answer(SigninAnswer::Cancel);
+                    }
+                }
+                KeyCode::Char('b')
+                    if control
+                        && form
+                            .methods
+                            .as_ref()
+                            .is_some_and(|methods| methods.browser.is_some()) =>
+                {
+                    if let Some(flow) = &signin.flow {
+                        flow.answer(SigninAnswer::UseBrowser);
+                    }
+                }
+                KeyCode::Char('e') if control && form.server_is_fixed() => {
+                    if let Some(flow) = &signin.flow {
+                        flow.answer(SigninAnswer::ChangeServer);
+                    }
+                }
+                _ if !form.shows_password() => {}
+                KeyCode::Tab | KeyCode::Down => signin.next_field(),
+                KeyCode::BackTab | KeyCode::Up => signin.previous_field(),
                 KeyCode::Enter if signin.focus != Field::Password => {
-                    signin.focus = signin.focus.next();
+                    signin.next_field();
                 }
                 KeyCode::Enter => self.submit_password(),
                 KeyCode::Backspace => match signin.focus {
@@ -476,6 +613,11 @@ impl App {
             },
             SigninStep::Finished(_) | SigninStep::NotALink(_) | SigninStep::Cancelled => {}
         }
+    }
+
+    /// Whether the form offers the browser (for the command bar).
+    fn offers_browser(signin: &SigninState) -> bool {
+        matches!(&signin.step, SigninStep::Password(form) if form.methods.as_ref().is_some_and(|methods| methods.browser.is_some()))
     }
 
     /// Signs in with the form, unless a rate limit is still running.
@@ -536,11 +678,17 @@ impl App {
             }
             Cmd::Select | Cmd::NextField | Cmd::Answer(_) => {
                 let key = match cmd {
-                    Cmd::NextField => KeyCode::Tab,
-                    Cmd::Answer(ch) => KeyCode::Char(ch),
-                    _ => KeyCode::Enter,
+                    Cmd::NextField => KeyEvent::new(KeyCode::Tab, KeyModifiers::NONE),
+                    // A control character stands for its Ctrl key (the
+                    // command bar's ^B and ^E).
+                    Cmd::Answer(ch @ '\u{1}'..='\u{1a}') => KeyEvent::new(
+                        KeyCode::Char(char::from(ch as u8 - 1 + b'a')),
+                        KeyModifiers::CONTROL,
+                    ),
+                    Cmd::Answer(ch) => KeyEvent::new(KeyCode::Char(ch), KeyModifiers::NONE),
+                    _ => KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE),
                 };
-                self.signin_key(KeyEvent::new(key, KeyModifiers::NONE));
+                self.signin_key(key);
             }
             _ => {}
         }
@@ -584,20 +732,46 @@ impl App {
                     CommandEntry::with("N", "Cancel", Cmd::Answer('n')),
                     quit,
                 ],
-                SigninStep::Password(_) => vec![
-                    CommandEntry::with(
-                        "Enter",
-                        if signin.focus == Field::Password {
-                            "SignIn"
-                        } else {
-                            "Next"
-                        },
-                        Cmd::Select,
-                    ),
-                    CommandEntry::of(Cmd::NextField),
-                    back,
+                SigninStep::Password(form) => {
+                    let mut entries = Vec::new();
+                    if Self::offers_browser(signin) {
+                        entries.push(CommandEntry::with("^B", "Browser", Cmd::Answer('\u{2}')));
+                    }
+                    if form.shows_password() {
+                        entries.push(CommandEntry::with(
+                            "Enter",
+                            if signin.focus == Field::Password {
+                                "SignIn"
+                            } else {
+                                "Next"
+                            },
+                            Cmd::Select,
+                        ));
+                        entries.push(CommandEntry::of(Cmd::NextField));
+                    }
+                    if form.server_is_fixed() {
+                        entries.push(CommandEntry::with("^E", "Server", Cmd::Answer('\u{5}')));
+                    }
+                    entries.extend([back, quit]);
+                    entries
+                }
+                SigninStep::Server(_) => {
+                    vec![CommandEntry::with("Enter", "Find", Cmd::Select), back, quit]
+                }
+                SigninStep::ConfirmBrowser(_) => vec![
+                    CommandEntry::with("Y", "Continue", Cmd::Answer('y')),
+                    CommandEntry::with("N", "Cancel", Cmd::Answer('n')),
                     quit,
                 ],
+                SigninStep::Browser(_) => vec![
+                    CommandEntry::with("O", "OpenAgain", Cmd::Answer('o')),
+                    CommandEntry::with("C", "CopyAddr", Cmd::Answer('c')),
+                    CommandEntry::with("N", "Cancel", Cmd::Answer('n')),
+                    quit,
+                ],
+                SigninStep::DeviceLinked(_) | SigninStep::Stopped(_) => {
+                    vec![CommandEntry::with("Enter", "OK", Cmd::Select), back, quit]
+                }
                 SigninStep::AlreadySignedIn(_) => {
                     vec![CommandEntry::with("Enter", "OK", Cmd::Select), back, quit]
                 }

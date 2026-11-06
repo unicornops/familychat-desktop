@@ -109,6 +109,15 @@ Phase 11, the terminal UI: writing and encryption ([#12](https://github.com/unic
 - "Confirm it's you" in the terminal: compare emoji with another of your devices (each emoji shown with its name, names only in ASCII), or type your recovery key into a masked field; requests from your other devices to verify them; setting up recovery with the key shown once; identity warnings and why a message can't be read
 - the devices list and room key export and import stay in the window for now
 
+
+Phase 14, sign-in in the browser and with a QR code, for servers that offer them ([#15](https://github.com/unicornops/familychat-desktop/issues/15), [ADR 0010](./docs/adr/0010-browser-and-qr-code-sign-in.md)):
+
+- "Use another Matrix server" asks for the server first and shows only the ways it offers: your password, "Continue in your browser" (OAuth 2.0, as servers with Matrix Authentication Service use, or single sign-on), and "Sign in with a QR code"
+- the browser opens only after you say Continue to its whole address, and comes back to Family Chat on your own computer; the app registers itself as Family Chat Desktop, and signing out ends the session at the server
+- sign this computer in by scanning its QR code with a phone that's signed in, or sign a new phone in from here ("Sign in a new device", Ctrl+Alt+L or Cmd+Option+L): type the two numbers the other device shows, approve it in your browser, and your keys go with it
+- for a Family Chat family, every address these use must be one of Family Chat's own; Family Chat's servers don't offer them yet (family-chat #239 plans it), so families see the same sign-in as before
+- the terminal UI signs in through the browser too (Ctrl-B); QR codes are the window's
+
 Opening `familychat://` links straight from your browser needs the installers of Phase 12.
 
 ## Building

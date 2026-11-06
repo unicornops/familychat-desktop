@@ -55,6 +55,15 @@ pub enum ViewStep {
     NotFamilyChat,
     /// The account is signed in already.
     AlreadySignedIn,
+    /// Another server's ways to sign in: the browser, a QR code and the
+    /// password (ADR 0010).
+    Methods,
+    /// A server whose only way is the browser.
+    BrowserOnly,
+    /// "Continue in your browser?".
+    ConfirmBrowser,
+    /// Waiting for the browser.
+    Browser,
 }
 
 /// A signed-in account's rooms.
@@ -143,6 +152,10 @@ pub const VIEWS: &[&str] = &[
     "password-not-family-chat",
     "checking-server",
     "other-server",
+    "other-server-methods",
+    "other-server-browser-only",
+    "browser-confirm",
+    "browser-waiting",
     "keychain-locked",
     "keychain-unavailable",
     "lost-key",
@@ -347,6 +360,16 @@ pub fn fixture_view(name: &str) -> Option<FixtureView> {
         "password-not-family-chat" => FixtureView::signin(password()).at(ViewStep::NotFamilyChat),
         "checking-server" => FixtureView::signin(password()).at(ViewStep::CheckingServer),
         "other-server" => FixtureView::signin(InitialView::OtherServer),
+        "other-server-methods" => {
+            FixtureView::signin(InitialView::OtherServer).at(ViewStep::Methods)
+        }
+        "other-server-browser-only" => {
+            FixtureView::signin(InitialView::OtherServer).at(ViewStep::BrowserOnly)
+        }
+        "browser-confirm" => {
+            FixtureView::signin(InitialView::OtherServer).at(ViewStep::ConfirmBrowser)
+        }
+        "browser-waiting" => FixtureView::signin(InitialView::OtherServer).at(ViewStep::Browser),
         "keychain-locked" => FixtureView::profile(ViewProfile::KeychainLocked),
         "keychain-unavailable" => FixtureView::profile(ViewProfile::KeychainUnreachable),
         "lost-key" => FixtureView::profile(ViewProfile::LostKey),

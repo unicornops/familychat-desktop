@@ -32,6 +32,10 @@ const ADMIN_TOKEN: &str = "FAMILYCHAT_HARNESS_ADMIN_TOKEN";
 const REGISTRATION_TOKEN: &str = "FAMILYCHAT_HARNESS_REGISTRATION_TOKEN";
 const SYNAPSE_ADMIN_URL: &str = "FAMILYCHAT_HARNESS_SYNAPSE_ADMIN_URL";
 const SYNAPSE_ADMIN_TOKEN: &str = "FAMILYCHAT_HARNESS_SYNAPSE_ADMIN_TOKEN";
+const SYNAPSE_MAS_URL: &str = "FAMILYCHAT_HARNESS_SYNAPSE_MAS_URL";
+const MAS_URL: &str = "FAMILYCHAT_HARNESS_MAS_URL";
+const MAS_ADMIN_CLIENT: &str = "FAMILYCHAT_HARNESS_MAS_ADMIN_CLIENT";
+const MAS_ADMIN_SECRET: &str = "FAMILYCHAT_HARNESS_MAS_ADMIN_SECRET";
 
 /// Where the running harness is and how to reach it.
 ///
@@ -70,6 +74,14 @@ pub struct HarnessEnv {
     /// users.
     pub synapse_admin_url: String,
     synapse_admin_token: String,
+    /// Synapse delegating sign-in to MAS (Phase 14),
+    /// `https://synapse-mas.familychat.test`.
+    pub synapse_mas_url: String,
+    /// MAS, its OAuth 2.0 authorization server, `https://mas.familychat.test`.
+    pub mas_url: String,
+    /// MAS's admin client (client credentials, for its admin API).
+    pub mas_admin_client: String,
+    mas_admin_secret: String,
 }
 
 impl HarnessEnv {
@@ -138,12 +150,18 @@ impl HarnessEnv {
             registration_token: get(REGISTRATION_TOKEN)?,
             synapse_admin_url: get(SYNAPSE_ADMIN_URL)?,
             synapse_admin_token: get(SYNAPSE_ADMIN_TOKEN)?,
+            synapse_mas_url: get(SYNAPSE_MAS_URL)?,
+            mas_url: get(MAS_URL)?,
+            mas_admin_client: get(MAS_ADMIN_CLIENT)?,
+            mas_admin_secret: get(MAS_ADMIN_SECRET)?,
         };
         for (key, url) in [
             (HS1_URL, &env.hs1_url),
             (EVIL_URL, &env.evil_url),
             (SYNAPSE_URL, &env.synapse_url),
             (REDIRECT_URL, &env.redirect_url),
+            (SYNAPSE_MAS_URL, &env.synapse_mas_url),
+            (MAS_URL, &env.mas_url),
         ] {
             https_host(url).with_context(|| format!("{key} is not a bare https:// URL"))?;
         }
@@ -168,6 +186,8 @@ impl HarnessEnv {
             &self.evil_url,
             &self.redirect_url,
             &self.synapse_url,
+            &self.synapse_mas_url,
+            &self.mas_url,
         ] {
             if let Ok(host) = https_host(url) {
                 hosts.push(host.to_owned());
@@ -192,6 +212,11 @@ impl HarnessEnv {
     pub fn synapse_admin_token(&self) -> &str {
         &self.synapse_admin_token
     }
+
+    /// MAS's admin client's secret.
+    pub fn mas_admin_secret(&self) -> &str {
+        &self.mas_admin_secret
+    }
 }
 
 impl fmt::Debug for HarnessEnv {
@@ -213,6 +238,10 @@ impl fmt::Debug for HarnessEnv {
             .field("registration_token", &"<redacted>")
             .field("synapse_admin_url", &self.synapse_admin_url)
             .field("synapse_admin_token", &"<redacted>")
+            .field("synapse_mas_url", &self.synapse_mas_url)
+            .field("mas_url", &self.mas_url)
+            .field("mas_admin_client", &self.mas_admin_client)
+            .field("mas_admin_secret", &"<redacted>")
             .finish()
     }
 }
@@ -310,6 +339,10 @@ export FAMILYCHAT_HARNESS_ADMIN_TOKEN='admin-secret'
 export FAMILYCHAT_HARNESS_REGISTRATION_TOKEN='registration-secret'
 export FAMILYCHAT_HARNESS_SYNAPSE_ADMIN_URL='http://127.0.0.1:18009'
 export FAMILYCHAT_HARNESS_SYNAPSE_ADMIN_TOKEN='synapse-secret'
+export FAMILYCHAT_HARNESS_SYNAPSE_MAS_URL='https://synapse-mas.familychat.test'
+export FAMILYCHAT_HARNESS_MAS_URL='https://mas.familychat.test'
+export FAMILYCHAT_HARNESS_MAS_ADMIN_CLIENT='01KADM1NC1ENT0000000000000'
+export FAMILYCHAT_HARNESS_MAS_ADMIN_SECRET='mas-secret'
 ";
 
     fn sample_env() -> HarnessEnv {
@@ -349,8 +382,10 @@ export FAMILYCHAT_HARNESS_SYNAPSE_ADMIN_TOKEN='synapse-secret'
             [
                 "evil.familychat.example",
                 "hs1.familychat.test",
+                "mas.familychat.test",
                 "redirect.familychat.test",
                 "smith.test",
+                "synapse-mas.familychat.test",
                 "synapse.test"
             ]
         );
@@ -362,6 +397,7 @@ export FAMILYCHAT_HARNESS_SYNAPSE_ADMIN_TOKEN='synapse-secret'
         assert!(!debug.contains("admin-secret"), "{debug}");
         assert!(!debug.contains("registration-secret"), "{debug}");
         assert!(!debug.contains("synapse-secret"), "{debug}");
+        assert!(!debug.contains("mas-secret"), "{debug}");
         assert!(debug.contains("hs1.familychat.test"), "{debug}");
     }
 

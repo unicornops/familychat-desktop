@@ -29,8 +29,12 @@ pub use env::{DEFAULT_STATE_DIR, ENV_FILE_VAR, HarnessEnv, STATE_DIR_VAR, parse_
 mod client;
 #[cfg(feature = "test-harness")]
 mod harness;
+#[cfg(feature = "test-harness")]
+mod mas;
 
 #[cfg(feature = "test-harness")]
 pub use client::{HarnessResolver, admin_client, edge_client, edge_client_builder};
 #[cfg(feature = "test-harness")]
 pub use harness::{AccessLogLine, HomeserverHarness, LoginToken, Reply, Session, TestUser};
+#[cfg(feature = "test-harness")]
+pub use mas::{MasBrowser, MasUser, Page};

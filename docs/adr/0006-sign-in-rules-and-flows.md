@@ -154,6 +154,20 @@ refusal is signed out and forgotten by the session crate; any other
 failure after the credentials were issued (no native sliding sync, the
 keychain) is signed out by the sign-in (best effort, the outcome logged).
 
+### Phase 14: the browser and QR codes
+
+ADR 0010 adds the sign-ins a server may offer beyond these: OAuth 2.0 and
+single sign-on in the browser, and QR codes (MSC4108), shown only where
+the server has them. They keep this ADR's rules: discovery and every
+credential go only to a `CheckedHomeserver`; every request before the
+hand-off goes through the `Transport` (the QR code's secure channel is
+the SDK's, with every address it uses checked); for a Family Chat
+homeserver the issuer and every address are under the allowlist; the
+browser opens only after a confirmation that shows the whole address; and
+the post-login re-check runs as for a code. "Use another Matrix server"
+asks for the server first, and any homeserver under the allowlist is a
+Family Chat one there too (the Family Chat check, not the other server's).
+
 ### Secrets
 
 Tokens, access tokens and passwords are `Secret`s (or core's
@@ -198,7 +212,8 @@ job).
 | 8. Never log, persist or restore the token; memory only | `logs::rule8_no_token_or_password_reaches_a_log_line_even_unredacted` (no redaction, TRACE everywhere), `flows::rule8_no_token_in_debug_or_a_panic_message`, `link::tests::debug_never_prints_the_token`, `http::tests::debug_hides_bodies_tokens_and_queries`, `familychat-core` `signin::tests::secrets_never_print`, live (the captured log of the whole binary, and the profile's files, hold no token or password) |
 | Desktop: redact a `familychat://` link's query from logs | `familychat-security` `redact::tests::urls_lose_user_info_query_and_fragment`, `redact::tests::scrub_removes_every_kind_of_secret` |
 | PLAN.md 6.5: `M_LIMIT_EXCEEDED` shown with its wait, never retried | `flows::password_errors_are_shown_and_a_rate_limit_is_never_retried`, `flows::rule6_a_rate_limited_code_shows_the_wait_and_is_not_retried`, `wording::tests::rate_limits_say_how_long` |
-| PLAN.md 6.2: other servers by password | `flows::other_servers_need_only_https`, live `another_server_signs_in_with_a_password_on_synapse` |
+| PLAN.md 6.2: other servers by password (the server first, Phase 14) | `flows::other_servers_need_only_https`, live `another_server_signs_in_with_a_password_on_synapse` |
+| PLAN.md 6.6 and 7 for OAuth and QR codes: the allowlist on the issuer and every address, the confirmation before the browser, the re-check | ADR 0010's table (`tests/browser_and_qr.rs`, `tests/properties.rs`, live `tests/live_oauth.rs`) |
 | PLAN.md 6.2: device names | `device::tests::names_each_desktop_system`, live `a_code_signs_in_…` (the device's name on the server) |
 
 Not applicable on the desktop: the web app's URL stripping and soft

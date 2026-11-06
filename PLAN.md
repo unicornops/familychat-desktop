@@ -205,7 +205,7 @@ The welcome screen leads with Family Chat and keeps other servers one step away:
 
 1. **"Sign in with a code from your parent"**: paste the sign-in link, paste or drop the QR image (decoded locally, never uploaded), or arrive through a `familychat://` link. Redeemed with `m.login.token`.
 2. **"Sign in with your password"**: the family's address (`smith.safechat.family`, `smith.ie`) or a full Matrix ID, then the password.
-3. **"Use another Matrix server"**: any homeserver; password now, SSO, OAuth and QR login in Phase 14.
+3. **"Use another Matrix server"**: any homeserver: the server first, then what it offers (a password, OAuth or SSO in the browser, a QR code; Phase 14, ADR 0010).
 
 Device display name: `Family Chat (macOS)`, `Family Chat (Windows)` or `Family Chat (Linux)`, after the contract's `Family Chat (iPhone)`.
 
@@ -278,7 +278,7 @@ The panel shows a token-bearing link only as a QR image (never the raw URL), and
 | Native sliding sync (MSC4186) | yes | SyncService works |
 | Spec versions | up to v1.12, authenticated media | fine |
 | `m.login.token` | accepted and advertised (`session.rs`) | code sign-in works |
-| OAuth 2.0 / MAS (MSC3861) | not configured (family-chat #239 plans MAS per family) | no OAuth sign-in for Family Chat yet |
+| OAuth 2.0 / MAS (MSC3861) | not configured (family-chat #239 plans MAS per family) | no OAuth sign-in for Family Chat yet; the desktop offers it where a server has it, with the issuer under the allowlist for Family Chat (ADR 0010) |
 | QR login rendezvous (MSC4108 / MSC4388) | discovery answers `false` (`unstable.rs`) | QR login only on other servers until #239 |
 | First cross-signing upload without UIA (MSC3967) | yes, verified by the Phase 2 harness (family-chat #257) | code-only accounts get cross-signing; replacing the keys asks for a password |
 | Login rate limit | one bucket per family behind the proxy | never retry logins |

@@ -882,8 +882,11 @@ async fn other_servers_need_only_https() {
         .homeserver(base)
         .login(base, Reply::Json(200, credentials("@a:example.org")));
     let mut flow = harness.start(SigninStart::OtherServer);
-    let step = flow.settled().await;
-    assert_eq!(password_form(&step).kind, PasswordKind::OtherServer);
+    let step = choose_server(&mut flow, "example.org").await;
+    let form = password_form(&step);
+    assert_eq!(form.kind, PasswordKind::OtherServer);
+    // A server that doesn't say how it signs in is asked for a password.
+    assert!(form.shows_password() && form.server_is_fixed());
     flow.submit("example.org", "a");
     assert!(matches!(flow.ended().await, SigninStep::Finished(_)));
     assert_eq!(
@@ -900,16 +903,14 @@ async fn other_servers_need_only_https() {
         .server
         .well_known("example.org", "http://matrix.example.org");
     let mut flow = harness.start(SigninStart::OtherServer);
-    flow.settled().await;
-    flow.submit("example.org", "a");
-    let step = flow.settled().await;
-    assert_eq!(
-        password_form(&step)
-            .problem
-            .as_ref()
-            .map(|p| p.message.as_str()),
-        Some(wording::NOT_HTTPS)
-    );
+    let step = choose_server(&mut flow, "example.org").await;
+    match step {
+        SigninStep::Server(form) => assert_eq!(
+            form.problem.as_ref().map(|p| p.message.as_str()),
+            Some(wording::NOT_HTTPS)
+        ),
+        other => panic!("{other:?}"),
+    }
     assert_eq!(harness.server.seen().len(), 1);
 }
 

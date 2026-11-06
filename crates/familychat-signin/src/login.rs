@@ -38,6 +38,19 @@ pub struct Credentials {
     pub access_token: Secret<String>,
     /// The refresh token, when the server issued one.
     pub refresh_token: Option<Secret<String>>,
+    /// For an OAuth sign-in (ADR 0010), the client it was issued to and
+    /// where its tokens are revoked; signing it out revokes them there
+    /// rather than calling `/logout`.
+    pub oauth: Option<OAuthGrant>,
+}
+
+/// Who an OAuth sign-in's tokens were issued to.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OAuthGrant {
+    /// The client id the server registered.
+    pub client_id: String,
+    /// The issuer's revocation endpoint, checked like the issuer.
+    pub revocation_endpoint: Option<reqwest::Url>,
 }
 
 impl fmt::Debug for Credentials {
@@ -48,6 +61,7 @@ impl fmt::Debug for Credentials {
             .field("device_id", &self.device_id)
             .field("access_token", &self.access_token)
             .field("refresh_token", &self.refresh_token)
+            .field("oauth", &self.oauth)
             .finish()
     }
 }
@@ -165,6 +179,7 @@ async fn login(
         url: homeserver.endpoint(LOGIN_PATH),
         bearer: None,
         json: Some(body),
+        form: None,
     };
     let response = transport
         .send(request)
@@ -219,6 +234,7 @@ fn credentials(
             device_id,
             access_token,
             refresh_token: text("refresh_token").map(Secret::new),
+            oauth: None,
         }),
         _ => Err(Some(access_token)),
     }
@@ -257,9 +273,16 @@ pub async fn logout(transport: &dyn Transport, credentials: Credentials) {
     let Credentials {
         homeserver,
         access_token,
+        refresh_token,
+        oauth,
         ..
     } = credentials;
-    logout_token(transport, &homeserver, access_token).await;
+    match oauth {
+        Some(grant) => {
+            crate::oauth::revoke(transport, &grant, access_token, refresh_token).await;
+        }
+        None => logout_token(transport, &homeserver, access_token).await,
+    }
 }
 
 async fn logout_token(
@@ -272,6 +295,7 @@ async fn logout_token(
         url: homeserver.endpoint(LOGOUT_PATH),
         bearer: Some(access_token),
         json: Some(Secret::new(b"{}".to_vec())),
+        form: None,
     };
     match transport.send(request).await {
         Ok(response) if response.status == 200 => {

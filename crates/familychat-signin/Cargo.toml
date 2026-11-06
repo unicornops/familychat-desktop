@@ -18,6 +18,9 @@ staging = []
 test-harness = []
 
 [dependencies]
+# OAuth's PKCE (ADR 0010): the S256 challenge and URL-safe random text.
+# Both already in the graph through matrix-sdk.
+base64 = "0.22"
 familychat-core = { path = "../familychat-core" }
 familychat-security = { path = "../familychat-security" }
 # The hand-off to matrix-sdk (`AccountManager::add_account`, which restores
@@ -25,14 +28,22 @@ familychat-security = { path = "../familychat-security" }
 # a Matrix crate: the frontends reach it only through `familychat-core`'s
 # `SigninApi` (scripts/check-dependency-boundaries.sh).
 familychat-session = { path = "../familychat-session" }
+# Form bodies for OAuth's token and revocation endpoints, and the loopback
+# redirect's query. Already in the graph through url.
+form_urlencoded = "1.2"
 futures-util = { version = "0.3", default-features = false, features = ["std"] }
+# OAuth's state and PKCE verifier from the OS CSPRNG.
+getrandom.workspace = true
 # The dedicated sign-in HTTP client (PLAN.md, section 6.4): the reqwest line
 # matrix-sdk uses, with redirects, retries and pooled connections off.
 reqwest.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+# The S256 PKCE challenge; the version matrix-sdk uses.
+sha2 = "0.11"
 thiserror.workspace = true
-tokio.workspace = true
+# The loopback redirect's listener (`net`, `io-util`).
+tokio = { workspace = true, features = ["io-util", "net"] }
 tracing.workspace = true
 # Reading resolved homeserver URLs (whether a host is a name or an address).
 # Already in the graph through reqwest, which re-exports only `Url`.
@@ -45,14 +56,23 @@ anyhow.workspace = true
 familychat-signin = { path = ".", features = ["test-harness"] }
 familychat-store = { path = "../familychat-store" }
 familychat-test-support = { path = "../familychat-test-support", features = ["test-harness"] }
+# The other device in the live QR code tests (tests/live_oauth.rs): a phone
+# as a bare SDK client.
+matrix-sdk.workspace = true
 # Property tests for the link and server-name parsers (PLAN.md, section 9).
 # Already in the lock file through GPUI; only its default features.
 proptest = "1.12"
+# Reading the QR code the live tests' sign-in draws, as a phone's camera
+# would. Already in the graph through familychat-ui.
+rqrr = { version = "0.11", default-features = false }
 tracing-subscriber.workspace = true
 wiremock = "0.6.5"
 
 [[test]]
 name = "live_signin"
+
+[[test]]
+name = "live_oauth"
 
 [lints]
 workspace = true
