@@ -125,7 +125,7 @@ pub fn captured_logs() -> Arc<Mutex<Vec<u8>>> {
         .get_or_init(|| {
             let buffer = Arc::new(Mutex::new(Vec::new()));
             let (filter, _) = logging::filter_from(Some(&format!(
-                "{},familychat=debug",
+                "{},familychat=debug,matrix_sdk_crypto::verification=debug,matrix_sdk::encryption=debug",
                 logging::DEFAULT_DIRECTIVES
             )));
             let subscriber = logging::subscriber(Captured(buffer.clone()), filter);
