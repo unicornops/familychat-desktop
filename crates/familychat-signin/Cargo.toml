@@ -20,7 +20,7 @@ test-harness = []
 [dependencies]
 # OAuth's PKCE (ADR 0010): the S256 challenge and URL-safe random text.
 # Both already in the graph through matrix-sdk.
-base64 = "0.22"
+base64 = "0.23"
 familychat-core = { path = "../familychat-core" }
 familychat-security = { path = "../familychat-security" }
 # The hand-off to matrix-sdk (`AccountManager::add_account`, which restores
