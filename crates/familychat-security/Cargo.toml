@@ -34,7 +34,7 @@ zeroize.workspace = true
 # The terminal corpus's seeded mutations and random text
 # (tests/terminal_corpus.rs, copied from Zmail with the same generator).
 # Already in the lock file through the GPUI graph; the dev build only.
-rand = "0.8"
+rand = "0.10"
 
 [lints]
 workspace = true
