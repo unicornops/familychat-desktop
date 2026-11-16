@@ -39,8 +39,8 @@ getrandom = "0.4"
 # GPUI is a git dependency on Zed pinned to a stable release tag (ADR 0002,
 # docs/upstream/zed.md), never the crates.io `gpui` crate. The weekly
 # `zed-upstream` workflow moves both lines; keep them on the same tag.
-gpui = { git = "https://github.com/zed-industries/zed", tag = "v1.27.0" }
-gpui_platform = { git = "https://github.com/zed-industries/zed", tag = "v1.27.0", default-features = false, features = ["font-kit", "wayland", "x11"] }
+gpui = { git = "https://github.com/zed-industries/zed", tag = "v1.28.1" }
+gpui_platform = { git = "https://github.com/zed-industries/zed", tag = "v1.28.1", default-features = false, features = ["font-kit", "wayland", "x11"] }
 # Secrets live only in the OS keychain (PLAN.md, section 5.4): the macOS
 # login keychain, Windows Credential Manager and the Secret Service on
 # Linux. The version and features Zmail uses; 4.x is to be evaluated for
