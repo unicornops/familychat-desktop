@@ -14,9 +14,9 @@ not apply here.
 <!-- zed-pin:start -->
 | | |
 | --- | --- |
-| Zed release tag | [`v1.27.0`](https://github.com/zed-industries/zed/releases/tag/v1.27.0) |
-| Commit | [`c84af5b99cbc366d675064e52b23664a015b6e35`](https://github.com/zed-industries/zed/commit/c84af5b99cbc366d675064e52b23664a015b6e35) |
-| Released | 2026-11-04 |
+| Zed release tag | [`v1.28.1`](https://github.com/zed-industries/zed/releases/tag/v1.28.1) |
+| Commit | [`e8bc16acee5ae1937600d571d441c4b5d7b0d288`](https://github.com/zed-industries/zed/commit/e8bc16acee5ae1937600d571d441c4b5d7b0d288) |
+| Released | 2026-11-11 |
 | Rust toolchain (Zed's `rust-toolchain.toml`) | `1.98.1` |
 <!-- zed-pin:end -->
 
