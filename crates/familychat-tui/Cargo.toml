@@ -14,7 +14,7 @@ anyhow.workspace = true
 familychat-actions = { path = "../familychat-actions" }
 # OSC 52 copies: the selection in base64 (Zmail's clipboard.rs). Already in
 # the lock file through the GPUI and wiremock graphs.
-base64 = "0.22.1"
+base64 = "0.23.1"
 crossterm.workspace = true
 familychat-core = { path = "../familychat-core" }
 # The terminal sanitiser every server string goes through, and the safe
